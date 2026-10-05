@@ -1,0 +1,81 @@
+{
+  "gender_coded": {
+    "masculine_coded": {
+      "severity": 2,
+      "words": [
+        "aggressive", "dominant", "fearless", "headstrong", "battle-tested",
+        "boast", "greedy", "hierarchical", "outperform", "reckless",
+        "stubborn", "unreasonable", "superior"
+      ]
+    },
+    "masculine_coded_mild": {
+      "severity": 1,
+      "words": [
+        "ambitious", "assertive", "competitive", "decisive", "independent",
+        "self-reliant", "confident", "driven", "individualistic",
+        "analytical", "athletic", "challenging", "objective", "opinion",
+        "persist", "principle"
+      ]
+    },
+    "feminine_coded": {
+      "severity": 2,
+      "words": [
+        "flatterable", "nurturing", "sympathetic", "yield", "emotional"
+      ]
+    },
+    "feminine_coded_mild": {
+      "severity": 1,
+      "words": [
+        "collaborative", "communal", "compassionate", "considerate",
+        "cooperative", "dependable", "empathetic", "gentle", "honest",
+        "interpersonal", "kind", "loyal", "pleasant", "polite", "responsive",
+        "sensitive", "supportive", "tactful", "together", "trustworthy",
+        "understanding", "warm"
+      ]
+    },
+    "pronoun_or_org": {
+      "severity": 3,
+      "words": [
+        "sorority", "fraternity", "women's college", "men's college",
+        "she/her", "he/him", "he was responsible", "she was responsible"
+      ]
+    }
+  },
+  "age_coded": {
+    "severity": 3,
+    "words": [
+      "digital native", "young and energetic", "energetic self-starter",
+      "fresh perspective", "youthful", "veteran of", "seasoned professional",
+      "over 20 years of experience", "mature candidate"
+    ],
+    "note": "graduation-year detection (explicit 4-digit years near an education keyword) is handled separately in code as a structural signal, not a plain keyword match — see _find_education_years() in bias_detector.py. The old 'graduated in 19'/'graduated in 20' prefix-match entries were removed from here since that logic now supersedes them and they were producing noisy, fragile matches."
+  },
+  "ability_coded": {
+    "severity": 2,
+    "words": [
+      "excellent physical condition", "perfect attendance record",
+      "never missed a day of work", "no health issues", "fully able-bodied",
+      "in good health", "able to lift up to", "able to stand for extended periods",
+      "no medical restrictions", "marathon runner", "ironman finisher"
+    ],
+    "note": "rewritten from job-posting phrasing (which candidates never write about themselves) to self-reported phrasing candidates actually use when voluntarily disclosing health/fitness status on a resume. This category is still expected to be rare in practice — most ability bias in hiring comes from the job posting side, not the resume side — so low hit counts here are a legitimate finding, not necessarily a lexicon failure. The contextual pass is the better backstop for this category."
+  },
+  "prestige_bias": {
+    "severity": 1,
+    "words": [
+      "ivy league", "top-ranked university", "highly selective university",
+      "competitive admission", "top 1%", "summa cum laude",
+      "magna cum laude", "world-renowned", "globally ranked"
+    ],
+    "note": "specific elite university names (Harvard, MIT, Oxford, etc.) are a much stronger real-world signal than these generic phrases, but listing every prestigious institution by name isn't scalable for a lexicon. If time allows, consider cross-referencing extracted ORG entities (from ner_scan) against a ranked-university list instead of keyword matching."
+  },
+  "gap_negative_framing": {
+    "severity": 2,
+    "words": [
+      "career break", "employment gap", "gap in employment",
+      "took time off to", "personal reasons", "family leave",
+      "medical leave", "sabbatical", "caregiving responsibilities"
+    ],
+    "note": "candidates rarely explain employment gaps directly in resume body text (this is more common in cover letters), so near-zero hits on a resume-only dataset is expected and should be stated as a scope limitation, not treated as a bug to keep chasing."
+  }
+}
