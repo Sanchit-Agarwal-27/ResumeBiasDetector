@@ -1,5 +1,7 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "biaslens",
+  "version": "1.0.0",
+  "description": "AI-Powered Resume Bias Detector, Fairness Auditing & Interactive Canva/Figma Design Editor",
   "private": true,
   "sideEffects": false,
   "type": "module",
