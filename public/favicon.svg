@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect width="48" height="48" rx="10" fill="#0f172a"/>
+  <!-- Focus viewfinder brackets -->
+  <path d="M12 18V14C12 12.8954 12.8954 12 14 12H18" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M30 12H34C35.1046 12 36 12.8954 36 14V18" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M12 30V34C12 35.1046 12.8954 36 14 36H18" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M30 36H34C35.1046 36 36 35.1046 36 34V30" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- Center magnifying lens -->
+  <circle cx="23" cy="23" r="5" stroke="#ffffff" stroke-width="3" fill="none"/>
+  <line x1="26.8" y1="26.8" x2="31" y2="31" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+</svg>
