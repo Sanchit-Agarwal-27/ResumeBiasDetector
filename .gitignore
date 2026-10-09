@@ -20,6 +20,12 @@ dist-ssr/
 .tanstack/**
 .nitro/
 *.local
+*.tsbuildinfo
+.eslintcache
+.prettiercache
+coverage/
+*.tmp
+vite.config.ts.timestamp*
 
 # Environment variables & secrets
 .env

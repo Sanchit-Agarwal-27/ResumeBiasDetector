@@ -122,7 +122,8 @@ export const BIAS_TAXONOMY_RULES: TaxonomyRule[] = [
     severity: "medium",
     confidence: 0.87,
     replacement: "authoritative",
-    explanation: "Military or hierarchical phrasing associated with traditional male leadership tropes.",
+    explanation:
+      "Military or hierarchical phrasing associated with traditional male leadership tropes.",
     rationale: "Reflects domain knowledge without authoritarian undertones.",
     researchCitation: "Eagly & Karau (2002) Role Congruity Theory",
   },
@@ -219,8 +220,7 @@ export const BIAS_TAXONOMY_RULES: TaxonomyRule[] = [
     severity: "high",
     confidence: 0.93,
     replacement: "motivated contributor",
-    explanation:
-      "Direct age cue that invites age-based screening discrimination.",
+    explanation: "Direct age cue that invites age-based screening discrimination.",
     rationale: "Highlights work drive and motivation objectively.",
     researchCitation: "EEOC Guidelines",
   },
@@ -317,7 +317,8 @@ export const BIAS_TAXONOMY_RULES: TaxonomyRule[] = [
     replacement: "professional development & research period",
     explanation:
       "Uncontextualized gap framing invites negative recruiter speculation regarding career momentum.",
-    rationale: "Affirms active skill development and independent research during career transitions.",
+    rationale:
+      "Affirms active skill development and independent research during career transitions.",
     researchCitation: "Weisshaar (2018) From Opt Out to Blocked Out",
   },
   {
@@ -340,7 +341,8 @@ export const BIAS_TAXONOMY_RULES: TaxonomyRule[] = [
     replacement: "independent technical consulting & projects",
     explanation:
       "Deficit-based framing that triggers automatic negative heuristics in candidate screening.",
-    rationale: "Focus on tangible projects and technical deliverables completed during the interim.",
+    rationale:
+      "Focus on tangible projects and technical deliverables completed during the interim.",
     researchCitation: "Pedulla (2016) Penalties for Employment Gaps",
   },
   {
@@ -414,9 +416,7 @@ export function analyzeResumeText(rawText: string): {
 
   // 1. Taxonomy rule matching
   BIAS_TAXONOMY_RULES.forEach((rule, ruleIndex) => {
-    const pattern =
-      rule.regexPattern ||
-      new RegExp(`\\b${escapeRegex(rule.term)}\\b`, "gi");
+    const pattern = rule.regexPattern || new RegExp(`\\b${escapeRegex(rule.term)}\\b`, "gi");
 
     let match: RegExpExecArray | null = pattern.exec(rawText);
     while (match) {
@@ -462,7 +462,9 @@ export function analyzeResumeText(rawText: string): {
     const matchedText = yearMatch[0];
 
     const overlaps = spans.some(
-      (s) => Math.max(s.start, yearMatch!.index) < Math.min(s.end, yearMatch!.index + matchedText.length),
+      (s) =>
+        Math.max(s.start, yearMatch!.index) <
+        Math.min(s.end, yearMatch!.index + matchedText.length),
     );
 
     if (!overlaps) {

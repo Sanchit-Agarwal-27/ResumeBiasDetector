@@ -18,6 +18,14 @@ import {
   Server,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Moon,
+  User,
+  UserPlus,
+  LogIn,
+  LogOut,
+  Settings,
+  Palette,
   Upload,
   X,
 } from "lucide-react";
@@ -56,6 +64,10 @@ import {
 import { FairnessAuditModal } from "./fairness-audit-modal";
 import { EvaluationBenchmarkModal } from "./evaluation-benchmark-modal";
 import { EthicsModal } from "./ethics-modal";
+import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme";
+import { AuthModal } from "./auth-modal";
+import { AccountSettingsModal } from "./account-settings-modal";
 
 const categories: Array<{ key: "all" | BiasCategory; short: string; label: string; dot: string }> =
   [
@@ -144,11 +156,17 @@ export function ResumeWorkspace() {
 
   // When opening for the first time without saved data, default to inviting empty state
   const [loaded, setLoaded] = useState(() => Boolean(persistedData));
-  const [report, setReport] = useState<ResumeBiasReport>(() => persistedData?.report || normalizeFixture());
-  const [activeId, setActiveId] = useState(() => persistedData?.report?.spans?.[0]?.id || "span-001");
+  const [report, setReport] = useState<ResumeBiasReport>(
+    () => persistedData?.report || normalizeFixture(),
+  );
+  const [activeId, setActiveId] = useState(
+    () => persistedData?.report?.spans?.[0]?.id || "span-001",
+  );
   const [filter, setFilter] = useState<"all" | BiasCategory>("all");
   const [engineMode, setEngineMode] = useState<"local" | "fastapi">("local");
-  const [status, setStatus] = useState(() => persistedData ? "Saved resume restored" : "Ready to analyze");
+  const [status, setStatus] = useState(() =>
+    persistedData ? "Saved resume restored" : "Ready to analyze",
+  );
   const [dragging, setDragging] = useState(false);
 
   // Modal dialog states
@@ -156,12 +174,23 @@ export function ResumeWorkspace() {
   const [benchmarksModalOpen, setBenchmarksModalOpen] = useState(false);
   const [ethicsModalOpen, setEthicsModalOpen] = useState(false);
 
+  // User Authentication & Theme State
+  const { user, isAuthenticated, logout } = useAuth();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalView, setAuthModalView] = useState<"signin" | "signup" | "forgot">("signin");
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountModalTab, setAccountModalTab] = useState<
+    "profile" | "security" | "privacy" | "engine" | "appearance" | "feedback"
+  >("profile");
+
   // Figma / Canva Design Editor state
-  const [canvasPages, setCanvasPages] = useState<CanvasPage[]>(() =>
-    persistedData?.pages || [{ id: "page-1", pageNumber: 1, width: 595, height: 842 }],
+  const [canvasPages, setCanvasPages] = useState<CanvasPage[]>(
+    () => persistedData?.pages || [{ id: "page-1", pageNumber: 1, width: 595, height: 842 }],
   );
-  const [canvasBlocks, setCanvasBlocks] = useState<CanvasTextBlock[]>(() =>
-    persistedData?.blocks || parseRawTextToCanvasBlocks(sampleReport.raw_text, 595, 842),
+  const [canvasBlocks, setCanvasBlocks] = useState<CanvasTextBlock[]>(
+    () => persistedData?.blocks || parseRawTextToCanvasBlocks(sampleReport.raw_text, 595, 842),
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -230,7 +259,8 @@ export function ResumeWorkspace() {
 
   function handleCreateBlankResume() {
     const blankId = `blank-${Date.now()}`;
-    const initialText = "Your Name\ncontact@example.com | (555) 000-0000 | linkedin.com/in/profile\n\nPROFESSIONAL SUMMARY\nAccomplished professional with experience leading high-impact initiatives.\n\nEXPERIENCE\nSenior Specialist | Organization\n• Spearheaded core operations and delivered measurable results across key projects.";
+    const initialText =
+      "Your Name\ncontact@example.com | (555) 000-0000 | linkedin.com/in/profile\n\nPROFESSIONAL SUMMARY\nAccomplished professional with experience leading high-impact initiatives.\n\nEXPERIENCE\nSenior Specialist | Organization\n• Spearheaded core operations and delivered measurable results across key projects.";
     const blankBlocks = parseRawTextToCanvasBlocks(initialText, 595, 842);
     const analysis = analyzeResumeText(initialText);
     const fairness = runCounterfactualFairnessAudit(initialText, analysis.spans);
@@ -296,7 +326,7 @@ export function ResumeWorkspace() {
             viewport.width,
             viewport.height,
             index,
-            (page as any).commonObjs,
+            (page as unknown as { commonObjs?: unknown }).commonObjs,
             opList,
           );
           extractedPages.push({
@@ -307,7 +337,10 @@ export function ResumeWorkspace() {
           });
           extractedBlocks.push(...pageBlocks);
         }
-        rawText = extractedBlocks.map((b) => b.text).join("\n\n").trim();
+        rawText = extractedBlocks
+          .map((b) => b.text)
+          .join("\n\n")
+          .trim();
       }
 
       if (!rawText) throw new Error("No selectable text found");
@@ -330,7 +363,7 @@ export function ResumeWorkspace() {
       setActiveId(analysis.spans[0]?.id ?? "");
       setCanvasPages(extractedPages);
       setCanvasBlocks(extractedBlocks);
-      setStatus(`${file.name} imported into Canva/Figma editor`);
+      setStatus(`${file.name} imported into vector canvas editor`);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unable to read this file";
       setStatus(`Could not read ${file.name}: ${detail}`);
@@ -342,9 +375,14 @@ export function ResumeWorkspace() {
     if (mode === "accept" && activeSuggestion) {
       let replaced = false;
       const updatedBlocks = canvasBlocks.map((block) => {
-        if (!replaced && block.text.toLowerCase().includes(activeSuggestion.original_text.toLowerCase())) {
+        if (
+          !replaced &&
+          block.text.toLowerCase().includes(activeSuggestion.original_text.toLowerCase())
+        ) {
           replaced = true;
-          const start = block.text.toLowerCase().indexOf(activeSuggestion.original_text.toLowerCase());
+          const start = block.text
+            .toLowerCase()
+            .indexOf(activeSuggestion.original_text.toLowerCase());
           const newText =
             block.text.slice(0, start) +
             activeSuggestion.suggested_text +
@@ -424,7 +462,10 @@ export function ResumeWorkspace() {
           : /mono|courier/i.test(block.fontFamily)
             ? "courier"
             : "helvetica";
-        pdf.setFont(family, `${block.bold ? "bold" : ""}${block.italic ? "italic" : ""}` || "normal");
+        pdf.setFont(
+          family,
+          `${block.bold ? "bold" : ""}${block.italic ? "italic" : ""}` || "normal",
+        );
         pdf.setFontSize(block.fontSize);
         const hex = block.color || "#111827";
         if (hex.startsWith("#") && hex.length === 7) {
@@ -497,92 +538,272 @@ export function ResumeWorkspace() {
 
   if (!loaded) {
     return (
-      <main className="workspace-grid grid min-h-screen place-items-center p-6 bg-slate-50/80 dark:bg-zinc-950">
-        <div
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          className={cn(
-            "w-full max-w-2xl rounded-2xl border-2 border-dashed bg-card/95 p-8 sm:p-12 text-center shadow-xl backdrop-blur-sm transition-all",
-            dragging
-              ? "border-primary bg-primary/5 scale-[1.01]"
-              : "border-border/80 hover:border-primary/50",
-          )}
-        >
-          {/* BiasLens App Icon Badge */}
-          <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-foreground text-background shadow-md">
-            <ScanSearch className="size-9" />
-          </div>
-
-          <div className="mt-6">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Sparkles className="size-3.5" />
-              <span>AI-Powered Resume Bias Detection & Design Editor</span>
+      <div className="flex min-h-screen flex-col bg-slate-50/80 dark:bg-zinc-950 text-foreground">
+        {/* TOP NAVIGATION BAR FOR LANDING / EMPTY STATE */}
+        <header className="border-b border-border bg-card/85 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between z-20 sticky top-0">
+          <div className="flex items-center gap-2.5">
+            <div className="grid size-9 place-items-center rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs">
+              <ScanSearch className="size-5" />
             </div>
-            <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Welcome to BiasLens
-            </h1>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              Import an existing resume or start fresh to uncover hidden screening bias, calibrate neutrality, and refine your design in an interactive Canva/Figma canvas.
-            </p>
+            <div>
+              <p className="font-display text-base font-bold leading-none tracking-tight text-foreground">
+                BiasLens
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 mt-1 leading-none">
+                Resume Intelligence
+              </p>
+            </div>
           </div>
 
-          {/* Action Cards Grid */}
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
+          <div className="flex items-center gap-2">
+            {/* Quick Light/Dark Switcher */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
             >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                <Upload className="size-5" />
-              </div>
-              <span className="mt-3 text-xs font-bold text-foreground">Import Resume</span>
-              <span className="mt-1 text-[11px] text-muted-foreground">PDF or DOCX file</span>
-            </button>
+              {resolvedTheme === "dark" ? (
+                <Sun className="size-4 text-amber-400" />
+              ) : (
+                <Moon className="size-4 text-slate-700" />
+              )}
+            </Button>
 
-            <button
-              type="button"
-              onClick={handleCreateBlankResume}
-              className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <FileText className="size-5" />
+            {isAuthenticated && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 px-2.5 text-xs font-semibold rounded-lg"
+                  >
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        className="size-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="grid size-5 place-items-center rounded-full bg-primary/20 text-primary font-bold text-[10px]">
+                        {user.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="max-w-[110px] truncate">{user.name.split(" ")[0]}</span>
+                    <ChevronDown className="size-3 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-xs font-bold leading-none">{user.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAccountModalTab("profile");
+                      setAccountModalOpen(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    <User className="size-3.5 mr-2 text-primary" />
+                    <span>Profile Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAccountModalTab("security");
+                      setAccountModalOpen(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    <Settings className="size-3.5 mr-2 text-sky-500" />
+                    <span>Account & Security</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAccountModalTab("privacy");
+                      setAccountModalOpen(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    <LockKeyhole className="size-3.5 mr-2 text-amber-500" />
+                    <span>Privacy & Data</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAccountModalTab("appearance");
+                      setAccountModalOpen(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    <Palette className="size-3.5 mr-2 text-indigo-500" />
+                    <span>Website & Theme</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAccountModalTab("feedback");
+                      setAccountModalOpen(true);
+                    }}
+                    className="cursor-pointer text-xs"
+                  >
+                    <Sparkles className="size-3.5 mr-2 text-emerald-500" />
+                    <span>Help & Feedback</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="cursor-pointer text-xs text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="size-3.5 mr-2" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-8 font-medium gap-1.5"
+                  onClick={() => {
+                    setAuthModalView("signin");
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  <LogIn className="size-3.5" />
+                  <span>Sign In</span>
+                </Button>
+                <Button
+                  size="sm"
+                  className="text-xs h-8 font-semibold gap-1.5 shadow-2xs"
+                  onClick={() => {
+                    setAuthModalView("signup");
+                    setAuthModalOpen(true);
+                  }}
+                >
+                  <UserPlus className="size-3.5" />
+                  <span>Create Account</span>
+                </Button>
               </div>
-              <span className="mt-3 text-xs font-bold text-foreground">Create New</span>
-              <span className="mt-1 text-[11px] text-muted-foreground">Start from blank canvas</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={loadSample}
-              className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                <Sparkles className="size-5" />
-              </div>
-              <span className="mt-3 text-xs font-bold text-foreground">Explore Sample</span>
-              <span className="mt-1 text-[11px] text-muted-foreground">Preloaded bias demo</span>
-            </button>
+            )}
           </div>
+        </header>
 
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <LockKeyhole className="size-3.5 text-emerald-600" />
-            <span>Private & secure. 100% in-browser processing with local persistence.</span>
+        {/* HERO / EMPTY CANVAS DROPZONE */}
+        <main className="workspace-grid flex-1 grid place-items-center p-6">
+          <div
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={cn(
+              "w-full max-w-2xl rounded-2xl border-2 border-dashed bg-card/95 p-8 sm:p-12 text-center shadow-xl backdrop-blur-sm transition-all",
+              dragging
+                ? "border-primary bg-primary/5 scale-[1.01]"
+                : "border-border/80 hover:border-primary/50",
+            )}
+          >
+            {/* BiasLens App Icon Badge */}
+            <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-foreground text-background shadow-md">
+              <ScanSearch className="size-9" />
+            </div>
+
+            <div className="mt-6">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <Sparkles className="size-3.5" />
+                <span>AI-Powered Resume Bias Detection & Design Editor</span>
+              </div>
+              <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Welcome to BiasLens
+              </h1>
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                Import an existing resume or start fresh to uncover hidden screening bias, calibrate
+                neutrality, and refine your design in an interactive vector canvas editor.
+              </p>
+            </div>
+
+            {/* Action Cards Grid */}
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
+              >
+                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <Upload className="size-5" />
+                </div>
+                <span className="mt-3 text-xs font-bold text-foreground">Import Resume</span>
+                <span className="mt-1 text-[11px] text-muted-foreground">PDF or DOCX file</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCreateBlankResume}
+                className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
+              >
+                <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <FileText className="size-5" />
+                </div>
+                <span className="mt-3 text-xs font-bold text-foreground">Create New</span>
+                <span className="mt-1 text-[11px] text-muted-foreground">
+                  Start from blank canvas
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={loadSample}
+                className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
+              >
+                <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <Sparkles className="size-5" />
+                </div>
+                <span className="mt-3 text-xs font-bold text-foreground">Explore Sample</span>
+                <span className="mt-1 text-[11px] text-muted-foreground">Preloaded bias demo</span>
+              </button>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <LockKeyhole className="size-3.5 text-emerald-600" />
+              <span>Private & secure. 100% in-browser processing with local persistence.</span>
+            </div>
+
+            <input
+              ref={inputRef}
+              hidden
+              type="file"
+              accept=".pdf,.docx"
+              onChange={(event) => handleFile(event.target.files?.[0])}
+            />
           </div>
+        </main>
 
-          <input
-            ref={inputRef}
-            hidden
-            type="file"
-            accept=".pdf,.docx"
-            onChange={(event) => handleFile(event.target.files?.[0])}
-          />
-        </div>
-      </main>
+        {/* MODALS */}
+        <AuthModal
+          open={authModalOpen}
+          onOpenChange={setAuthModalOpen}
+          defaultView={authModalView}
+        />
+        <AccountSettingsModal
+          open={accountModalOpen}
+          onOpenChange={setAccountModalOpen}
+          defaultTab={accountModalTab}
+          engineMode={engineMode}
+          onEngineModeChange={(newMode) => {
+            setEngineMode(newMode);
+            setStatus(
+              newMode === "local"
+                ? "Running in-browser Local Engine"
+                : "Targeting FastAPI (localhost:8000)",
+            );
+          }}
+        />
+      </div>
     );
   }
 
@@ -665,7 +886,7 @@ export function ResumeWorkspace() {
           </div>
 
           <div
-            className="col-span-2 flex min-w-0 items-center gap-1 overflow-x-auto pb-1 lg:col-span-1 lg:justify-center lg:pb-0"
+            className="col-span-2 flex min-w-0 items-center justify-center gap-1 overflow-x-auto no-scrollbar scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:col-span-1"
             aria-label="Issue filters"
           >
             {categories.map((category) => {
@@ -679,7 +900,7 @@ export function ResumeWorkspace() {
                   variant={filter === category.key ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setFilter(category.key)}
-                  className="shrink-0"
+                  className="shrink-0 h-8 px-2.5 text-xs font-medium"
                 >
                   <span className={cn("size-1.5 rounded-full", category.dot)} />
                   {category.short}
@@ -690,53 +911,6 @@ export function ResumeWorkspace() {
           </div>
 
           <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 lg:col-start-4">
-            {/* Engine Mode Toggle (Local in-browser vs Person A/B FastAPI backend) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hidden sm:inline-flex items-center gap-1.5 text-xs"
-                  title="Switch between Local in-browser NLP and Person A/B FastAPI server"
-                >
-                  <Server className="size-3.5 text-sky-600 dark:text-sky-400" />
-                  <span className="hidden md:inline">Engine:</span>
-                  <span className="font-semibold capitalize">{engineMode}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Analysis Engine
-                </DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEngineMode("local");
-                    setStatus("Running in-browser Local Engine");
-                  }}
-                  className="flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold">Local (In-Browser)</span>
-                    <span className="text-[10px] text-muted-foreground">Private, client-side NLP</span>
-                  </div>
-                  {engineMode === "local" && <Check className="size-3.5 text-primary" />}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEngineMode("fastapi");
-                    setStatus("Targeting FastAPI (localhost:8000)");
-                  }}
-                  className="flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold">FastAPI Backend</span>
-                    <span className="text-[10px] text-muted-foreground">http://localhost:8000/api</span>
-                  </div>
-                  {engineMode === "fastapi" && <Check className="size-3.5 text-primary" />}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <Button
               variant="outline"
               size="sm"
@@ -798,6 +972,14 @@ export function ResumeWorkspace() {
                   <FileJson /> Bias report
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setAccountModalTab("engine");
+                    setAccountModalOpen(true);
+                  }}
+                >
+                  <Server className="size-4 text-sky-500" /> Analysis Engine Settings
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setFairnessModalOpen(true)}>
                   <Scale className="size-4 text-primary" /> Fairness Audit
                 </DropdownMenuItem>
@@ -807,6 +989,198 @@ export function ResumeWorkspace() {
                 <DropdownMenuItem onSelect={() => setEthicsModalOpen(true)}>
                   <ShieldCheck className="size-4 text-emerald-600" /> Ethics & Methodology
                 </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* THEME TOGGLE */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun className="size-4 text-amber-400" />
+              ) : (
+                <Moon className="size-4 text-slate-700" />
+              )}
+            </Button>
+
+            {/* ACCOUNT / PROFILE MENU */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-2 px-2 sm:px-2.5 font-medium text-xs rounded-lg"
+                >
+                  {isAuthenticated && user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="size-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid size-5 place-items-center rounded-full bg-primary/20 text-primary font-bold text-[10px]">
+                      {isAuthenticated && user ? (
+                        user.name.slice(0, 1).toUpperCase()
+                      ) : (
+                        <User className="size-3" />
+                      )}
+                    </div>
+                  )}
+                  <span className="hidden sm:inline-block max-w-[100px] truncate">
+                    {isAuthenticated && user ? user.name.split(" ")[0] : "Account"}
+                  </span>
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-xs font-bold leading-none text-foreground">
+                      {isAuthenticated && user ? user.name : "Guest Session"}
+                    </p>
+                    <p className="text-[10px] leading-none text-muted-foreground truncate">
+                      {isAuthenticated && user ? user.email : "Local In-Browser"}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {isAuthenticated ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("profile");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <User className="size-3.5 mr-2 text-primary" />
+                      <span>Profile Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("security");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Settings className="size-3.5 mr-2 text-sky-500" />
+                      <span>Account & Security</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("privacy");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <LockKeyhole className="size-3.5 mr-2 text-amber-500" />
+                      <span>Privacy & Data</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("engine");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Server className="size-3.5 mr-2 text-sky-500" />
+                      <span>Analysis Engine</span>
+                      <span className="ml-auto text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-muted text-muted-foreground">
+                        {engineMode}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("appearance");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Palette className="size-3.5 mr-2 text-indigo-500" />
+                      <span>Website & Theme</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("feedback");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Sparkles className="size-3.5 mr-2 text-emerald-500" />
+                      <span>Help & Feedback</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={logout}
+                      className="cursor-pointer text-xs text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="size-3.5 mr-2" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAuthModalView("signin");
+                        setAuthModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs font-semibold"
+                    >
+                      <LogIn className="size-3.5 mr-2 text-primary" />
+                      <span>Sign In</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAuthModalView("signup");
+                        setAuthModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <UserPlus className="size-3.5 mr-2 text-emerald-500" />
+                      <span>Create Account</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("engine");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Server className="size-3.5 mr-2 text-sky-500" />
+                      <span>Analysis Engine</span>
+                      <span className="ml-auto text-[9px] uppercase px-1.5 py-0.5 rounded font-bold bg-muted text-muted-foreground">
+                        {engineMode}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("appearance");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Palette className="size-3.5 mr-2 text-indigo-500" />
+                      <span>Theme & Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setAccountModalTab("feedback");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Sparkles className="size-3.5 mr-2 text-amber-500" />
+                      <span>Help & Feedback</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1028,15 +1402,25 @@ export function ResumeWorkspace() {
         open={fairnessModalOpen}
         onOpenChange={setFairnessModalOpen}
         report={report}
-        onAuditUpdated={(updated) =>
-          setReport((curr) => ({ ...curr, fairness_audit: updated }))
-        }
+        onAuditUpdated={(updated) => setReport((curr) => ({ ...curr, fairness_audit: updated }))}
       />
-      <EvaluationBenchmarkModal
-        open={benchmarksModalOpen}
-        onOpenChange={setBenchmarksModalOpen}
-      />
+      <EvaluationBenchmarkModal open={benchmarksModalOpen} onOpenChange={setBenchmarksModalOpen} />
       <EthicsModal open={ethicsModalOpen} onOpenChange={setEthicsModalOpen} />
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} defaultView={authModalView} />
+      <AccountSettingsModal
+        open={accountModalOpen}
+        onOpenChange={setAccountModalOpen}
+        defaultTab={accountModalTab}
+        engineMode={engineMode}
+        onEngineModeChange={(newMode) => {
+          setEngineMode(newMode);
+          setStatus(
+            newMode === "local"
+              ? "Running in-browser Local Engine"
+              : "Targeting FastAPI (localhost:8000)",
+          );
+        }}
+      />
     </main>
   );
 }

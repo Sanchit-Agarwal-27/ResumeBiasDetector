@@ -1,7 +1,7 @@
 {
   "name": "biaslens",
   "version": "1.0.0",
-  "description": "AI-Powered Resume Bias Detector, Fairness Auditing & Interactive Canva/Figma Design Editor",
+  "description": "AI-Powered Resume Bias Detector, Fairness Auditing & Interactive Vector Canvas Editor",
   "private": true,
   "sideEffects": false,
   "type": "module",

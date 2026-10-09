@@ -3,12 +3,7 @@ import {
   runCounterfactualFairnessAudit,
   EVALUATION_BENCHMARK_DATA,
 } from "./bias-taxonomy";
-import type {
-  BiasCategory,
-  BiasSpan,
-  ResumeBiasReport,
-  SeverityLevel,
-} from "./resume-contract";
+import type { BiasCategory, BiasSpan, ResumeBiasReport, SeverityLevel } from "./resume-contract";
 
 export type AnalysisMode = "local" | "fastapi";
 

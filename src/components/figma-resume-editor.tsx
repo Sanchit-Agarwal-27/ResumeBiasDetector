@@ -123,16 +123,22 @@ export function FigmaResumeEditor({
   const [marquee, setMarquee] = useState<MarqueeBox | null>(null);
 
   // Dynamic Alignment Docking Guides (Canva/Figma style)
-  const [activeSnapGuides, setActiveSnapGuides] = useState<Array<{
-    type: "x" | "y";
-    pos: number;
-    pageIndex: number;
-    label?: string;
-  }>>([]);
+  const [activeSnapGuides, setActiveSnapGuides] = useState<
+    Array<{
+      type: "x" | "y";
+      pos: number;
+      pageIndex: number;
+      label?: string;
+    }>
+  >([]);
 
   // History Stacks (Undo / Redo)
-  const [history, setHistory] = useState<Array<{ blocks: CanvasTextBlock[]; pages: CanvasPage[] }>>([]);
-  const [redoStack, setRedoStack] = useState<Array<{ blocks: CanvasTextBlock[]; pages: CanvasPage[] }>>([]);
+  const [history, setHistory] = useState<Array<{ blocks: CanvasTextBlock[]; pages: CanvasPage[] }>>(
+    [],
+  );
+  const [redoStack, setRedoStack] = useState<
+    Array<{ blocks: CanvasTextBlock[]; pages: CanvasPage[] }>
+  >([]);
 
   // Spacebar Pan Navigation
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -365,10 +371,7 @@ export function FigmaResumeEditor({
   };
 
   // Multi-Block Drag & Move
-  const handleStartDrag = (
-    e: ReactPointerEvent<HTMLDivElement>,
-    block: CanvasTextBlock,
-  ) => {
+  const handleStartDrag = (e: ReactPointerEvent<HTMLDivElement>, block: CanvasTextBlock) => {
     if (editingBlockId === block.id) return;
     e.preventDefault();
     e.stopPropagation();
@@ -423,24 +426,44 @@ export function FigmaResumeEditor({
           // 1. Page Margin Snapping (Left, Right)
           if (Math.abs(rawLeft - pageMargin) <= snapThreshold) {
             deltaX = pageMargin - init.x;
-            detectedGuides.push({ type: "x", pos: pageMargin, pageIndex: block.pageIndex, label: "Margin" });
+            detectedGuides.push({
+              type: "x",
+              pos: pageMargin,
+              pageIndex: block.pageIndex,
+              label: "Margin",
+            });
           } else if (Math.abs(rawRight - (page.width - pageMargin)) <= snapThreshold) {
             deltaX = page.width - pageMargin - block.width - init.x;
-            detectedGuides.push({ type: "x", pos: page.width - pageMargin, pageIndex: block.pageIndex, label: "Margin" });
+            detectedGuides.push({
+              type: "x",
+              pos: page.width - pageMargin,
+              pageIndex: block.pageIndex,
+              label: "Margin",
+            });
           }
 
           // 2. Page Horizontal Center Snapping
           const pageCenterX = Math.round(page.width / 2);
           if (Math.abs(rawCenterX - pageCenterX) <= snapThreshold) {
             deltaX = pageCenterX - block.width / 2 - init.x;
-            detectedGuides.push({ type: "x", pos: pageCenterX, pageIndex: block.pageIndex, label: "Center" });
+            detectedGuides.push({
+              type: "x",
+              pos: pageCenterX,
+              pageIndex: block.pageIndex,
+              label: "Center",
+            });
           }
 
           // 3. Page Vertical Center Snapping
           const pageCenterY = Math.round(page.height / 2);
           if (Math.abs(rawCenterY - pageCenterY) <= snapThreshold) {
             deltaY = pageCenterY - (block.height || 24) / 2 - init.y;
-            detectedGuides.push({ type: "y", pos: pageCenterY, pageIndex: block.pageIndex, label: "Middle" });
+            detectedGuides.push({
+              type: "y",
+              pos: pageCenterY,
+              pageIndex: block.pageIndex,
+              label: "Middle",
+            });
           }
 
           // 4. Snap to other sibling blocks on the same page
@@ -458,7 +481,11 @@ export function FigmaResumeEditor({
             // Snap right edge
             else if (Math.abs(rawRight - (sib.x + sib.width)) <= snapThreshold) {
               deltaX = sib.x + sib.width - block.width - init.x;
-              detectedGuides.push({ type: "x", pos: sib.x + sib.width, pageIndex: block.pageIndex });
+              detectedGuides.push({
+                type: "x",
+                pos: sib.x + sib.width,
+                pageIndex: block.pageIndex,
+              });
             }
             // Snap top edge
             if (Math.abs(rawTop - sib.y) <= snapThreshold) {
@@ -537,9 +564,7 @@ export function FigmaResumeEditor({
       }
 
       setBlocks((prev) =>
-        prev.map((b) =>
-          b.id === block.id ? { ...b, width: nextWidth, height: nextHeight } : b,
-        ),
+        prev.map((b) => (b.id === block.id ? { ...b, width: nextWidth, height: nextHeight } : b)),
       );
     };
 
@@ -630,7 +655,12 @@ export function FigmaResumeEditor({
   // Spacebar pan navigation window listeners
   useEffect(() => {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.code === "Space" && !editingBlockId && (e.target as HTMLElement)?.tagName !== "INPUT" && (e.target as HTMLElement)?.tagName !== "TEXTAREA") {
+      if (
+        e.code === "Space" &&
+        !editingBlockId &&
+        (e.target as HTMLElement)?.tagName !== "INPUT" &&
+        (e.target as HTMLElement)?.tagName !== "TEXTAREA"
+      ) {
         setIsSpacePressed(true);
       }
     };
@@ -923,7 +953,9 @@ export function FigmaResumeEditor({
             onClick={() => setAutoDocking((prev) => !prev)}
             title="Auto-dock & snap elements to page center, margins, and sibling boxes"
           >
-            <Magnet className={cn("size-3.5", autoDocking ? "text-primary" : "text-muted-foreground")} />
+            <Magnet
+              className={cn("size-3.5", autoDocking ? "text-primary" : "text-muted-foreground")}
+            />
             <span className="hidden sm:inline">Auto-Dock</span>
           </Button>
 
@@ -993,7 +1025,9 @@ export function FigmaResumeEditor({
                 type="button"
                 className="px-1.5 text-xs text-muted-foreground hover:text-foreground font-bold cursor-pointer"
                 onClick={() =>
-                  updateSelectedBlocks({ fontSize: Math.max(8, Number((primarySelectedBlock.fontSize - 1).toFixed(1))) })
+                  updateSelectedBlocks({
+                    fontSize: Math.max(8, Number((primarySelectedBlock.fontSize - 1).toFixed(1))),
+                  })
                 }
                 title="Decrease font size"
               >
@@ -1018,7 +1052,9 @@ export function FigmaResumeEditor({
                 type="button"
                 className="px-1.5 text-xs text-muted-foreground hover:text-foreground font-bold cursor-pointer"
                 onClick={() =>
-                  updateSelectedBlocks({ fontSize: Math.min(96, Number((primarySelectedBlock.fontSize + 1).toFixed(1))) })
+                  updateSelectedBlocks({
+                    fontSize: Math.min(96, Number((primarySelectedBlock.fontSize + 1).toFixed(1))),
+                  })
                 }
                 title="Increase font size"
               >
@@ -1031,7 +1067,10 @@ export function FigmaResumeEditor({
               <Button
                 size="icon"
                 variant={primarySelectedBlock.bold ? "secondary" : "ghost"}
-                className={cn("size-7", primarySelectedBlock.bold && "bg-background shadow-xs font-bold")}
+                className={cn(
+                  "size-7",
+                  primarySelectedBlock.bold && "bg-background shadow-xs font-bold",
+                )}
                 onClick={() => updateSelectedBlocks({ bold: !primarySelectedBlock.bold })}
                 title="Bold (Ctrl+B)"
               >
@@ -1040,7 +1079,10 @@ export function FigmaResumeEditor({
               <Button
                 size="icon"
                 variant={primarySelectedBlock.italic ? "secondary" : "ghost"}
-                className={cn("size-7", primarySelectedBlock.italic && "bg-background shadow-xs italic")}
+                className={cn(
+                  "size-7",
+                  primarySelectedBlock.italic && "bg-background shadow-xs italic",
+                )}
                 onClick={() => updateSelectedBlocks({ italic: !primarySelectedBlock.italic })}
                 title="Italic (Ctrl+I)"
               >
@@ -1049,7 +1091,10 @@ export function FigmaResumeEditor({
               <Button
                 size="icon"
                 variant={primarySelectedBlock.underline ? "secondary" : "ghost"}
-                className={cn("size-7", primarySelectedBlock.underline && "bg-background shadow-xs underline")}
+                className={cn(
+                  "size-7",
+                  primarySelectedBlock.underline && "bg-background shadow-xs underline",
+                )}
                 onClick={() => updateSelectedBlocks({ underline: !primarySelectedBlock.underline })}
                 title="Underline (Ctrl+U)"
               >
@@ -1061,7 +1106,11 @@ export function FigmaResumeEditor({
             <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md">
               <Button
                 size="icon"
-                variant={primarySelectedBlock.align === "left" || !primarySelectedBlock.align ? "secondary" : "ghost"}
+                variant={
+                  primarySelectedBlock.align === "left" || !primarySelectedBlock.align
+                    ? "secondary"
+                    : "ghost"
+                }
                 className="size-7"
                 onClick={() => updateSelectedBlocks({ align: "left" })}
                 title="Align text left (Ctrl+Shift+L)"
@@ -1298,7 +1347,8 @@ export function FigmaResumeEditor({
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-zinc-400 pointer-events-none">
                     <p className="text-xs font-medium">Page {page.pageNumber} is empty</p>
                     <p className="text-[11px] text-zinc-400/80 mt-1">
-                      Click <strong className="text-zinc-600">Add Text</strong> above or drag text frames here
+                      Click <strong className="text-zinc-600">Add Text</strong> above or drag text
+                      frames here
                     </p>
                   </div>
                 )}
@@ -1318,7 +1368,9 @@ export function FigmaResumeEditor({
 
                 {/* Unified Multi-Selection Bounding Box (Figma/Canva group outline) */}
                 {(() => {
-                  const selectedPageBlocks = pageBlocks.filter((b) => selectedBlockIds.includes(b.id));
+                  const selectedPageBlocks = pageBlocks.filter((b) =>
+                    selectedBlockIds.includes(b.id),
+                  );
                   if (selectedPageBlocks.length <= 1) return null;
                   const minX = Math.min(...selectedPageBlocks.map((b) => b.x));
                   const minY = Math.min(...selectedPageBlocks.map((b) => b.y));
@@ -1399,7 +1451,10 @@ export function FigmaResumeEditor({
                           onChange={(e) => {
                             const newText = e.target.value;
                             const target = e.target;
-                            const neededHeight = Math.max(block.height || 20, Math.ceil(target.scrollHeight / zoom));
+                            const neededHeight = Math.max(
+                              block.height || 20,
+                              Math.ceil(target.scrollHeight / zoom),
+                            );
                             updateSelectedBlocks({
                               text: newText,
                               height: neededHeight,
@@ -1429,7 +1484,8 @@ export function FigmaResumeEditor({
                         <div
                           className={cn(
                             "w-full h-full select-none",
-                            block.text.includes("\n") || (block.width > 350 && block.text.length > 55)
+                            block.text.includes("\n") ||
+                              (block.width > 350 && block.text.length > 55)
                               ? "whitespace-pre-wrap break-words"
                               : "whitespace-nowrap",
                           )}

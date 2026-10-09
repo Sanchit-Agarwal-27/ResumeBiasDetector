@@ -1,11 +1,4 @@
-import {
-  BarChart3,
-  CheckCircle2,
-  Cpu,
-  Layers,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { BarChart3, CheckCircle2, Cpu, Layers, Sparkles, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +13,7 @@ interface EvaluationBenchmarkModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EvaluationBenchmarkModal({
-  open,
-  onOpenChange,
-}: EvaluationBenchmarkModalProps) {
+export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBenchmarkModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto p-0">
@@ -38,7 +28,8 @@ export function EvaluationBenchmarkModal({
             Detection Engine Evaluation & Ablation Study
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Precision, recall, and F1 scores measured against a human-annotated test set of 120 resumes with inter-annotator agreement validation.
+            Precision, recall, and F1 scores measured against a human-annotated test set of 120
+            resumes with inter-annotator agreement validation.
           </DialogDescription>
         </DialogHeader>
 
@@ -151,7 +142,9 @@ export function EvaluationBenchmarkModal({
                 <CheckCircle2 className="size-4 text-emerald-600" /> Human Annotation Protocol
               </h4>
               <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                Test resumes were annotated by 3 independent reviewers across computer science, engineering, and business disciplines using the standardized 5-category taxonomy (Gaucher word lists, ADEA guidelines, and Rivera prestige proxies).
+                Test resumes were annotated by 3 independent reviewers across computer science,
+                engineering, and business disciplines using the standardized 5-category taxonomy
+                (Gaucher word lists, ADEA guidelines, and Rivera prestige proxies).
               </p>
             </div>
 
@@ -160,7 +153,9 @@ export function EvaluationBenchmarkModal({
                 <Sparkles className="size-4 text-primary" /> Key Empirical Finding
               </h4>
               <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                Lexicon-only matching suffers from high false-positive rates on multi-meaning words (e.g., "aggressive timeline"), whereas the contextual dual-pass achieves 91% precision by confirming role-agency syntax.
+                Lexicon-only matching suffers from high false-positive rates on multi-meaning words
+                (e.g., "aggressive timeline"), whereas the contextual dual-pass achieves 91%
+                precision by confirming role-agency syntax.
               </p>
             </div>
           </div>

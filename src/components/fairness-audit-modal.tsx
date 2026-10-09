@@ -19,10 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { ResumeBiasReport } from "@/lib/resume-contract";
-import {
-  COUNTERFACTUAL_COHORTS,
-  runCounterfactualFairnessAudit,
-} from "@/lib/bias-taxonomy";
+import { COUNTERFACTUAL_COHORTS, runCounterfactualFairnessAudit } from "@/lib/bias-taxonomy";
 
 interface FairnessAuditModalProps {
   open: boolean;
@@ -124,11 +121,10 @@ export function FairnessAuditModal({
               <p className="mt-3 font-display text-4xl font-bold">
                 {parity ? (parity.value * 100).toFixed(1) : "4.0"}%
               </p>
-              <p className="mt-1 text-xs font-semibold text-foreground">
-                Max Score Divergence
-              </p>
+              <p className="mt-1 text-xs font-semibold text-foreground">Max Score Divergence</p>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                Variance between demographic name perturbations remains within the allowable 8.0% tolerance band.
+                Variance between demographic name perturbations remains within the allowable 8.0%
+                tolerance band.
               </p>
             </div>
 
@@ -143,11 +139,10 @@ export function FairnessAuditModal({
                 </span>
               </div>
               <p className="mt-3 font-display text-4xl font-bold">{permutations}</p>
-              <p className="mt-1 text-xs font-semibold text-foreground">
-                Synthetic Permutations
-              </p>
+              <p className="mt-1 text-xs font-semibold text-foreground">Synthetic Permutations</p>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                Evaluated against 5 demographic and pedigree cohorts grounded in Bertrand & Mullainathan (2004).
+                Evaluated against 5 demographic and pedigree cohorts grounded in Bertrand &
+                Mullainathan (2004).
               </p>
             </div>
           </div>
@@ -180,7 +175,8 @@ export function FairnessAuditModal({
                 <div className="text-xs">
                   <p className="font-semibold text-foreground">Gender & Ethnicity Name Proxies</p>
                   <p className="mt-1 text-muted-foreground">
-                    Swapping candidate names (Brad, Keisha, Jamal, Emily, Wei, Maria) across equal skill statements.
+                    Swapping candidate names (Brad, Keisha, Jamal, Emily, Wei, Maria) across equal
+                    skill statements.
                   </p>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                     <CheckCircle2 className="size-3" /> Score Variance &lt; 3.8%
@@ -193,7 +189,8 @@ export function FairnessAuditModal({
                 <div className="text-xs">
                   <p className="font-semibold text-foreground">Institutional Pedigree Proxies</p>
                   <p className="mt-1 text-muted-foreground">
-                    Swapping elite institutions (Stanford, Harvard, Ivy League) with State University / City College.
+                    Swapping elite institutions (Stanford, Harvard, Ivy League) with State
+                    University / City College.
                   </p>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                     <CheckCircle2 className="size-3" /> Neutralized in Blind Screening Mode
@@ -206,7 +203,8 @@ export function FairnessAuditModal({
                 <div className="text-xs">
                   <p className="font-semibold text-foreground">Graduation Date & Age Proxies</p>
                   <p className="mt-1 text-muted-foreground">
-                    Testing ADEA vulnerability by perturbing graduation years (e.g. 1999 vs. 2014 vs. omitted).
+                    Testing ADEA vulnerability by perturbing graduation years (e.g. 1999 vs. 2014
+                    vs. omitted).
                   </p>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                     <CheckCircle2 className="size-3" /> Neutralized via Date Omission
@@ -219,7 +217,8 @@ export function FairnessAuditModal({
                 <div className="text-xs">
                   <p className="font-semibold text-foreground">Tone & Agentic Phrasing</p>
                   <p className="mt-1 text-muted-foreground">
-                    Testing masculine agentic adjectives ("aggressive", "dominant") vs communal equivalents.
+                    Testing masculine agentic adjectives ("aggressive", "dominant") vs communal
+                    equivalents.
                   </p>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                     <CheckCircle2 className="size-3" /> Successfully Flagged & Neutralized
@@ -230,7 +229,10 @@ export function FairnessAuditModal({
           </div>
 
           <div className="rounded-lg border-l-4 border-primary bg-primary/5 p-4 text-xs leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">Statistical Grounding Note:</strong> The Four-Fifths (80%) Rule is codified under Title VII Uniform Guidelines on Employee Selection Procedures (1978). This audit layer verifies that algorithmic filters do not disproportionately reject candidates based on proxy demographic attributes.
+            <strong className="text-foreground">Statistical Grounding Note:</strong> The Four-Fifths
+            (80%) Rule is codified under Title VII Uniform Guidelines on Employee Selection
+            Procedures (1978). This audit layer verifies that algorithmic filters do not
+            disproportionately reject candidates based on proxy demographic attributes.
           </div>
         </div>
       </DialogContent>

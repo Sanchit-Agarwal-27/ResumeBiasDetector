@@ -47,19 +47,50 @@ interface TextLine {
 }
 
 /**
+export interface PdfCommonObjs {
+  has?: (id: string) => boolean;
+  get?: (id: string) => {
+    name?: string;
+    loadedName?: string;
+    bold?: boolean;
+    italic?: boolean;
+    ascent?: number;
+  } | null;
+}
+
+export interface PdfOpList {
+  fnArray?: number[];
+  argsArray?: unknown[][];
+}
+
+export interface PdfTextItem {
+  str?: string;
+  transform?: number[];
+  width?: number;
+  height?: number;
+  fontName?: string;
+  dir?: string;
+}
+
+export interface PdfStyleItem {
+  fontFamily?: string;
+  ascent?: number;
+}
+
+/**
  * High-fidelity PDF layout extraction engine.
  * Preserves exact (x, y) coordinates, font size, bold/italic, font family,
  * and extracts true RGB color from the PDF operator stream.
  * Fully column-aware to prevent multi-column resumes from interleaving.
  */
 export function clusterPdfTextContent(
-  textContentItems: Array<any>,
-  styles: Record<string, any>,
+  textContentItems: Array<PdfTextItem>,
+  styles: Record<string, PdfStyleItem>,
   viewportWidth: number,
   viewportHeight: number,
   pageIndex: number,
-  commonObjs?: any,
-  opList?: any,
+  commonObjs?: PdfCommonObjs,
+  opList?: PdfOpList,
 ): CanvasTextBlock[] {
   // 1. Extract exact color stream from PDF operators if available
   let curColor = "#111827";
@@ -112,9 +143,7 @@ export function clusterPdfTextContent(
     const fontObj = commonObjs?.has?.(fontId) ? commonObjs.get(fontId) : null;
     const fontName =
       fontObj?.name || fontObj?.loadedName || styles[fontId]?.fontFamily || "sans-serif";
-    const isBold = Boolean(
-      fontObj?.bold || /bold|black|heavy|medium|semibold/i.test(fontName),
-    );
+    const isBold = Boolean(fontObj?.bold || /bold|black|heavy|medium|semibold/i.test(fontName));
     const isItalic = Boolean(fontObj?.italic || /italic|oblique/i.test(fontName));
 
     let family = "Arial, sans-serif";
@@ -158,9 +187,7 @@ export function clusterPdfTextContent(
         .slice(opCursor, opCursor + 6)
         .findIndex(
           (r) =>
-            r.text === trimmedStr ||
-            r.text.includes(trimmedStr) ||
-            trimmedStr.includes(r.text),
+            r.text === trimmedStr || r.text.includes(trimmedStr) || trimmedStr.includes(r.text),
         );
       if (matchIdx !== -1) {
         assignedColor = opRecords[opCursor + matchIdx]!.color;
@@ -188,9 +215,7 @@ export function clusterPdfTextContent(
 
     const x =
       Math.round(
-        (transform[0] < 0
-          ? transform[4] - Math.max(it.width, fontSize * 0.8)
-          : transform[4]) * 10,
+        (transform[0] < 0 ? transform[4] - Math.max(it.width, fontSize * 0.8) : transform[4]) * 10,
       ) / 10;
 
     // Use consistent baseline-to-top metric (0.80) to ensure lines on the same baseline align
@@ -287,11 +312,7 @@ export function clusterPdfTextContent(
 
       if (sameStyle && isInlineContinuation) {
         let sep = "";
-        if (
-          gap > cur.fontSize * 0.18 &&
-          !cur.text.endsWith(" ") &&
-          !frag.text.startsWith(" ")
-        ) {
+        if (gap > cur.fontSize * 0.18 && !cur.text.endsWith(" ") && !frag.text.startsWith(" ")) {
           sep = " ";
         }
         cur.text += sep + frag.text;
@@ -341,10 +362,7 @@ export function clusterPdfTextContent(
   for (const run of lineFrames) {
     if (!hasTwoColumns) {
       leftRuns.push(run);
-    } else if (
-      run.y < 120 &&
-      (run.fontSize >= 14 || run.x + run.width > columnSplitX + 30)
-    ) {
+    } else if (run.y < 120 && (run.fontSize >= 14 || run.x + run.width > columnSplitX + 30)) {
       headerRuns.push(run);
     } else if (run.x >= columnSplitX - 10) {
       rightRuns.push(run);
@@ -374,12 +392,11 @@ export function clusterPdfTextContent(
           frame.italic === next.italic &&
           frame.color === next.color;
 
-        const isNaturalLineSpacing =
-          gapY >= -2 && gapY <= Math.max(9, frame.fontSize * 0.95);
+        const isNaturalLineSpacing = gapY >= -2 && gapY <= Math.max(9, frame.fontSize * 0.95);
         const sameMargin = Math.abs(frame.x - next.x) <= 8; // exact same left margin
-        const isBulletStart = /^[•\-\*]|\d+\./.test(next.text.trim());
+        const isBulletStart = /^[•\-*]|\d+\./.test(next.text.trim());
         const isHeader = next.bold || next.fontSize >= 12;
-        const prevEndsTerminal = /[\.\!\?]$/.test(frame.text.trim());
+        const prevEndsTerminal = /[.!?]$/.test(frame.text.trim());
         const isWrappedLine =
           frame.width > 140 && !isBulletStart && !isHeader && !frame.text.includes("|");
 
@@ -440,7 +457,10 @@ export function parseRawTextToCanvasBlocks(
   pageWidth = 595,
   pageHeight = 842,
 ): CanvasTextBlock[] {
-  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = rawText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   const blocks: CanvasTextBlock[] = [];
 
   let currentY = 36;
@@ -460,12 +480,12 @@ export function parseRawTextToCanvasBlocks(
         (line === line.toUpperCase() && line.length > 3));
 
     const isTitleLine = i === 0 && line.length < 35;
-    const isBulletLine = /^[•\-\*]/.test(line);
+    const isBulletLine = /^[•\-*]/.test(line);
 
     let fontSize = 9;
     let bold = false;
     let color = "#222222";
-    let align: CanvasTextBlock["align"] = "left";
+    const align: CanvasTextBlock["align"] = "left";
 
     if (isTitleLine) {
       fontSize = 20;

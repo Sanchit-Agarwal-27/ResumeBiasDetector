@@ -80,47 +80,136 @@
 }
 
 .dark {
-  --background: oklch(0.17 0.012 250);
-  --foreground: oklch(0.94 0.008 80);
-  --card: oklch(0.21 0.014 250);
-  --card-foreground: oklch(0.94 0.008 80);
-  --popover: oklch(0.22 0.014 250);
-  --popover-foreground: oklch(0.94 0.008 80);
-  --primary: oklch(0.7 0.17 30);
-  --primary-foreground: oklch(0.16 0.015 250);
-  --secondary: oklch(0.27 0.015 250);
+  --background: oklch(0.13 0.015 260);
+  --foreground: oklch(0.96 0.005 80);
+  --card: oklch(0.17 0.018 260);
+  --card-foreground: oklch(0.96 0.005 80);
+  --popover: oklch(0.18 0.018 260);
+  --popover-foreground: oklch(0.96 0.005 80);
+  --primary: oklch(0.68 0.19 250);
+  --primary-foreground: oklch(0.99 0.005 80);
+  --secondary: oklch(0.22 0.018 260);
   --secondary-foreground: oklch(0.94 0.008 80);
-  --muted: oklch(0.25 0.014 250);
-  --muted-foreground: oklch(0.69 0.015 80);
-  --accent: oklch(0.31 0.04 30);
-  --accent-foreground: oklch(0.92 0.04 35);
-  --destructive: oklch(0.68 0.19 25);
-  --destructive-foreground: oklch(0.14 0 0);
-  --border: oklch(0.33 0.015 250);
-  --input: oklch(0.33 0.015 250);
-  --ring: oklch(0.7 0.17 30);
-  --success: oklch(0.69 0.14 155);
+  --muted: oklch(0.21 0.016 260);
+  --muted-foreground: oklch(0.65 0.015 260);
+  --accent: oklch(0.25 0.025 260);
+  --accent-foreground: oklch(0.95 0.01 80);
+  --destructive: oklch(0.64 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.26 0.018 260);
+  --input: oklch(0.26 0.018 260);
+  --ring: oklch(0.68 0.19 250);
+  --success: oklch(0.69 0.15 155);
   --success-foreground: oklch(0.13 0 0);
-  --paper: oklch(0.23 0.012 250);
-  --paper-foreground: oklch(0.93 0.008 80);
-  --gender: oklch(0.72 0.16 305);
-  --gender-soft: oklch(0.3 0.08 305);
-  --age: oklch(0.78 0.14 80);
-  --age-soft: oklch(0.32 0.07 75);
-  --prestige: oklch(0.72 0.13 245);
-  --prestige-soft: oklch(0.3 0.065 245);
-  --gap: oklch(0.72 0.11 180);
-  --gap-soft: oklch(0.3 0.055 180);
+  --paper: oklch(0.2 0.015 260);
+  --paper-foreground: oklch(0.95 0.005 80);
+  --gender: oklch(0.75 0.18 315);
+  --gender-soft: oklch(0.28 0.07 315);
+  --age: oklch(0.8 0.15 75);
+  --age-soft: oklch(0.29 0.06 75);
+  --prestige: oklch(0.75 0.16 245);
+  --prestige-soft: oklch(0.28 0.065 245);
+  --gap: oklch(0.74 0.13 180);
+  --gap-soft: oklch(0.28 0.055 180);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { font-family: var(--font-sans); }
-  body { background-color: var(--color-background); color: var(--color-foreground); margin: 0; }
-  button, input, textarea { letter-spacing: 0; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    margin: 0;
+  }
+  button,
+  input,
+  textarea {
+    letter-spacing: 0;
+  }
 }
 
 @utility workspace-grid {
-  background-image: linear-gradient(to right, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 3%, transparent) 1px, transparent 1px);
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--foreground) 3%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--foreground) 3%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 24px 24px;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+/* Ensure Issue Filters header never displays any scrollbar */
+[aria-label="Issue filters"] {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+[aria-label="Issue filters"]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Toast Close Button Styling (Always visible, clean top-right positioning) */
+[data-sonner-toast] [data-close-button] {
+  left: auto !important;
+  right: 10px !important;
+  top: 10px !important;
+  transform: none !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 9999px !important;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  z-index: 50 !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  transform: scale(1.08) !important;
+}
+
+[data-sonner-toast] [data-close-button] svg {
+  width: 12px !important;
+  height: 12px !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
 }
