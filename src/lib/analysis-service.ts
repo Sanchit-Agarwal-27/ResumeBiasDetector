@@ -5,6 +5,8 @@ import {
 } from "./bias-taxonomy";
 import type { BiasCategory, BiasSpan, ResumeBiasReport, SeverityLevel } from "./resume-contract";
 
+import { checkRateLimit, recordRateLimitFailure, recordRateLimitSuccess } from "./rate-limiter";
+
 export type AnalysisMode = "local" | "fastapi";
 
 export interface AnalysisServiceConfig {
@@ -22,20 +24,31 @@ export async function processResumeAnalysis(
   fileName: string,
   config: AnalysisServiceConfig = DEFAULT_CONFIG,
 ): Promise<ResumeBiasReport> {
-  // If user configured FastAPI backend from Person A / B, attempt remote call
+  // If user configured FastAPI backend from Person A / B, attempt remote call with rate limiting
   if (config.mode === "fastapi") {
-    try {
-      const response = await fetch(`${config.fastApiUrl}/api/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ raw_text: rawText, file_name: fileName }),
-      });
-      if (response.ok) {
-        const data = (await response.json()) as ResumeBiasReport;
-        return data;
+    const rateCheck = checkRateLimit("api:analyze", config.fastApiUrl);
+    if (!rateCheck.allowed) {
+      console.warn(
+        "[AnalysisService] Rate limit hit for FastAPI endpoint. Falling back to local NLP.",
+      );
+    } else {
+      try {
+        const response = await fetch(`${config.fastApiUrl}/api/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ raw_text: rawText, file_name: fileName }),
+        });
+        if (response.ok) {
+          recordRateLimitSuccess("api:analyze", config.fastApiUrl);
+          const data = (await response.json()) as ResumeBiasReport;
+          return data;
+        } else {
+          recordRateLimitFailure("api:analyze", config.fastApiUrl);
+        }
+      } catch (error) {
+        recordRateLimitFailure("api:analyze", config.fastApiUrl);
+        console.warn("FastAPI backend unreachable; falling back to local NLP engine", error);
       }
-    } catch (error) {
-      console.warn("FastAPI backend unreachable; falling back to local NLP engine", error);
     }
   }
 

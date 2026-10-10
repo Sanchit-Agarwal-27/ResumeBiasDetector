@@ -59,19 +59,33 @@ Modern recruitment algorithms and automated Applicant Tracking Systems (ATS) fre
 - **Empirical Evaluation Benchmarks:** Built-in review of model performance, precision/recall metrics, and ablation studies across technical and business resumes.
 - **Ethics & Methodology Documentation:** Interactive ethical framework grounded in EEOC and academic compliance standards.
 
-### 📥 Comprehensive Export Options
+### 🎯 Counterfactual Job-Matching Simulator
 
-- **Print-Ready PDF Document:** Vector-preserving single and multi-page resume export.
-- **High-Resolution Images:** Export to clean PNG or compressed JPEG formats.
-- **Audit Data:** Download plain text versions or complete JSON bias reports for compliance documentation.
+- **Dual Compass Telemetry:** Live synchronized gauges measuring **Neutrality Index** alongside **ATS Match Score** ($0 - 100\%$).
+- **Keyword Gap Matrix:** Instant identification of matched, partial, and critical missing hard skills and competencies.
+- **Counterfactual Impact Projections:** Quantifies how de-biasing rewrites increase machine-readability on Workday, Greenhouse, and Lever.
+- **Built-in Industry Benchmarks:** Pre-loaded enterprise role templates (Senior Full-Stack, Staff AI/ML, Product Manager, Data Analyst, DevOps).
 
-### ⚙️ Account, Engine & Privacy Settings
+### ☁️ Cloud Vault & Resume Version History
 
-- **Analysis Engine Switcher:** Easily configure your intelligence provider in the dedicated Settings tab:
-  - **Local (In-Browser):** Zero network latency, 100% offline-capable, complete data privacy.
-  - **FastAPI Backend:** Targeted at `http://localhost:8000/api/analyze` with built-in connection ping testing.
-- **Interactive Notifications:** Clean, dismissible toast notifications with cross close buttons.
-- **Account & Security:** Profile customization, simulated Google OAuth, data retention policies, and session caching controls.
+- **Multi-Document Library:** Store, organize, and switch between multiple tailored resume profiles.
+- **Immutable Checkpoints:** Create named version snapshots (e.g., *"Initial Baseline v1"*, *"De-biased Candidate v2"*) with 1-click restore rollback.
+- **Side-by-Side Visual Diff Inspector:** Word-level color-coded comparison highlighting additions, deletions, and score progressions.
+- **Branching & Duplication:** Duplicate existing profiles to test different industry specializations without losing work.
+
+### 📥 Certified Vector PDF Export with Embedded Selectable Text
+
+- **100% Real Embedded Vector Text:** Native PostScript font structures ensuring text remains completely selectable and searchable for all ATS bots.
+- **ATS Bot Preview Stream:** Inspect the exact text stream parsed by automated recruiters before applying.
+- **Regional Paper Presets:** 1-click formatting for international standard A4 or North American US Letter.
+- **Embedded Document Metadata:** Injects PDF/UA metadata tags (`/Title`, `/Author`, `/Subject`, `/Keywords`) for enterprise compliance.
+
+### 🔐 Production OAuth & Supabase Cloud Integration
+
+- **Enterprise Authentication:** Live Google OAuth 2.0, verified email/password, and magic sign-in links via `@supabase/supabase-js`.
+- **PostgreSQL Data Layer with RLS:** Strict user-level tenant isolation across `profiles`, `resumes`, `resume_pages`, `canvas_blocks`, `bias_audits`, and `resume_versions`.
+- **Guest-to-Cloud Migration:** Work locally in guest mode with zero friction, then auto-sync to your account upon signing in.
+- **Analysis Engine Switcher:** Easily toggle between offline in-browser client NLP and a remote Python FastAPI backend.
 
 ---
 
@@ -151,7 +165,31 @@ biaslens/
 - [Node.js](https://nodejs.org/) (v18.0.0 or higher)
 - npm or bun
 
-### Installation
+### Environment Setup
+
+1. Copy `.env.example` to create your local environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Populate the Supabase credentials from your [Supabase Dashboard](https://supabase.com/dashboard) (`Project Settings` → `API`):
+   ```env
+   VITE_SUPABASE_URL=https://your-project-id.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-public-key-here
+   ```
+   *(If not configured, BiasLens seamlessly runs in zero-friction Local Guest Mode using persistent browser storage).*
+
+### Database Setup (Supabase PostgreSQL)
+
+1. Open your project on **Supabase** and navigate to the **SQL Editor**.
+2. Open [`supabase/schema.sql`](supabase/schema.sql) from this repository.
+3. Paste the contents into a New Query and click **Run**.
+4. This script configures:
+   - `profiles`, `resumes`, `resume_pages`, `canvas_blocks`, `bias_audits`, and `resume_versions` tables.
+   - Comprehensive **Row-Level Security (RLS)** ensuring strict tenant data isolation.
+   - JSONB support for `target_job` and `ats_match` context.
+   - Automatic user profile provisioning trigger upon registration.
+
+### Installation & Run
 
 ```bash
 # Clone the repository

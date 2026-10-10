@@ -174,7 +174,13 @@ export function FigmaResumeEditor({
     if (targetBlock) {
       setSelectedBlockIds([targetBlock.id]);
       setActivePageIndex(targetBlock.pageIndex);
-      onSelectBlock?.(targetBlock.id);
+      // Smoothly scroll the targeted canvas block into view
+      requestAnimationFrame(() => {
+        const blockEl = document.getElementById(`canvas-block-${targetBlock.id}`);
+        if (blockEl) {
+          blockEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+        }
+      });
     }
   }, [activeBiasSpan]);
 
@@ -1405,9 +1411,14 @@ export function FigmaResumeEditor({
                     block.text.toLowerCase().includes(s.matched_text.toLowerCase()),
                   );
                   const hasBias = blockBiasSpans.length > 0;
+                  const isTargetOfActiveBias = Boolean(
+                    activeBiasSpan &&
+                    block.text.toLowerCase().includes(activeBiasSpan.matched_text.toLowerCase()),
+                  );
 
                   return (
                     <div
+                      id={`canvas-block-${block.id}`}
                       key={block.id}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1434,6 +1445,8 @@ export function FigmaResumeEditor({
                           ? "ring-2 ring-primary ring-offset-1 z-30"
                           : "hover:outline hover:outline-1 hover:outline-primary/40",
                         hasBias && !isSelected && "border-b-2 border-amber-500/80",
+                        isTargetOfActiveBias &&
+                          "ring-2 ring-amber-500 ring-offset-2 ring-offset-background shadow-lg shadow-amber-500/25 z-30",
                       )}
                       style={{
                         left: block.x * zoom,

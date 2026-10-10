@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { PageSkeleton } from "@/components/loading/page-skeleton";
 
 function NotFoundComponent() {
   return (
@@ -101,6 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
+  pendingComponent: PageSkeleton,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });

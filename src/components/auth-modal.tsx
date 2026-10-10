@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
+import { checkRateLimit, recordRateLimitFailure, recordRateLimitSuccess } from "@/lib/rate-limiter";
 import {
   CheckCircle2,
   Eye,
@@ -19,20 +20,32 @@ import {
   Lock,
   Mail,
   ScanSearch,
+  Send,
   ShieldCheck,
+  Sparkles,
   User,
 } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultView?: "signin" | "signup" | "forgot";
+  defaultView?: "signin" | "signup" | "forgot" | "magic-link";
 }
 
 export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthModalProps) {
-  const { login, loginWithGoogle, signup, forgotPassword, resetPassword } = useAuth();
+  const {
+    login,
+    loginWithGoogle,
+    loginWithMagicLink,
+    signup,
+    forgotPassword,
+    resetPassword,
+    isCloudConnected,
+  } = useAuth();
 
-  const [view, setView] = useState<"signin" | "signup" | "forgot" | "reset-code">(defaultView);
+  const [view, setView] = useState<"signin" | "signup" | "forgot" | "reset-code" | "magic-link">(
+    defaultView,
+  );
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -41,30 +54,45 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [resetCode, setResetCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   // Reset internal states when opened
   React.useEffect(() => {
     if (open) {
       setView(defaultView);
       setError(null);
+      setSuccessNotice(null);
     }
   }, [open, defaultView]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessNotice(null);
     if (!email || !password) {
       setError("Please fill in both email and password.");
       return;
     }
+
+    const rateCheck = checkRateLimit("auth:login", email);
+    if (!rateCheck.allowed) {
+      setError(rateCheck.reason || "Rate limit reached. Please wait a moment.");
+      return;
+    }
+
     setLoading(true);
     try {
       await login(email, password);
+      recordRateLimitSuccess("auth:login", email);
       onOpenChange(false);
-    } catch {
-      setError("Authentication failed. Please verify your credentials.");
+    } catch (err: unknown) {
+      recordRateLimitFailure("auth:login", email);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Authentication failed. Please verify your credentials.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -73,6 +101,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessNotice(null);
     if (!name.trim()) {
       setError("Please enter your full name.");
       return;
@@ -89,12 +118,54 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
       setError("Passwords do not match.");
       return;
     }
+
+    const rateCheck = checkRateLimit("auth:signup", email);
+    if (!rateCheck.allowed) {
+      setError(rateCheck.reason || "Too many registration attempts. Please wait.");
+      return;
+    }
+
     setLoading(true);
     try {
       await signup(name, email, password);
+      recordRateLimitSuccess("auth:signup", email);
       onOpenChange(false);
-    } catch {
-      setError("Failed to create account. Please try again.");
+    } catch (err: unknown) {
+      recordRateLimitFailure("auth:signup", email);
+      const msg =
+        err instanceof Error ? err.message : "Failed to create account. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessNotice(null);
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    const rateCheck = checkRateLimit("auth:magic-link", email);
+    if (!rateCheck.allowed) {
+      setError(rateCheck.reason || "Please wait before requesting another magic link.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ok = await loginWithMagicLink(email);
+      if (ok) {
+        recordRateLimitSuccess("auth:magic-link", email);
+        setSuccessNotice("Magic sign-in link dispatched! Please check your email inbox.");
+      }
+    } catch (err: unknown) {
+      recordRateLimitFailure("auth:magic-link", email);
+      const msg = err instanceof Error ? err.message : "Could not dispatch magic sign-in link.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -102,13 +173,15 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
   const handleGoogleSignIn = async () => {
     setError(null);
+    setSuccessNotice(null);
     setLoading(true);
     try {
       await loginWithGoogle();
-      onOpenChange(false);
-    } catch {
-      setError("Google authentication could not be completed.");
-    } finally {
+      // OAuth redirects the window in production, or logs in immediately in demo mode
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Google authentication could not be completed.";
+      setError(msg);
       setLoading(false);
     }
   };
@@ -116,38 +189,27 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessNotice(null);
     if (!email || !email.includes("@")) {
       setError("Please provide a valid email address.");
       return;
     }
+
+    const rateCheck = checkRateLimit("auth:forgot-password", email);
+    if (!rateCheck.allowed) {
+      setError(rateCheck.reason || "Please wait before requesting another password reset.");
+      return;
+    }
+
     setLoading(true);
     try {
       await forgotPassword(email);
-      setView("reset-code");
-    } catch {
-      setError("Could not process password reset request.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!resetCode) {
-      setError("Please enter the 6-digit confirmation code.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("New password must be at least 6 characters.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await resetPassword(email, resetCode, password);
-      setView("signin");
-    } catch {
-      setError("Invalid or expired reset code.");
+      recordRateLimitSuccess("auth:forgot-password", email);
+      setSuccessNotice("Password reset email sent! Check your inbox for the link.");
+    } catch (err: unknown) {
+      recordRateLimitFailure("auth:forgot-password", email);
+      const msg = err instanceof Error ? err.message : "Could not process password reset request.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -155,7 +217,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] p-0 overflow-hidden border border-border/80 shadow-2xl bg-card">
+      <DialogContent className="max-w-[430px] p-0 overflow-hidden border border-border/80 shadow-2xl bg-card">
         {/* Header Ribbon */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 text-white text-center relative overflow-hidden">
           <div className="absolute -right-8 -top-8 size-32 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
@@ -165,16 +227,15 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
           <DialogTitle className="text-xl font-bold font-display tracking-tight text-white">
             {view === "signin" && "Sign In to BiasLens"}
             {view === "signup" && "Create Your Account"}
+            {view === "magic-link" && "Passwordless Sign-In"}
             {view === "forgot" && "Reset Password"}
-            {view === "reset-code" && "Verify Reset Code"}
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-300 mt-1">
             {view === "signin" &&
-              "Access your AI fairness audits, neutral rewrites, and saved resumes."}
-            {view === "signup" &&
-              "Start screening resumes with counterfactual neutrality and zero bias."}
+              "Access your AI fairness audits, neutral rewrites, and Cloud Vault."}
+            {view === "signup" && "Sync your resumes securely across devices with Supabase Cloud."}
+            {view === "magic-link" && "Sign in with a one-click magic link sent to your inbox."}
             {view === "forgot" && "Enter your email to receive a password reset link."}
-            {view === "reset-code" && "Enter the verification code and set your new password."}
           </DialogDescription>
         </div>
 
@@ -186,18 +247,25 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
             </div>
           )}
 
-          {/* GOOGLE SIGN IN BUTTON (on signin and signup views) */}
-          {(view === "signin" || view === "signup") && (
+          {successNotice && (
+            <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-start gap-2">
+              <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+              <span>{successNotice}</span>
+            </div>
+          )}
+
+          {/* GOOGLE SIGN IN BUTTON (on signin, signup, magic-link views) */}
+          {(view === "signin" || view === "signup" || view === "magic-link") && (
             <div className="mb-4">
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 border-border bg-background hover:bg-muted font-medium text-xs flex items-center justify-center gap-2.5 transition-all shadow-2xs"
+                className="w-full h-10 border-border bg-background hover:bg-muted font-medium text-xs flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
               >
                 {/* Official Google G Logo SVG */}
-                <svg className="size-4" viewBox="0 0 24 24">
+                <svg className="size-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -283,7 +351,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
               <Button
                 type="submit"
-                className="w-full h-9 text-xs font-semibold mt-2"
+                className="w-full h-9 text-xs font-semibold mt-2 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? (
@@ -295,9 +363,21 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
                 )}
               </Button>
 
-              <div className="text-center pt-2">
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView("magic-link");
+                    setError(null);
+                  }}
+                  className="text-[11px] text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                >
+                  <Send className="size-3" />
+                  Email me a sign-in link
+                </button>
+
                 <p className="text-xs text-muted-foreground">
-                  Don't have an account?{" "}
+                  Need an account?{" "}
                   <button
                     type="button"
                     onClick={() => {
@@ -306,9 +386,58 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
                     }}
                     className="text-primary font-semibold hover:underline"
                   >
-                    Create account
+                    Sign up
                   </button>
                 </p>
+              </div>
+            </form>
+          )}
+
+          {/* VIEW: MAGIC LINK */}
+          {view === "magic-link" && (
+            <form onSubmit={handleMagicLink} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                  <Mail className="size-3.5 text-muted-foreground" />
+                  Email Address
+                </Label>
+                <Input
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-9 text-xs font-semibold mt-2 cursor-pointer"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 size-3.5 animate-spin" /> Sending Link...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-1.5 size-3.5" /> Send Magic Sign-In Link
+                  </>
+                )}
+              </Button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView("signin");
+                    setError(null);
+                  }}
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  ← Sign in with password instead
+                </button>
               </div>
             </form>
           )}
@@ -393,7 +522,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
               <Button
                 type="submit"
-                className="w-full h-9 text-xs font-semibold mt-1"
+                className="w-full h-9 text-xs font-semibold mt-1 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? (
@@ -443,7 +572,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
               <Button
                 type="submit"
-                className="w-full h-9 text-xs font-semibold mt-2"
+                className="w-full h-9 text-xs font-semibold mt-2 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? (
@@ -465,74 +594,6 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
                   className="text-xs text-primary font-medium hover:underline"
                 >
                   ← Back to Sign In
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* VIEW: VERIFY RESET CODE */}
-          {view === "reset-code" && (
-            <form onSubmit={handleResetPassword} className="space-y-3.5">
-              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                <CheckCircle2 className="size-4 shrink-0" />
-                <span>Reset code sent! Check your inbox (or use demo code: 123456).</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <KeyRound className="size-3.5 text-muted-foreground" />
-                  6-Digit Verification Code
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="123456"
-                  maxLength={6}
-                  value={resetCode}
-                  onChange={(e) => setResetCode(e.target.value)}
-                  className="h-9 text-xs font-mono tracking-wider"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Lock className="size-3.5 text-muted-foreground" />
-                  New Password
-                </Label>
-                <Input
-                  type="password"
-                  placeholder="Enter new strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-9 text-xs"
-                  required
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-9 text-xs font-semibold mt-2"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 size-3.5 animate-spin" /> Updating Password...
-                  </>
-                ) : (
-                  "Set New Password & Sign In"
-                )}
-              </Button>
-
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setView("signin");
-                    setError(null);
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground font-medium"
-                >
-                  Cancel and return to sign in
                 </button>
               </div>
             </form>

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ResumeWorkspace } from "@/components/resume-workspace";
+import { PageSkeleton } from "@/components/loading/page-skeleton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/")({
     ],
   }),
   component: Index,
+  pendingComponent: PageSkeleton,
 });
 
 function Index() {

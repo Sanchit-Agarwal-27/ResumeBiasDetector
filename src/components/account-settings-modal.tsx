@@ -67,7 +67,8 @@ export function AccountSettingsModal({
   engineMode = "local",
   onEngineModeChange,
 }: AccountSettingsModalProps) {
-  const { user, updateProfile, logout, deleteAccount, clearWorkspaceCache } = useAuth();
+  const { user, updateProfile, resetPassword, logout, deleteAccount, clearWorkspaceCache } =
+    useAuth();
   const { theme, setTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<
@@ -150,7 +151,7 @@ export function AccountSettingsModal({
     });
   };
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword) {
       toast.error("Please enter your current password.");
@@ -164,12 +165,20 @@ export function AccountSettingsModal({
       toast.error("New passwords do not match.");
       return;
     }
-    toast.success("Password changed successfully", {
-      description: "Your security credentials have been updated.",
-    });
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      await resetPassword(newPassword);
+      toast.success("Password changed successfully", {
+        description: "Your security credentials have been updated in Supabase.",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Please re-authenticate and try again.";
+      toast.error("Failed to update password", {
+        description: msg,
+      });
+    }
   };
 
   const handleToggle2FA = (checked: boolean) => {

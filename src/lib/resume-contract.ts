@@ -38,6 +38,60 @@ export interface EvaluationBenchmark {
   f1_score: number;
 }
 
+export interface JobDescriptionProfile {
+  id: string;
+  title: string;
+  company?: string;
+  raw_text: string;
+  target_seniority?: string;
+}
+
+export type KeywordImportance = "required" | "preferred" | "domain_context";
+export type MatchStatus = "exact" | "synonym" | "missing";
+
+export interface KeywordMatchEntry {
+  keyword: string;
+  category: "hard_skill" | "soft_skill" | "certification" | "tool_framework";
+  importance: KeywordImportance;
+  status: MatchStatus;
+  foundInResume: boolean;
+  frequencyInJob: number;
+  frequencyInResume: number;
+  suggestedAction?: string;
+}
+
+export interface AtsSectionCoverage {
+  contact_info: boolean;
+  work_experience: boolean;
+  education: boolean;
+  skills_section: boolean;
+  overall_structure_score: number;
+}
+
+export interface CounterfactualJobSimulation {
+  baseline_ats_score: number;
+  debiased_ats_score: number;
+  score_delta: number;
+  ats_verdict:
+    "Strong Candidate" | "Interview Threshold" | "Risky Filter Trigger" | "Likely Screened Out";
+  adverse_impact_risk: "Low" | "Medium" | "High";
+  net_verdict_explanation: string;
+  recommendations: string[];
+}
+
+export interface AtsMatchResult {
+  job_profile: JobDescriptionProfile;
+  overall_match_score: number; // 0 - 100
+  hard_skills_score: number; // 0 - 100
+  soft_skills_score: number; // 0 - 100
+  semantic_relevance_score: number; // 0 - 100
+  section_coverage: AtsSectionCoverage;
+  matched_keywords: KeywordMatchEntry[];
+  missing_keywords: KeywordMatchEntry[];
+  counterfactual_simulation: CounterfactualJobSimulation;
+  analyzed_at: string;
+}
+
 export interface ResumeBiasReport {
   document_id: string;
   file_name: string;
@@ -56,6 +110,8 @@ export interface ResumeBiasReport {
     counterfactual_permutations_tested: number;
   };
   evaluation_benchmarks?: EvaluationBenchmark[];
+  target_job?: JobDescriptionProfile;
+  ats_match?: AtsMatchResult;
 }
 
 export const sampleReport: ResumeBiasReport = {

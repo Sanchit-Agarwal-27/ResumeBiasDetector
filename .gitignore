@@ -34,6 +34,7 @@ vite.config.ts.timestamp*
 .env.test.local
 .env.production.local
 .dev.vars
+!.env.example
 
 # Cloudflare / Wrangler
 .wrangler/
