@@ -11,10 +11,20 @@ export interface CanvasTextBlock {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  strikethrough?: boolean;
   color?: string;
+  backgroundColor?: string;
   align?: "left" | "center" | "right" | "justify";
   lineHeight?: number;
+  letterSpacing?: number;
+  spaceBefore?: number;
+  spaceAfter?: number;
+  indent?: number;
   isTitle?: boolean;
+  isHeading?: boolean;
+  isBullet?: boolean;
+  isNumbered?: boolean;
+  listNumber?: number;
 }
 
 export interface CanvasPage {
@@ -46,7 +56,6 @@ interface TextLine {
   fragments: RawFragment[];
 }
 
-/**
 export interface PdfCommonObjs {
   has?: (id: string) => boolean;
   get?: (id: string) => {
@@ -77,11 +86,29 @@ export interface PdfStyleItem {
   ascent?: number;
 }
 
+export const STANDARD_PAGE_SIZES = {
+  letter: { width: 612, height: 792, label: "US Letter (8.5 × 11 in)" },
+  a4: { width: 595.28, height: 841.89, label: "A4 (210 × 297 mm)" },
+};
+
+/**
+ * Normalizes bullet characters from arbitrary PDF encodings (Wingdings, symbols, hyphens)
+ */
+function normalizeBulletText(raw: string): { text: string; isBullet: boolean } {
+  const trimmed = raw.trim();
+  // Match standard bullets, Wingdings \uf0b7, middle dots, dashes, stars, geometric shapes
+  const bulletRegex = /^[\u2022\u25cf\u25cb\u25aa\u25b8\uf0b7\u00b7\u2013\u2014■●○►*•]\s*|^-\s+/;
+  if (bulletRegex.test(trimmed)) {
+    const cleaned = trimmed.replace(bulletRegex, "").trim();
+    return { text: "• " + cleaned, isBullet: true };
+  }
+  return { text: raw, isBullet: false };
+}
+
 /**
  * High-fidelity PDF layout extraction engine.
- * Preserves exact (x, y) coordinates, font size, bold/italic, font family,
- * and extracts true RGB color from the PDF operator stream.
- * Fully column-aware to prevent multi-column resumes from interleaving.
+ * Accurately extracts reading order, aligns margins, preserves font styles,
+ * and handles multi-column and two-item line structures (e.g. title + right date).
  */
 export function clusterPdfTextContent(
   textContentItems: Array<PdfTextItem>,
@@ -92,35 +119,40 @@ export function clusterPdfTextContent(
   commonObjs?: PdfCommonObjs,
   opList?: PdfOpList,
 ): CanvasTextBlock[] {
-  // 1. Extract exact color stream from PDF operators if available
+  // 1. Extract color stream from PDF operators
   let curColor = "#111827";
   const opRecords: Array<{ color: string; text: string }> = [];
 
   if (opList && opList.fnArray && opList.argsArray) {
-    const OPS_SET_RGB = 59; // ops.setFillRGBColor
-    const OPS_SET_GRAY = 57; // ops.setFillGray
-    const OPS_SHOW_TEXT = 44; // ops.showText
-    const OPS_SHOW_SPACED = 45; // ops.showSpacedText
+    const OPS_SET_RGB = 59;
+    const OPS_SET_GRAY = 57;
+    const OPS_SHOW_TEXT = 44;
+    const OPS_SHOW_SPACED = 45;
 
     for (let i = 0; i < opList.fnArray.length; i++) {
       const fn = opList.fnArray[i];
       const args = opList.argsArray[i];
 
       if (fn === OPS_SET_RGB && args) {
-        const r = Math.round(args[0] ?? 0);
-        const g = Math.round(args[1] ?? 0);
-        const b = Math.round(args[2] ?? 0);
+        const r = Math.round(Number(args[0] ?? 0));
+        const g = Math.round(Number(args[1] ?? 0));
+        const b = Math.round(Number(args[2] ?? 0));
         curColor = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
       } else if (fn === OPS_SET_GRAY && args) {
-        const g = Math.round((args[0] ?? 0) * 255);
+        const g = Math.round(Number(args[0] ?? 0) * 255);
         curColor = `#${g.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}`;
       } else if ((fn === OPS_SHOW_TEXT || fn === OPS_SHOW_SPACED) && args) {
         let str = "";
         if (Array.isArray(args[0])) {
           for (const item of args[0]) {
             if (typeof item === "string") str += item;
-            else if (item && typeof item === "object" && item.unicode !== undefined) {
-              str += item.unicode;
+            else if (
+              item &&
+              typeof item === "object" &&
+              "unicode" in item &&
+              typeof (item as { unicode: string }).unicode === "string"
+            ) {
+              str += (item as { unicode: string }).unicode;
             }
           }
         } else if (typeof args[0] === "string") {
@@ -133,7 +165,7 @@ export function clusterPdfTextContent(
     }
   }
 
-  // 2. Extract font metadata from commonObjs & styles dictionary
+  // 2. Extract font metadata
   const fontMap: Record<
     string,
     { name: string; family: string; bold: boolean; italic: boolean; ascent: number }
@@ -142,21 +174,24 @@ export function clusterPdfTextContent(
   for (const fontId of Object.keys(styles || {})) {
     const fontObj = commonObjs?.has?.(fontId) ? commonObjs.get(fontId) : null;
     const fontName =
-      fontObj?.name || fontObj?.loadedName || styles[fontId]?.fontFamily || "sans-serif";
-    const isBold = Boolean(fontObj?.bold || /bold|black|heavy|medium|semibold/i.test(fontName));
-    const isItalic = Boolean(fontObj?.italic || /italic|oblique/i.test(fontName));
+      fontObj?.name || fontObj?.loadedName || styles[fontId]?.fontFamily || "Calibri, sans-serif";
+    const isBold = Boolean(fontObj?.bold || /bold|black|heavy|medium|semibold|bld/i.test(fontName));
+    const isItalic = Boolean(fontObj?.italic || /italic|oblique|ital/i.test(fontName));
 
-    let family = "Arial, sans-serif";
+    let family = "Calibri, sans-serif";
     if (/montserrat/i.test(fontName)) family = "'Montserrat', sans-serif";
-    else if (/calibri/i.test(fontName)) family = "Calibri, sans-serif";
     else if (/poppins/i.test(fontName)) family = "'Poppins', sans-serif";
     else if (/lato/i.test(fontName)) family = "'Lato', sans-serif";
-    else if (/open\s*sans/i.test(fontName)) family = "'Open Sans', sans-serif";
-    else if (/times|georgia|serif|cambria/i.test(fontName)) family = "Georgia, serif";
+    else if (/georgia/i.test(fontName)) family = "Georgia, serif";
+    else if (/garamond/i.test(fontName)) family = "'EB Garamond', Georgia, serif";
+    else if (/merriweather/i.test(fontName)) family = "Merriweather, serif";
+    else if (/times|cambria/i.test(fontName)) family = "'Times New Roman', Times, serif";
     else if (/courier|mono|consolas/i.test(fontName)) family = "'Courier New', monospace";
-    else if (/helvetica/i.test(fontName)) family = "Helvetica, Arial, sans-serif";
     else if (/roboto/i.test(fontName)) family = "Roboto, sans-serif";
     else if (/inter/i.test(fontName)) family = "Inter, sans-serif";
+    else if (/arial|helvetica/i.test(fontName)) family = "Arial, sans-serif";
+    else if (/serif/i.test(fontName)) family = "'Times New Roman', Times, serif";
+    else if (/calibri/i.test(fontName)) family = "Calibri, sans-serif";
 
     fontMap[fontId] = {
       name: fontName,
@@ -167,7 +202,7 @@ export function clusterPdfTextContent(
     };
   }
 
-  // 3. Process raw text items and associate precise coordinates and colors
+  // 3. Process raw text items into RawFragments
   const rawFragments: RawFragment[] = [];
   let opCursor = 0;
 
@@ -177,14 +212,13 @@ export function clusterPdfTextContent(
 
     const trimmedStr = it.str.trim();
 
-    // Match color from opRecords
     let assignedColor = "#111827";
     if (opCursor < opRecords.length && opRecords[opCursor]?.text === trimmedStr) {
       assignedColor = opRecords[opCursor]!.color;
       opCursor++;
     } else if (opRecords.length > 0) {
       const matchIdx = opRecords
-        .slice(opCursor, opCursor + 6)
+        .slice(opCursor, opCursor + 8)
         .findIndex(
           (r) =>
             r.text === trimmedStr || r.text.includes(trimmedStr) || trimmedStr.includes(r.text),
@@ -199,12 +233,15 @@ export function clusterPdfTextContent(
 
     const transform = it.transform || [12, 0, 0, 12, 0, 0];
     const fontSize = Math.max(7, Math.round(Math.abs(transform[0]) * 10) / 10);
-    const fontInfo = fontMap[it.fontName] || {
-      family: "Arial, sans-serif",
-      bold: false,
-      italic: false,
-      ascent: 0.78,
-    };
+    const fontInfo =
+      it.fontName && fontMap[it.fontName]
+        ? fontMap[it.fontName]!
+        : {
+            family: "Calibri, sans-serif",
+            bold: false,
+            italic: false,
+            ascent: 0.78,
+          };
 
     let text = it.str;
     if (transform[0] < 0 || it.dir === "rtl") {
@@ -213,15 +250,15 @@ export function clusterPdfTextContent(
       }
     }
 
+    const itemWidth = typeof it.width === "number" ? it.width : fontSize * 0.55 * text.length;
     const x =
       Math.round(
-        (transform[0] < 0 ? transform[4] - Math.max(it.width, fontSize * 0.8) : transform[4]) * 10,
+        (transform[0] < 0 ? transform[4] - Math.max(itemWidth, fontSize * 0.8) : transform[4]) * 10,
       ) / 10;
 
-    // Use consistent baseline-to-top metric (0.80) to ensure lines on the same baseline align
     const baselineY = viewportHeight - transform[5];
     const y = Math.round((baselineY - fontSize * 0.8) * 10) / 10;
-    const width = Math.round(Math.max(it.width, fontSize * 0.4) * 10) / 10;
+    const width = Math.round(Math.max(itemWidth, fontSize * 0.4) * 10) / 10;
     const height = Math.round(fontSize * 1.25 * 10) / 10;
 
     rawFragments.push({
@@ -240,17 +277,20 @@ export function clusterPdfTextContent(
     });
   }
 
-  // 4. Sort fragments by baseline then X
+  if (rawFragments.length === 0) {
+    return [];
+  }
+
+  // 4. Baseline clustering into horizontal lines (3.0pt tolerance)
   rawFragments.sort((a, b) =>
-    Math.abs(a.baselineY - b.baselineY) > 2 ? a.baselineY - b.baselineY : a.x - b.x,
+    Math.abs(a.baselineY - b.baselineY) > 2.5 ? a.baselineY - b.baselineY : a.x - b.x,
   );
 
-  // 5. Group into horizontal lines (within 2.5pt baseline tolerance)
   const lines: TextLine[] = [];
   for (const frag of rawFragments) {
-    const existingLine = lines.find((l) => Math.abs(l.baselineY - frag.baselineY) <= 2.5);
-    if (existingLine) {
-      existingLine.fragments.push(frag);
+    const matchingLine = lines.find((l) => Math.abs(l.baselineY - frag.baselineY) <= 3.0);
+    if (matchingLine) {
+      matchingLine.fragments.push(frag);
     } else {
       lines.push({
         baselineY: frag.baselineY,
@@ -259,10 +299,11 @@ export function clusterPdfTextContent(
       });
     }
   }
-  lines.sort((a, b) => a.y - b.y);
 
-  // 6. On each line, merge adjacent words that belong to the same text run
-  interface LineFrame {
+  lines.sort((a, b) => a.baselineY - b.baselineY);
+
+  // 5. On each line, merge words and handle left-title + right-date combinations
+  interface LineRun {
     x: number;
     y: number;
     maxX: number;
@@ -274,13 +315,16 @@ export function clusterPdfTextContent(
     bold: boolean;
     italic: boolean;
     color: string;
+    baselineY: number;
+    isCenter?: boolean;
+    isRightAligned?: boolean;
   }
 
-  const lineFrames: LineFrame[] = [];
+  const lineRuns: LineRun[] = [];
 
   for (const line of lines) {
     line.fragments.sort((a, b) => a.x - b.x);
-    let cur: LineFrame | null = null;
+    let cur: LineRun | null = null;
 
     for (const frag of line.fragments) {
       if (!cur) {
@@ -296,6 +340,7 @@ export function clusterPdfTextContent(
           bold: frag.bold,
           italic: frag.italic,
           color: frag.color,
+          baselineY: line.baselineY,
         };
         continue;
       }
@@ -303,24 +348,32 @@ export function clusterPdfTextContent(
       const gap = frag.x - cur.maxX;
       const sameStyle =
         cur.fontFamily === frag.fontFamily &&
-        Math.abs(cur.fontSize - frag.fontSize) <= 1 &&
+        Math.abs(cur.fontSize - frag.fontSize) <= 1.2 &&
         cur.bold === frag.bold &&
         cur.italic === frag.italic &&
         cur.color === frag.color;
 
-      const isInlineContinuation = gap >= -2 && gap <= Math.max(16, cur.fontSize * 1.5);
+      // Small inline continuation: within word spacing
+      const isWordContinuation = gap >= -3 && gap <= Math.max(14, cur.fontSize * 1.2);
 
-      if (sameStyle && isInlineContinuation) {
-        let sep = "";
-        if (gap > cur.fontSize * 0.18 && !cur.text.endsWith(" ") && !frag.text.startsWith(" ")) {
-          sep = " ";
-        }
-        cur.text += sep + frag.text;
+      // Large gap on the same line (e.g. Job Title on left, Date / Location on right)
+      const isSameLineTabGap = gap > Math.max(14, cur.fontSize * 1.2) && gap < viewportWidth * 0.75;
+
+      if (sameStyle && isWordContinuation) {
+        const needsSpace =
+          gap > cur.fontSize * 0.16 && !cur.text.endsWith(" ") && !frag.text.startsWith(" ");
+        cur.text += (needsSpace ? " " : "") + frag.text;
+        cur.maxX = Math.max(cur.maxX, frag.x + frag.width);
+        cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
+        cur.height = Math.max(cur.height, frag.height);
+      } else if (isSameLineTabGap && Math.abs(cur.fontSize - frag.fontSize) <= 2.5) {
+        // Neatly connect Title + Date with a professional separator instead of ragged clumping
+        cur.text += "  —  " + frag.text;
         cur.maxX = Math.max(cur.maxX, frag.x + frag.width);
         cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
         cur.height = Math.max(cur.height, frag.height);
       } else {
-        lineFrames.push({ ...cur });
+        lineRuns.push({ ...cur });
         cur = {
           x: frag.x,
           y: frag.y,
@@ -333,204 +386,393 @@ export function clusterPdfTextContent(
           bold: frag.bold,
           italic: frag.italic,
           color: frag.color,
+          baselineY: line.baselineY,
         };
       }
     }
 
-    if (cur) lineFrames.push({ ...cur });
+    if (cur) lineRuns.push({ ...cur });
   }
 
-  // 7. Multi-column detection to avoid interleaving left & right columns
-  const hasTwoColumns =
-    lineFrames.some((r) => r.x > viewportWidth * 0.55 && r.width < viewportWidth * 0.45) &&
-    lineFrames.some((r) => r.x < viewportWidth * 0.45 && r.width < viewportWidth * 0.55);
+  // 6. Column architecture check
+  let isTrueTwoColumn = false;
+  let gutterX = viewportWidth * 0.5;
 
-  let columnSplitX = viewportWidth * 0.52;
-  if (hasTwoColumns) {
-    const leftRightSplit = lineFrames
-      .filter((r) => r.x > viewportWidth * 0.4 && r.x < viewportWidth * 0.7)
-      .map((r) => r.x);
-    if (leftRightSplit.length > 0) {
-      columnSplitX = Math.min(...leftRightSplit) - 8;
+  const fullWidthLineCount = lineRuns.filter((r) => r.width > viewportWidth * 0.55).length;
+  const totalLineCount = lineRuns.length;
+
+  if (totalLineCount > 8 && fullWidthLineCount / totalLineCount < 0.2) {
+    const leftTextLines = lineRuns.filter((r) => r.maxX < viewportWidth * 0.46 && r.y > 100);
+    const rightTextLines = lineRuns.filter((r) => r.x > viewportWidth * 0.54 && r.y > 100);
+
+    if (leftTextLines.length >= 6 && rightTextLines.length >= 6) {
+      const leftYMin = Math.min(...leftTextLines.map((r) => r.y));
+      const leftYMax = Math.max(...leftTextLines.map((r) => r.y));
+      const rightYMin = Math.min(...rightTextLines.map((r) => r.y));
+      const rightYMax = Math.max(...rightTextLines.map((r) => r.y));
+      const verticalOverlap = Math.min(leftYMax, rightYMax) - Math.max(leftYMin, rightYMin);
+
+      if (verticalOverlap > 200) {
+        isTrueTwoColumn = true;
+        const maxLeftX = Math.max(...leftTextLines.map((r) => r.maxX));
+        const minRightX = Math.min(...rightTextLines.map((r) => r.x));
+        gutterX = Math.round((maxLeftX + minRightX) / 2);
+      }
     }
   }
 
-  const headerRuns: LineFrame[] = [];
-  const leftRuns: LineFrame[] = [];
-  const rightRuns: LineFrame[] = [];
+  // 7. Order runs
+  let orderedRuns: LineRun[] = [];
+  if (!isTrueTwoColumn) {
+    orderedRuns = [...lineRuns].sort((a, b) => {
+      const diffY = a.baselineY - b.baselineY;
+      if (Math.abs(diffY) > 3) return diffY;
+      return a.x - b.x;
+    });
+  } else {
+    const headerRuns: LineRun[] = [];
+    const leftColRuns: LineRun[] = [];
+    const rightColRuns: LineRun[] = [];
 
-  for (const run of lineFrames) {
-    if (!hasTwoColumns) {
-      leftRuns.push(run);
-    } else if (run.y < 120 && (run.fontSize >= 14 || run.x + run.width > columnSplitX + 30)) {
-      headerRuns.push(run);
-    } else if (run.x >= columnSplitX - 10) {
-      rightRuns.push(run);
-    } else {
-      leftRuns.push(run);
+    const firstTwoColY = Math.min(
+      ...lineRuns
+        .filter((r) => (r.maxX < gutterX - 10 && r.y > 80) || (r.x > gutterX + 10 && r.y > 80))
+        .map((r) => r.y),
+    );
+
+    for (const run of lineRuns) {
+      if (run.y < firstTwoColY - 10 || run.width > viewportWidth * 0.6) {
+        headerRuns.push(run);
+      } else if (run.maxX <= gutterX) {
+        leftColRuns.push(run);
+      } else {
+        rightColRuns.push(run);
+      }
     }
+
+    headerRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
+    leftColRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
+    rightColRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
+    orderedRuns = [...headerRuns, ...leftColRuns, ...rightColRuns];
   }
 
-  // Helper to merge wrapped sentences within the same column group
-  const mergeRunsInColumn = (runs: LineFrame[]): LineFrame[] => {
-    runs.sort((a, b) => a.y - b.y);
-    const result: LineFrame[] = [];
-    let i = 0;
+  // 8. Natural Paragraph Clustering & Alignment Normalization
+  // Detect dominant document body baseline margin
+  const bodyRuns = orderedRuns.filter((r) => !r.text.startsWith("•") && r.width > 80);
+  const minBodyX = bodyRuns.length > 0 ? Math.min(...bodyRuns.map((r) => r.x)) : 40;
+  const baseMargin = Math.max(28, Math.min(54, Math.round(minBodyX)));
+  const mergedBlocks: CanvasTextBlock[] = [];
+  let i = 0;
 
-    while (i < runs.length) {
-      const frame = { ...runs[i]! };
-      let nextIdx = i + 1;
+  while (i < orderedRuns.length) {
+    const cur = orderedRuns[i]!;
+    let rawText = cur.text.trim();
+    let width = cur.width;
+    let height = cur.height;
 
-      while (nextIdx < runs.length) {
-        const next = runs[nextIdx]!;
-        const gapY = next.y - (frame.y + frame.height);
+    // Bullet normalization
+    const { text: normalizedText, isBullet } = normalizeBulletText(rawText);
+    rawText = normalizedText;
+
+    const isSectionHeader =
+      !isBullet &&
+      rawText.length < 50 &&
+      (/^(PROFESSIONAL SUMMARY|SUMMARY|EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|EDUCATION|SKILLS|TECHNICAL SKILLS|PROJECTS|CERTIFICATIONS|AWARDS|PUBLICATIONS|LEADERSHIP|ACTIVITIES)/i.test(
+        rawText,
+      ) ||
+        (rawText === rawText.toUpperCase() && rawText.length >= 4 && !rawText.includes("•")));
+
+    const isCandidateName = i === 0 && pageIndex === 0 && (cur.fontSize >= 14 || cur.bold);
+
+    const isContactLine =
+      (i === 1 || i === 2) &&
+      pageIndex === 0 &&
+      (rawText.includes("@") ||
+        rawText.includes("|") ||
+        rawText.includes("linkedin") ||
+        rawText.includes("github"));
+
+    const isJobTitleLine =
+      !isSectionHeader &&
+      !isCandidateName &&
+      !isContactLine &&
+      !isBullet &&
+      (rawText.includes(" — ") ||
+        rawText.includes(" | ") ||
+        /^(Senior|Lead|Junior|Staff|Principal|Software|Product|Engineering|Director|Manager|VP|Analyst|Consultant)/i.test(
+          rawText,
+        )) &&
+      rawText.length < 90;
+
+    let nextIdx = i + 1;
+
+    // Merge multi-line wrapping paragraphs
+    if (!isSectionHeader && !isCandidateName && !isJobTitleLine) {
+      while (nextIdx < orderedRuns.length) {
+        const next = orderedRuns[nextIdx]!;
+        const gapY = next.y - (cur.y + height);
 
         const sameStyle =
-          frame.fontFamily === next.fontFamily &&
-          Math.abs(frame.fontSize - next.fontSize) <= 1 &&
-          frame.bold === next.bold &&
-          frame.italic === next.italic &&
-          frame.color === next.color;
+          cur.fontFamily === next.fontFamily &&
+          Math.abs(cur.fontSize - next.fontSize) <= 1 &&
+          cur.bold === next.bold &&
+          cur.italic === next.italic &&
+          cur.color === next.color;
 
-        const isNaturalLineSpacing = gapY >= -2 && gapY <= Math.max(9, frame.fontSize * 0.95);
-        const sameMargin = Math.abs(frame.x - next.x) <= 8; // exact same left margin
-        const isBulletStart = /^[•\-*]|\d+\./.test(next.text.trim());
-        const isHeader = next.bold || next.fontSize >= 12;
-        const prevEndsTerminal = /[.!?]$/.test(frame.text.trim());
-        const isWrappedLine =
-          frame.width > 140 && !isBulletStart && !isHeader && !frame.text.includes("|");
+        const isNaturalLineSpacing = gapY >= -2 && gapY <= Math.max(8, cur.fontSize * 0.9);
+        const sameMargin = Math.abs(cur.x - next.x) <= 12;
 
-        // Merge if this is an authentic multi-line sentence continuation
+        const { isBullet: nextIsBullet } = normalizeBulletText(next.text);
+        const nextIsHeader = next.bold || next.fontSize >= 12;
+        const curEndsTerminal = /[.!?:]$/.test(rawText);
+
         if (
           sameStyle &&
           isNaturalLineSpacing &&
           sameMargin &&
-          isWrappedLine &&
-          (!prevEndsTerminal || /^[a-z]/.test(next.text.trim()))
+          !nextIsBullet &&
+          !nextIsHeader &&
+          (!curEndsTerminal || /^[a-z]/.test(next.text.trim()))
         ) {
-          frame.text += " " + next.text.trim();
-          frame.width = Math.max(frame.width, next.width);
-          frame.height = Math.round(next.y + next.height - frame.y);
+          rawText += " " + next.text.trim();
+          width = Math.max(width, next.width);
+          height = Math.round(next.y + next.height - cur.y);
           nextIdx++;
         } else {
           break;
         }
       }
-
-      result.push(frame);
-      i = nextIdx;
     }
-    return result;
-  };
 
-  const finalMerged: LineFrame[] = [
-    ...mergeRunsInColumn(headerRuns),
-    ...mergeRunsInColumn(leftRuns),
-    ...mergeRunsInColumn(rightRuns),
-  ];
+    // Determine clean styling with fidelity to source PDF
+    let fontSize = cur.fontSize ? Math.round(cur.fontSize * 10) / 10 : 9.5;
+    let bold = cur.bold;
+    let color =
+      cur.color && cur.color !== "#000000" && cur.color !== "#ffffff"
+        ? cur.color
+        : cur.color || "#111827";
+    let align: CanvasTextBlock["align"] = "left";
+    let spaceBefore = 2;
+    let spaceAfter = 2;
+    let indent = 0;
 
-  return finalMerged.map((b, idx) => ({
-    id: `frame-${pageIndex + 1}-block-${idx + 1}`,
-    pageIndex,
-    text: b.text,
-    x: Math.round(b.x * 10) / 10,
-    y: Math.round(b.y * 10) / 10,
-    width: Math.max(Math.round(b.width * 10) / 10 + 6, 24),
-    height: Math.round(b.height),
-    fontSize: b.fontSize,
-    fontFamily: b.fontFamily,
-    bold: b.bold,
-    italic: b.italic,
-    color: b.color,
-    align: "left",
-    lineHeight: 1.25,
-    isTitle: b.fontSize >= 13 || (b.bold && b.fontSize >= 10.5),
-  }));
+    // Check alignment
+    const isCentered = Math.abs(cur.x + cur.width / 2 - viewportWidth / 2) < 45;
+    const isRightAligned =
+      cur.x + cur.width > viewportWidth - 60 && cur.width < viewportWidth * 0.45;
+
+    // Indentation calculation relative to detected document baseline margin
+    const naturalIndent = Math.max(0, Math.min(72, Math.round(cur.x - baseMargin)));
+
+    if (isCandidateName) {
+      fontSize = Math.max(16, Math.min(26, fontSize));
+      bold = true;
+      if (!cur.color || cur.color === "#111827") color = "#0f172a";
+      align = isCentered ? "center" : "left";
+      spaceBefore = 4;
+      spaceAfter = 4;
+    } else if (isContactLine) {
+      fontSize = Math.max(8, Math.min(10.5, fontSize));
+      if (!cur.color || cur.color === "#111827") color = "#475569";
+      align = isCentered ? "center" : "left";
+      spaceBefore = 0;
+      spaceAfter = 6;
+    } else if (isSectionHeader) {
+      fontSize = Math.max(11, Math.min(14, fontSize));
+      bold = true;
+      if (!cur.color || cur.color === "#111827") color = "#1e3a8a";
+      align = "left";
+      spaceBefore = 8;
+      spaceAfter = 3;
+    } else if (isJobTitleLine) {
+      fontSize = Math.max(9.5, Math.min(12, fontSize));
+      bold = true;
+      align = "left";
+      spaceBefore = 5;
+      spaceAfter = 2;
+    } else if (isBullet) {
+      fontSize = Math.max(8.5, Math.min(11, fontSize));
+      align = "left";
+      indent = Math.max(14, naturalIndent);
+      spaceBefore = 2;
+      spaceAfter = 2;
+    } else {
+      fontSize = Math.max(8, Math.min(13, fontSize));
+      align = isCentered ? "center" : isRightAligned ? "right" : "left";
+      indent = naturalIndent >= 12 && !isCentered ? naturalIndent : 0;
+      spaceBefore = 2;
+      spaceAfter = 2;
+    }
+
+    mergedBlocks.push({
+      id: `frame-${pageIndex + 1}-block-${mergedBlocks.length + 1}`,
+      pageIndex,
+      text: rawText,
+      x: baseMargin,
+      y: Math.round(cur.y * 10) / 10,
+      width: Math.max(Math.round(width * 10) / 10, viewportWidth - baseMargin * 2),
+      height: Math.max(Math.round(height), 16),
+      fontSize,
+      fontFamily: cur.fontFamily,
+      bold,
+      italic: cur.italic,
+      underline: false,
+      color,
+      align,
+      lineHeight: 1.25,
+      letterSpacing: 0,
+      spaceBefore,
+      spaceAfter,
+      indent,
+      isTitle: isCandidateName,
+      isHeading: isSectionHeader || isJobTitleLine,
+      isBullet,
+    });
+
+    i = nextIdx;
+  }
+
+  return mergedBlocks;
 }
 
 /**
- * Converts raw text (from DOCX or text paste) into structured Canva/Figma blocks
- * with realistic typography and positioning.
+ * Converts raw text into structured document blocks
  */
 export function parseRawTextToCanvasBlocks(
   rawText: string,
-  pageWidth = 595,
-  pageHeight = 842,
+  pageWidth = 612,
+  pageHeight = 792,
 ): CanvasTextBlock[] {
   const lines = rawText
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const blocks: CanvasTextBlock[] = [];
 
-  let currentY = 36;
-  const marginX = 36;
+  const blocks: CanvasTextBlock[] = [];
+  const marginX = 40;
   const contentWidth = pageWidth - marginX * 2;
+  let currentY = 40;
   let pageIdx = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
 
-    const isHeaderLine =
-      line.length < 45 &&
-      (i === 0 ||
-        /^(EDUCATION|EXPERIENCE|PROJECTS|SKILLS|TECHNICAL SKILLS|PUBLICATIONS|AWARDS|CERTIFICATIONS|COURSEWORK|ACHIEVEMENTS|ADDITIONAL)/i.test(
+    const isTitleLine = i === 0 && line.length < 40;
+    const isContactLine =
+      (i === 1 || i === 2) &&
+      (line.includes("@") ||
+        line.includes("|") ||
+        line.includes("linkedin") ||
+        line.includes("http"));
+
+    const isSectionHeader =
+      !isTitleLine &&
+      !isContactLine &&
+      line.length < 50 &&
+      (/^(PROFESSIONAL SUMMARY|SUMMARY|EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|EDUCATION|SKILLS|TECHNICAL SKILLS|PROJECTS|CERTIFICATIONS|AWARDS|PUBLICATIONS|LEADERSHIP|ACTIVITIES)/i.test(
+        line,
+      ) ||
+        (line === line.toUpperCase() && line.length >= 4 && !line.includes("•")));
+
+    const isJobTitleLine =
+      !isSectionHeader &&
+      !isTitleLine &&
+      !isContactLine &&
+      (line.includes(" | ") ||
+        line.includes(" — ") ||
+        line.includes(" - ") ||
+        /^(Senior|Lead|Junior|Staff|Principal|Software|Product|Engineering|Director|Manager|VP|Analyst|Consultant)/i.test(
           line,
-        ) ||
-        (line === line.toUpperCase() && line.length > 3));
+        )) &&
+      line.length < 90 &&
+      !line.startsWith("•");
 
-    const isTitleLine = i === 0 && line.length < 35;
-    const isBulletLine = /^[•\-*]/.test(line);
+    const isBulletLine = /^[•\-*]|\d+\.\s/.test(line);
 
-    let fontSize = 9;
+    let fontSize = 9.5;
     let bold = false;
-    let color = "#222222";
-    const align: CanvasTextBlock["align"] = "left";
+    let color = "#111827";
+    let align: CanvasTextBlock["align"] = "left";
+    let spaceBefore = 2;
+    let spaceAfter = 2;
+    let indent = 0;
 
     if (isTitleLine) {
       fontSize = 20;
       bold = true;
-      color = "#000000";
-    } else if (isHeaderLine) {
-      fontSize = 11;
+      color = "#0f172a";
+      align = "left";
+      spaceBefore = 4;
+      spaceAfter = 4;
+    } else if (isContactLine) {
+      fontSize = 9;
+      bold = false;
+      color = "#475569";
+      align = "left";
+      spaceBefore = 0;
+      spaceAfter = 6;
+    } else if (isSectionHeader) {
+      fontSize = 11.5;
       bold = true;
-      color = "#17365d";
+      color = "#1e3a8a";
+      align = "left";
+      spaceBefore = 8;
+      spaceAfter = 3;
+    } else if (isJobTitleLine) {
+      fontSize = 10;
+      bold = true;
+      color = "#0f172a";
+      align = "left";
+      spaceBefore = 5;
+      spaceAfter = 2;
     } else if (isBulletLine) {
-      fontSize = 8.7;
+      fontSize = 9.5;
       bold = false;
-      color = "#222222";
-    } else if (line.includes(" | ") || line.includes("@") || line.includes("linkedin")) {
-      fontSize = 8.8;
-      bold = false;
-      color = "#444444";
+      color = "#1f2937";
+      indent = 14;
+      spaceBefore = 2;
+      spaceAfter = 2;
     }
 
-    const estimatedHeight = Math.max(14, Math.round(fontSize * 1.35));
+    const estimatedHeight = Math.max(16, Math.round(fontSize * 1.25));
 
     // Auto page overflow
-    if (currentY + estimatedHeight > pageHeight - 36) {
+    if (currentY + estimatedHeight > pageHeight - 40) {
       pageIdx++;
-      currentY = 36;
+      currentY = 40;
+    }
+
+    let formattedText = line;
+    if (isBulletLine && !line.startsWith("•") && (line.startsWith("-") || line.startsWith("*"))) {
+      formattedText = "• " + line.slice(1).trim();
     }
 
     blocks.push({
       id: `text-block-${blocks.length + 1}`,
       pageIndex: pageIdx,
-      text: line,
-      x: isBulletLine ? marginX + 4 : marginX,
+      text: formattedText,
+      x: marginX,
       y: currentY,
       width: contentWidth,
       height: estimatedHeight,
       fontSize,
-      fontFamily: "Inter, sans-serif",
+      fontFamily: "Calibri, sans-serif",
       bold,
+      italic: false,
+      underline: false,
       color,
       align,
       lineHeight: 1.25,
-      isTitle: isHeaderLine || isTitleLine,
+      letterSpacing: 0,
+      spaceBefore,
+      spaceAfter,
+      indent,
+      isTitle: isTitleLine,
+      isHeading: isSectionHeader || isJobTitleLine,
+      isBullet: isBulletLine,
     });
 
-    currentY += estimatedHeight + (isHeaderLine ? 8 : isTitleLine ? 10 : 4);
+    currentY += estimatedHeight + spaceBefore + spaceAfter;
   }
 
   return blocks;

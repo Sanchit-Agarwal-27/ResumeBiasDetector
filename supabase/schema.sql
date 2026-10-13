@@ -66,10 +66,20 @@ create table if not exists public.canvas_blocks (
   bold boolean default false,
   italic boolean default false,
   underline boolean default false,
+  strikethrough boolean default false,
   color text default '#111827',
+  background_color text default null,
   align text default 'left',
   line_height numeric default 1.3,
+  letter_spacing numeric default 0,
+  space_before numeric default 0,
+  space_after numeric default 4,
+  indent numeric default 0,
   is_title boolean default false,
+  is_heading boolean default false,
+  is_bullet boolean default false,
+  is_numbered boolean default false,
+  list_number int default null,
   primary key (resume_id, id)
 );
 
@@ -100,6 +110,16 @@ create table if not exists public.resume_versions (
 alter table public.resumes add column if not exists target_job jsonb default null;
 alter table public.resumes add column if not exists ats_match jsonb default null;
 alter table public.resume_versions add column if not exists ats_score int default null;
+alter table public.canvas_blocks add column if not exists strikethrough boolean default false;
+alter table public.canvas_blocks add column if not exists background_color text default null;
+alter table public.canvas_blocks add column if not exists letter_spacing numeric default 0;
+alter table public.canvas_blocks add column if not exists space_before numeric default 0;
+alter table public.canvas_blocks add column if not exists space_after numeric default 4;
+alter table public.canvas_blocks add column if not exists indent numeric default 0;
+alter table public.canvas_blocks add column if not exists is_heading boolean default false;
+alter table public.canvas_blocks add column if not exists is_bullet boolean default false;
+alter table public.canvas_blocks add column if not exists is_numbered boolean default false;
+alter table public.canvas_blocks add column if not exists list_number int default null;
 
 -- ==============================================================================
 -- INDEXES FOR PERFORMANCE

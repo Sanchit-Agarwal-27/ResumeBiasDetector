@@ -40,6 +40,7 @@ import { jsPDF } from "jspdf";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,7 @@ import {
   runCounterfactualFairnessAudit,
   EVALUATION_BENCHMARK_DATA,
 } from "@/lib/bias-taxonomy";
-import { FigmaResumeEditor } from "./figma-resume-editor";
+import { WordResumeEditor } from "./word-resume-editor";
 import {
   clusterPdfTextContent,
   parseRawTextToCanvasBlocks,
@@ -200,12 +201,12 @@ export function ResumeWorkspace() {
     "profile" | "security" | "privacy" | "engine" | "appearance" | "feedback"
   >("profile");
 
-  // Figma / Canva Design Editor state
+  // Word / Docs Document Editor state
   const [canvasPages, setCanvasPages] = useState<CanvasPage[]>([
-    { id: "page-1", pageNumber: 1, width: 595, height: 842 },
+    { id: "page-1", pageNumber: 1, width: 612, height: 792 },
   ]);
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasTextBlock[]>(() =>
-    parseRawTextToCanvasBlocks(sampleReport.raw_text, 595, 842),
+    parseRawTextToCanvasBlocks(sampleReport.raw_text, 612, 792),
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -475,8 +476,8 @@ export function ResumeWorkspace() {
     setLoaded(true);
     setActiveId(fixture.spans[0]?.id ?? "span-001");
     setFilter("all");
-    setCanvasPages([{ id: "page-1", pageNumber: 1, width: 595, height: 842 }]);
-    setCanvasBlocks(parseRawTextToCanvasBlocks(fixture.raw_text, 595, 842));
+    setCanvasPages([{ id: "page-1", pageNumber: 1, width: 612, height: 792 }]);
+    setCanvasBlocks(parseRawTextToCanvasBlocks(fixture.raw_text, 612, 792));
     setStatus("Sample analysis ready");
     setTimeout(() => setIsTransitioning(false), 220);
     toast.info("Sample resume loaded", {
@@ -489,7 +490,7 @@ export function ResumeWorkspace() {
     const blankId = `blank-${Date.now()}`;
     const initialText =
       "Your Name\ncontact@example.com | (555) 000-0000 | linkedin.com/in/profile\n\nPROFESSIONAL SUMMARY\nAccomplished professional with experience leading high-impact initiatives.\n\nEXPERIENCE\nSenior Specialist | Organization\n• Spearheaded core operations and delivered measurable results across key projects.";
-    const blankBlocks = parseRawTextToCanvasBlocks(initialText, 595, 842);
+    const blankBlocks = parseRawTextToCanvasBlocks(initialText, 612, 792);
     const analysis = analyzeResumeText(initialText);
     const fairness = runCounterfactualFairnessAudit(initialText, analysis.spans);
     const blankReport: ResumeBiasReport = {
@@ -508,12 +509,12 @@ export function ResumeWorkspace() {
     setLoaded(true);
     setActiveId(analysis.spans[0]?.id ?? "");
     setFilter("all");
-    setCanvasPages([{ id: "page-1", pageNumber: 1, width: 595, height: 842 }]);
+    setCanvasPages([{ id: "page-1", pageNumber: 1, width: 612, height: 792 }]);
     setCanvasBlocks(blankBlocks);
     setStatus("Blank resume created");
     setTimeout(() => setIsTransitioning(false), 220);
     toast.success("New blank resume created", {
-      description: "Start typing or designing on the canvas.",
+      description: "Start typing or editing your document.",
     });
   }
 
@@ -546,13 +547,13 @@ export function ResumeWorkspace() {
         const mammoth = await import("mammoth");
         const result = await mammoth.extractRawText({ arrayBuffer });
         rawText = result.value.trim();
-        extractedBlocks = parseRawTextToCanvasBlocks(rawText, 595, 842);
+        extractedBlocks = parseRawTextToCanvasBlocks(rawText, 612, 792);
         const maxPageIdx = Math.max(0, ...extractedBlocks.map((b) => b.pageIndex));
         extractedPages = Array.from({ length: maxPageIdx + 1 }, (_, i) => ({
           id: `page-${i + 1}`,
           pageNumber: i + 1,
-          width: 595,
-          height: 842,
+          width: 612,
+          height: 792,
         }));
       } else {
         const pdfjs = await import("pdfjs-dist");
@@ -572,13 +573,50 @@ export function ResumeWorkspace() {
             (page as unknown as { commonObjs?: unknown }).commonObjs,
             opList,
           );
-          extractedPages.push({
-            id: `page-${index + 1}`,
-            pageNumber: index + 1,
-            width: Math.round(viewport.width),
-            height: Math.round(viewport.height),
-          });
-          extractedBlocks.push(...pageBlocks);
+
+          // Standardize page dimensions to standard resume formats:
+          // US Letter: 612 x 792 pt, A4: 595 x 842 pt
+          let normWidth = 612;
+          let normHeight = 792;
+          if (viewport.width <= 600) {
+            normWidth = 595;
+            normHeight = 842;
+          } else {
+            normWidth = 612;
+            normHeight = 792;
+          }
+
+          // If content on this viewport page exceeds standard page height,
+          // flow blocks cleanly across multiple standard pages without vertical stretching
+          const contentMaxY =
+            pageBlocks.length > 0 ? Math.max(...pageBlocks.map((b) => b.y + b.height)) : 0;
+          const usablePageHeight = normHeight - 60;
+          const subPagesNeeded = Math.max(1, Math.ceil(contentMaxY / usablePageHeight));
+
+          const basePageIndex = extractedPages.length;
+          for (let sp = 0; sp < subPagesNeeded; sp++) {
+            extractedPages.push({
+              id: `page-${basePageIndex + sp + 1}`,
+              pageNumber: basePageIndex + sp + 1,
+              width: normWidth,
+              height: normHeight,
+            });
+          }
+
+          for (const b of pageBlocks) {
+            const pageOffset = Math.min(Math.floor(b.y / usablePageHeight), subPagesNeeded - 1);
+            const targetPageIndex = basePageIndex + pageOffset;
+            const remappedY =
+              pageOffset > 0
+                ? Math.round(b.y - pageOffset * usablePageHeight + 36)
+                : Math.round(b.y);
+            extractedBlocks.push({
+              ...b,
+              pageIndex: targetPageIndex,
+              y: remappedY,
+              width: Math.min(b.width, normWidth - 72),
+            });
+          }
         }
         rawText = extractedBlocks
           .map((b) => b.text)
@@ -615,7 +653,7 @@ export function ResumeWorkspace() {
       setActiveId(analysis.spans[0]?.id ?? "");
       setCanvasPages(extractedPages);
       setCanvasBlocks(extractedBlocks);
-      setStatus(`${file.name} imported into vector canvas editor`);
+      setStatus(`${file.name} imported into Word resume editor`);
       toast.success("Resume imported successfully", {
         description: `Detected ${analysis.spans.length} signals with ${analysis.neutrality_score}% neutrality index.`,
       });
@@ -660,8 +698,11 @@ export function ResumeWorkspace() {
         );
         const joined = sorted.map((b) => b.text).join("\n\n");
         updateText(joined);
-        setStatus("Rewrite applied to canvas frame");
-        toast.success("Rewrite applied to canvas block");
+        setStatus("Rewrite applied to document");
+        toast.success("Rewrite applied to document");
+        const nextInFilter = filteredSpans.find((span) => span.id !== activeSpan.id);
+        const nextAny = report.spans.find((span) => span.id !== activeSpan.id);
+        setActiveId(nextInFilter?.id || nextAny?.id || "");
         return;
       }
     }
@@ -826,30 +867,12 @@ export function ResumeWorkspace() {
                     size="sm"
                     className="h-8 gap-2 px-2.5 text-xs font-semibold rounded-lg"
                   >
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name}
-                        referrerPolicy="no-referrer"
-                        crossOrigin="anonymous"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          const fallback = e.currentTarget.parentElement?.querySelector(
-                            ".avatar-fallback-initials",
-                          );
-                          if (fallback) (fallback as HTMLElement).style.display = "grid";
-                        }}
-                        className="size-5 rounded-full object-cover shrink-0"
-                      />
-                    ) : null}
-                    <div
-                      className={cn(
-                        "avatar-fallback-initials grid size-5 place-items-center rounded-full bg-primary/20 text-primary font-bold text-[10px] shrink-0",
-                        user.avatarUrl && "hidden",
-                      )}
-                    >
-                      {user.name.slice(0, 1).toUpperCase()}
-                    </div>
+                    <UserAvatar
+                      src={user.avatarUrl}
+                      name={user.name}
+                      size="xs"
+                      className="size-5"
+                    />
                     <span className="max-w-[110px] truncate">{user.name.split(" ")[0]}</span>
                     <ChevronDown className="size-3 text-muted-foreground" />
                   </Button>
@@ -976,14 +999,14 @@ export function ResumeWorkspace() {
             <div className="mt-6">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 <Sparkles className="size-3.5" />
-                <span>AI-Powered Resume Bias Detection & Design Editor</span>
+                <span>AI-Powered Resume Bias Detection & Document Editor</span>
               </div>
               <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                 Welcome to BiasLens
               </h1>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
                 Import an existing resume or start fresh to uncover hidden screening bias, calibrate
-                neutrality, and refine your design in an interactive vector canvas editor.
+                neutrality, and refine your resume in an intuitive, Google Docs-style word editor.
               </p>
             </div>
 
@@ -1011,7 +1034,7 @@ export function ResumeWorkspace() {
                 </div>
                 <span className="mt-3 text-xs font-bold text-foreground">Create New</span>
                 <span className="mt-1 text-[11px] text-muted-foreground">
-                  Start from blank canvas
+                  Start from clean document
                 </span>
               </button>
 
@@ -1379,35 +1402,18 @@ export function ResumeWorkspace() {
                   size="sm"
                   className="h-8 gap-2 px-2 sm:px-2.5 font-medium text-xs rounded-lg"
                 >
-                  {isAuthenticated && user?.avatarUrl ? (
-                    <img
+                  {isAuthenticated && user ? (
+                    <UserAvatar
                       src={user.avatarUrl}
-                      alt={user.name}
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        // Fallback gracefully to clean initial badge if image link expires or gets blocked
-                        e.currentTarget.style.display = "none";
-                        const fallback = e.currentTarget.parentElement?.querySelector(
-                          ".avatar-fallback-initials",
-                        );
-                        if (fallback) (fallback as HTMLElement).style.display = "grid";
-                      }}
-                      className="size-5 rounded-full object-cover shrink-0"
+                      name={user.name}
+                      size="xs"
+                      className="size-5"
                     />
-                  ) : null}
-                  <div
-                    className={cn(
-                      "avatar-fallback-initials grid size-5 place-items-center rounded-full bg-primary/20 text-primary font-bold text-[10px] shrink-0",
-                      isAuthenticated && user?.avatarUrl && "hidden",
-                    )}
-                  >
-                    {isAuthenticated && user ? (
-                      user.name.slice(0, 1).toUpperCase()
-                    ) : (
+                  ) : (
+                    <div className="grid size-5 place-items-center rounded-full bg-muted text-muted-foreground">
                       <User className="size-3" />
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <span className="hidden sm:inline-block max-w-[100px] truncate">
                     {isAuthenticated && user ? user.name.split(" ")[0] : "Account"}
                   </span>
@@ -1567,7 +1573,7 @@ export function ResumeWorkspace() {
 
       {/* MAIN TWO-COLUMN WORKSPACE */}
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,3.5fr)_minmax(330px,1.5fr)]">
-        {/* LEFT COLUMN: FIGMA / CANVA RESUME DESIGN CANVAS */}
+        {/* LEFT COLUMN: MS WORD / GOOGLE DOCS STYLE RESUME EDITOR */}
         <section className="min-w-0 border-b p-3 sm:p-5 lg:border-b-0 lg:border-r flex flex-col bg-slate-50 dark:bg-zinc-950">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -1605,12 +1611,12 @@ export function ResumeWorkspace() {
             </div>
           </div>
 
-          {/* FIGMA / CANVA RESUME EDITOR CANVAS */}
+          {/* WORD / DOCS RESUME EDITOR */}
           <div className="flex-1 min-h-[640px] h-[calc(100vh-170px)]">
             {isTransitioning ? (
               <CanvasSkeleton className="h-full" />
             ) : (
-              <FigmaResumeEditor
+              <WordResumeEditor
                 pages={canvasPages}
                 blocks={canvasBlocks}
                 activeBiasSpan={activeSpan}

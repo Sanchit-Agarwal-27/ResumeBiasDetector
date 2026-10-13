@@ -69,7 +69,7 @@ Modern recruitment algorithms and automated Applicant Tracking Systems (ATS) fre
 ### ☁️ Cloud Vault & Resume Version History
 
 - **Multi-Document Library:** Store, organize, and switch between multiple tailored resume profiles.
-- **Immutable Checkpoints:** Create named version snapshots (e.g., *"Initial Baseline v1"*, *"De-biased Candidate v2"*) with 1-click restore rollback.
+- **Immutable Checkpoints:** Create named version snapshots (e.g., _"Initial Baseline v1"_, _"De-biased Candidate v2"_) with 1-click restore rollback.
 - **Side-by-Side Visual Diff Inspector:** Word-level color-coded comparison highlighting additions, deletions, and score progressions.
 - **Branching & Duplication:** Duplicate existing profiles to test different industry specializations without losing work.
 
@@ -176,7 +176,7 @@ biaslens/
    VITE_SUPABASE_URL=https://your-project-id.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-public-key-here
    ```
-   *(If not configured, BiasLens seamlessly runs in zero-friction Local Guest Mode using persistent browser storage).*
+   _(If not configured, BiasLens seamlessly runs in zero-friction Local Guest Mode using persistent browser storage)._
 
 ### Database Setup (Supabase PostgreSQL)
 

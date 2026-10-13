@@ -24,7 +24,7 @@ audit actually catches bias when it's there).
 **`bias_taxonomy.py`**
 A small, temporary bias lexicon (gender-coded words, age-coded phrases,
 university-prestige markers) plus a `flag_sample_text()` function that
-scans text and returns flagged phrases. This is a *stand-in* for Person
+scans text and returns flagged phrases. This is a _stand-in_ for Person
 A's real NLP detector — once their module is ready, swap their output
 in wherever this file is used. The important thing is the shape stays
 the same: each flag has a `text`, `category`, `severity`, and
@@ -48,13 +48,14 @@ as a sanity check: the audit should find little bias here.
 **`mock_scorer_biased.py`**
 A second placeholder scorer with bias built in **on purpose** (penalizes
 certain names, less-known universities, and employment gaps). Run your
-audit against this one to *prove your statistics pipeline works* —
+audit against this one to _prove your statistics pipeline works_ —
 this is your strongest demo/viva moment: "here's a known-biased model,
 and here's our audit correctly catching it."
 
 **`fairness_audit.py`**
 The actual statistics. Takes resume pairs + a scorer, and for each
 variable tested computes:
+
 - Mean score gap between variant A and variant B
 - A paired t-test p-value (is the gap statistically meaningful?)
 - Disparate impact ratio (the "80% rule" — a standard HR/legal fairness
@@ -100,8 +101,8 @@ correctly distinguish a fair model from a biased one.
   size artificially. Before your final report, write more varied
   resume bodies by hand or synthetically to make the statistics
   genuinely robust, not just repeated.
-- The mock scorers are not real models. Your fairness-audit *method* is
-  valid research methodology; your *specific numbers* are only as
+- The mock scorers are not real models. Your fairness-audit _method_ is
+  valid research methodology; your _specific numbers_ are only as
   meaningful as whatever scorer you plug in.
 - Disparate impact ratio depends heavily on the shortlist threshold you
   pick — say so explicitly when you present results, and consider

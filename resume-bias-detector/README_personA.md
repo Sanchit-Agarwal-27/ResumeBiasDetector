@@ -106,7 +106,7 @@ Set `run_contextual=True` to also run the transformer-based contextual pass
    categories at once since the model has nothing substantive to classify
    — fixed by requiring a minimum word count before a segment reaches the
    classifier. Residual, undocumented risk: short skill-bullet fragments
-   (e.g. "HR Policies & Procedures   Staff Recruitment & Retention") still
+   (e.g. "HR Policies & Procedures Staff Recruitment & Retention") still
    pass the word-count filter but aren't real prose either, and may still
    produce some noise. Given time constraints this is accepted as a known
    limitation rather than further engineered — consistent with the

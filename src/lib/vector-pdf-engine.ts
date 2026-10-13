@@ -155,10 +155,19 @@ export async function generateVectorPdf(
       const align = block.align === "justify" ? "left" : block.align || "left";
 
       // Render vector text with native PDF font operator
-      pdf.text(lines, xPt, yPt + fontSizePt, {
+      const textOptions: {
+        align: "left" | "center" | "right";
+        lineHeightFactor: number;
+        charSpace?: number;
+      } = {
         align,
         lineHeightFactor: block.lineHeight || 1.35,
-      });
+      };
+      if (typeof block.letterSpacing === "number" && block.letterSpacing !== 0) {
+        textOptions.charSpace = block.letterSpacing;
+      }
+
+      pdf.text(lines, xPt, yPt + fontSizePt, textOptions);
 
       // If text is underlined, draw a crisp vector rule line
       if (block.underline) {

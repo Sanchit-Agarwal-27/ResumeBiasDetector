@@ -44,4 +44,57 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export { Avatar, AvatarImage, AvatarFallback };
+interface UserAvatarProps {
+  src?: string | null;
+  name?: string;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  className?: string;
+  fallbackClassName?: string;
+}
+
+const UserAvatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  UserAvatarProps
+>(({ src, name = "User", size = "md", className, fallbackClassName }, ref) => {
+  const initials = React.useMemo(() => {
+    if (!name) return "BL";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "BL";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }, [name]);
+
+  const sizeClasses = {
+    xs: "size-5 text-[10px]",
+    sm: "size-8 text-xs",
+    md: "size-10 text-xs",
+    lg: "size-12 text-sm",
+    xl: "size-16 text-base",
+  }[size];
+
+  return (
+    <Avatar ref={ref} className={cn(sizeClasses, "border border-border/60 shrink-0 select-none", className)}>
+      {src ? (
+        <AvatarImage
+          src={src}
+          alt={name}
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          className="size-full object-cover"
+        />
+      ) : null}
+      <AvatarFallback
+        className={cn(
+          "bg-gradient-to-tr from-sky-600 via-indigo-600 to-purple-600 text-white font-bold select-none",
+          fallbackClassName,
+        )}
+      >
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  );
+});
+UserAvatar.displayName = "UserAvatar";
+
+export { Avatar, AvatarImage, AvatarFallback, UserAvatar };
+

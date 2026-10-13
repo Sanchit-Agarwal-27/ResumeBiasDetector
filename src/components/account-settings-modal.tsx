@@ -1,31 +1,28 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { UserAvatar } from "@/components/ui/avatar";
 import { useAuth, type UserProfile } from "@/lib/auth-context";
-import { useTheme, type ThemeMode } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 import {
   Activity,
   AlertTriangle,
-  Bug,
   Check,
   CheckCircle2,
   Clock,
   Compass,
   Cpu,
   Database,
-  Globe,
-  HardDrive,
+  FileText,
   HelpCircle,
   KeyRound,
   Laptop,
-  LifeBuoy,
   Lock,
   LogOut,
-  Mail,
   Moon,
   Paintbrush,
   Palette,
@@ -34,14 +31,15 @@ import {
   Send,
   Server,
   Shield,
-  ShieldAlert,
   ShieldCheck,
-  Smartphone,
   Sparkles,
   Sun,
+  Target,
   Trash2,
+  Type,
   User,
-  UserCheck,
+  History,
+  FileCheck2,
 } from "lucide-react";
 
 interface AccountSettingsModalProps {
@@ -52,12 +50,58 @@ interface AccountSettingsModalProps {
   onEngineModeChange?: (mode: "local" | "fastapi") => void;
 }
 
-const PRESET_AVATARS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&h=256&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&h=256&q=80",
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&h=256&q=80",
+export const PRESET_AVATARS = [
+  {
+    id: "initials",
+    label: "Clean Initials Badge",
+    url: "",
+    isInitials: true,
+  },
+  {
+    id: "svg-sky",
+    label: "Sky Tech",
+    url: "https://api.dicebear.com/7.x/identicon/svg?seed=BiasLensSky&backgroundColor=0284c7",
+  },
+  {
+    id: "svg-indigo",
+    label: "Indigo Executive",
+    url: "https://api.dicebear.com/7.x/identicon/svg?seed=BiasLensIndigo&backgroundColor=4f46e5",
+  },
+  {
+    id: "svg-emerald",
+    label: "Emerald DEI",
+    url: "https://api.dicebear.com/7.x/identicon/svg?seed=BiasLensEmerald&backgroundColor=059669",
+  },
+  {
+    id: "svg-purple",
+    label: "Purple Creative",
+    url: "https://api.dicebear.com/7.x/identicon/svg?seed=BiasLensPurple&backgroundColor=7c3aed",
+  },
+  {
+    id: "photo-1",
+    label: "Professional 1",
+    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80",
+  },
+  {
+    id: "photo-2",
+    label: "Professional 2",
+    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80",
+  },
+  {
+    id: "photo-3",
+    label: "Professional 3",
+    url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&h=256&q=80",
+  },
+  {
+    id: "photo-4",
+    label: "Professional 4",
+    url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&h=256&q=80",
+  },
+  {
+    id: "photo-5",
+    label: "Professional 5",
+    url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&h=256&q=80",
+  },
 ];
 
 export function AccountSettingsModal({
@@ -82,6 +126,14 @@ export function AccountSettingsModal({
     return localStorage.getItem("biaslens_fastapi_url") || "http://localhost:8000";
   });
   const [testingPing, setTestingPing] = useState(false);
+  const [fourFifthsSensitivity, setFourFifthsSensitivity] = useState(() => {
+    if (typeof window === "undefined") return "80";
+    return localStorage.getItem("biaslens_four_fifths_threshold") || "80";
+  });
+  const [atsAlgorithm, setAtsAlgorithm] = useState(() => {
+    if (typeof window === "undefined") return "hybrid";
+    return localStorage.getItem("biaslens_ats_algorithm") || "hybrid";
+  });
 
   // Keep active tab in sync when opened with a specific defaultTab
   React.useEffect(() => {
@@ -97,9 +149,11 @@ export function AccountSettingsModal({
 
   // Profile Form States
   const [name, setName] = useState(user?.name || "");
+  const [roleTitle, setRoleTitle] = useState(user?.role || "Candidate");
   const [headline, setHeadline] = useState(user?.headline || "");
   const [organization, setOrganization] = useState(user?.organization || "");
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || PRESET_AVATARS[0]);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || "");
+  const [customAvatarInput, setCustomAvatarInput] = useState("");
 
   // Security Form States
   const [currentPassword, setCurrentPassword] = useState("");
@@ -112,10 +166,34 @@ export function AccountSettingsModal({
     user?.dataRetention || "local",
   );
   const [telemetry, setTelemetry] = useState(user?.telemetryEnabled ?? true);
+  const [autoVaultSync, setAutoVaultSync] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("biaslens_auto_vault_sync") !== "false";
+  });
+  const [anonymizePii, setAnonymizePii] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("biaslens_anonymize_pii") === "true";
+  });
 
-  // Appearance States
+  // Word Editor & Appearance States
   const [autoSave, setAutoSave] = useState(user?.autoSave ?? true);
   const [exportFormat, setExportFormat] = useState(user?.defaultExportFormat || "pdf");
+  const [defaultFont, setDefaultFont] = useState(() => {
+    if (typeof window === "undefined") return "Calibri, sans-serif";
+    return localStorage.getItem("biaslens_default_font") || "Calibri, sans-serif";
+  });
+  const [defaultPaperFormat, setDefaultPaperFormat] = useState(() => {
+    if (typeof window === "undefined") return "letter";
+    return localStorage.getItem("biaslens_paper_format") || "letter";
+  });
+  const [defaultMargin, setDefaultMargin] = useState(() => {
+    if (typeof window === "undefined") return "54";
+    return localStorage.getItem("biaslens_default_margin") || "54";
+  });
+  const [showUnderlines, setShowUnderlines] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("biaslens_show_bias_underlines") !== "false";
+  });
 
   // Feedback State
   const [feedbackCategory, setFeedbackCategory] = useState("Bug Report");
@@ -126,9 +204,10 @@ export function AccountSettingsModal({
   React.useEffect(() => {
     if (user) {
       setName(user.name);
+      setRoleTitle(user.role || "Candidate");
       setHeadline(user.headline || "");
       setOrganization(user.organization || "");
-      setAvatarUrl(user.avatarUrl || PRESET_AVATARS[0]);
+      setAvatarUrl(user.avatarUrl || "");
       setTwoFactor(user.twoFactorEnabled);
       setDataRetention(user.dataRetention);
       setTelemetry(user.telemetryEnabled);
@@ -144,11 +223,21 @@ export function AccountSettingsModal({
       return;
     }
     updateProfile({
-      name,
-      headline,
-      organization,
-      avatarUrl,
+      name: name.trim(),
+      role: roleTitle.trim(),
+      headline: headline.trim(),
+      organization: organization.trim(),
+      avatarUrl: avatarUrl.trim(),
     });
+  };
+
+  const handleApplyCustomAvatar = () => {
+    if (!customAvatarInput.trim()) {
+      toast.error("Please enter a valid image URL");
+      return;
+    }
+    setAvatarUrl(customAvatarInput.trim());
+    toast.success("Avatar URL applied — click Save Profile Changes to persist");
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -199,15 +288,29 @@ export function AccountSettingsModal({
       dataRetention,
       telemetryEnabled: telemetry,
     });
-    toast.success("Privacy preferences saved");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("biaslens_auto_vault_sync", String(autoVaultSync));
+      localStorage.setItem("biaslens_anonymize_pii", String(anonymizePii));
+    }
+    toast.success("Privacy preferences saved", {
+      description: "Data retention and export anonymization rules updated.",
+    });
   };
 
-  const handleSaveAppearance = () => {
+  const handleSaveEditorAndAppearance = () => {
     updateProfile({
       autoSave,
       defaultExportFormat: exportFormat as UserProfile["defaultExportFormat"],
     });
-    toast.success("Application preferences saved");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("biaslens_default_font", defaultFont);
+      localStorage.setItem("biaslens_paper_format", defaultPaperFormat);
+      localStorage.setItem("biaslens_default_margin", defaultMargin);
+      localStorage.setItem("biaslens_show_bias_underlines", String(showUnderlines));
+    }
+    toast.success("Word Editor & Theme preferences saved", {
+      description: "Default typography, margins, paper size, and theme updated.",
+    });
   };
 
   const handleSubmitFeedback = (e: React.FormEvent) => {
@@ -221,7 +324,7 @@ export function AccountSettingsModal({
       setSubmittingFeedback(false);
       setFeedbackMessage("");
       toast.success("Feedback submitted successfully!", {
-        description: "Thank you for helping us refine BiasLens detection precision.",
+        description: "Thank you for helping us refine BiasLens Word editor & detection precision.",
       });
     }, 600);
   };
@@ -230,6 +333,8 @@ export function AccountSettingsModal({
     setSelectedEngine(mode);
     if (typeof window !== "undefined") {
       localStorage.setItem("biaslens_engine_mode", mode);
+      localStorage.setItem("biaslens_four_fifths_threshold", fourFifthsSensitivity);
+      localStorage.setItem("biaslens_ats_algorithm", atsAlgorithm);
     }
     onEngineModeChange?.(mode);
     toast.success(mode === "local" ? "Local Engine Activated" : "FastAPI Backend Activated", {
@@ -256,7 +361,7 @@ export function AccountSettingsModal({
       });
     } catch {
       toast.info("FastAPI server standby", {
-        description: `Could not reach ${fastApiUrl} (Server will fallback to Local NLP if offline).`,
+        description: `Could not reach ${fastApiUrl} (BiasLens will use Local NLP if server is offline).`,
       });
     } finally {
       setTestingPing(false);
@@ -270,15 +375,12 @@ export function AccountSettingsModal({
         <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-muted/30 p-4 flex flex-col justify-between shrink-0">
           <div>
             <div className="flex items-center gap-3 px-2 py-3 mb-3">
-              <div className="relative size-10 rounded-full overflow-hidden border border-border bg-muted">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="size-full object-cover" />
-                ) : (
-                  <div className="size-full flex items-center justify-center font-bold text-xs bg-primary text-primary-foreground">
-                    {user?.name?.slice(0, 2).toUpperCase() || "BL"}
-                  </div>
-                )}
-              </div>
+              <UserAvatar
+                src={avatarUrl}
+                name={name || user?.name || "Guest Session"}
+                size="md"
+                className="border-2 border-primary/20 shadow-xs"
+              />
               <div className="min-w-0">
                 <p className="truncate text-xs font-bold text-foreground">
                   {user ? user.name : "Guest Session"}
@@ -293,7 +395,7 @@ export function AccountSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("profile")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "profile"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -306,7 +408,7 @@ export function AccountSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("security")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "security"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -319,7 +421,7 @@ export function AccountSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("privacy")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "privacy"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -332,7 +434,7 @@ export function AccountSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("engine")}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "engine"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -356,27 +458,27 @@ export function AccountSettingsModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("appearance")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "appearance"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <Palette className="size-4 shrink-0" />
-                <span>Website & Theme</span>
+                <span>Word Editor & Theme</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("feedback")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   activeTab === "feedback"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <HelpCircle className="size-4 shrink-0" />
-                <span>Help & Feedback</span>
+                <span>Help & Shortcuts</span>
               </button>
             </nav>
           </div>
@@ -389,13 +491,13 @@ export function AccountSettingsModal({
                 logout();
                 onOpenChange(false);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
             >
               <LogOut className="size-4 shrink-0" />
               <span>Sign Out</span>
             </button>
             <div className="px-3 pt-2">
-              <span className="text-[10px] text-muted-foreground">BiasLens v2.4.0 Engine</span>
+              <span className="text-[10px] text-muted-foreground">BiasLens v2.5 • Word Engine</span>
             </div>
           </div>
         </aside>
@@ -404,47 +506,85 @@ export function AccountSettingsModal({
         <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
           {/* TAB 1: PROFILE SETTINGS */}
           {activeTab === "profile" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
                 <h3 className="text-base font-bold text-foreground">Profile Settings</h3>
                 <p className="text-xs text-muted-foreground">
-                  Manage your personal information, public credentials, and avatar badge.
+                  Manage your personal information, public credentials, and profile avatar badge.
                 </p>
               </div>
 
               <form onSubmit={handleSaveProfile} className="space-y-5">
-                {/* Avatar Chooser */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Avatar Image</Label>
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={avatarUrl}
-                      alt="Current avatar"
-                      className="size-16 rounded-full object-cover border-2 border-primary/40 shadow-xs"
-                    />
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] text-muted-foreground">
-                        Select a curated profile avatar:
+                {/* Avatar Chooser with Fail-Safe Fallback */}
+                <div className="p-4 rounded-xl border border-border bg-card space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-foreground">Avatar Image</Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      Always visible • Automatic initials fallback
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="relative group">
+                      <UserAvatar
+                        src={avatarUrl}
+                        name={name || user?.name || "User"}
+                        size="xl"
+                        className="border-2 border-primary/40 ring-4 ring-primary/10 shadow-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        Select a curated profile avatar or initials badge:
                       </p>
-                      <div className="flex items-center gap-2">
-                        {PRESET_AVATARS.map((preset, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setAvatarUrl(preset)}
-                            className={`size-8 rounded-full overflow-hidden border-2 transition-transform hover:scale-105 ${
-                              avatarUrl === preset
-                                ? "border-primary ring-2 ring-primary/40"
-                                : "border-border"
-                            }`}
-                          >
-                            <img
-                              src={preset}
-                              alt={`Preset ${idx}`}
-                              className="size-full object-cover"
-                            />
-                          </button>
-                        ))}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {PRESET_AVATARS.map((preset) => {
+                          const isSelected =
+                            (preset.isInitials && (!avatarUrl || avatarUrl === "")) ||
+                            avatarUrl === preset.url;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setAvatarUrl(preset.url)}
+                              title={preset.label}
+                              className={`size-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
+                                isSelected
+                                  ? "border-primary ring-2 ring-primary/50 scale-105"
+                                  : "border-border hover:border-primary/50 hover:scale-105 opacity-80 hover:opacity-100"
+                              }`}
+                            >
+                              <UserAvatar
+                                src={preset.url}
+                                name={name || user?.name || "User"}
+                                size="sm"
+                                className="size-full border-0"
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom URL Input */}
+                      <div className="pt-1 flex items-center gap-2 max-w-md">
+                        <Input
+                          type="url"
+                          placeholder="Or paste custom image URL (e.g. https://...)"
+                          value={customAvatarInput}
+                          onChange={(e) => setCustomAvatarInput(e.target.value)}
+                          className="h-7 text-[11px]"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleApplyCustomAvatar}
+                          className="h-7 text-[11px] px-2.5 shrink-0"
+                        >
+                          Apply URL
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -457,7 +597,7 @@ export function AccountSettingsModal({
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Alex Rivera"
+                      placeholder="e.g. Eric Bosco"
                       className="h-9 text-xs"
                       required
                     />
@@ -477,24 +617,41 @@ export function AccountSettingsModal({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Professional Role</Label>
+                    <select
+                      value={roleTitle}
+                      onChange={(e) => setRoleTitle(e.target.value)}
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="Candidate">Candidate / Job Seeker</option>
+                      <option value="Recruiter">Technical Recruiter / Talent Acquisition</option>
+                      <option value="Hiring Manager">Hiring Manager / Team Lead</option>
+                      <option value="DEI Auditor">DEI Auditor / HR Compliance Officer</option>
+                      <option value="Career Coach">Career Coach / Consultant</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Organization / Employer</Label>
+                    <Input
+                      type="text"
+                      value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
+                      placeholder="e.g. Google, MIT Labs, or Independent"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Professional Headline</Label>
                   <Input
                     type="text"
                     value={headline}
                     onChange={(e) => setHeadline(e.target.value)}
-                    placeholder="e.g. Lead Talent Acquisition Specialist & DEI Champion"
-                    className="h-9 text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Organization / Employer</Label>
-                  <Input
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="e.g. Google, MIT Labs, or Independent"
+                    placeholder="e.g. Senior Software Engineer & Bias-Free Career Professional"
                     className="h-9 text-xs"
                   />
                 </div>
@@ -514,7 +671,7 @@ export function AccountSettingsModal({
 
           {/* TAB 2: ACCOUNT & SECURITY */}
           {activeTab === "security" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
                 <h3 className="text-base font-bold text-foreground">Account & Security</h3>
                 <p className="text-xs text-muted-foreground">
@@ -642,39 +799,41 @@ export function AccountSettingsModal({
                   <h4 className="text-xs font-bold text-destructive">Danger Zone</h4>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Permanently erase your account, audit logs, cached templates, and API keys. This
-                  action cannot be reversed.
+                  Permanently erase your account, audit logs, cached templates, and Cloud Vault
+                  snapshots. This action cannot be reversed.
                 </p>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="text-xs mt-1"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you certain you want to permanently delete your account and erase local data?",
-                      )
-                    ) {
-                      deleteAccount();
-                      onOpenChange(false);
-                    }
-                  }}
-                >
-                  <Trash2 className="size-3.5 mr-1.5" />
-                  Delete Account
-                </Button>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="text-xs"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Are you certain you want to permanently delete your account and erase local data?",
+                        )
+                      ) {
+                        deleteAccount();
+                        onOpenChange(false);
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-3.5 mr-1.5" />
+                    Delete Account
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
           {/* TAB 3: PRIVACY & DATA RETENTION */}
           {activeTab === "privacy" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
                 <h3 className="text-base font-bold text-foreground">Privacy & Data Governance</h3>
                 <p className="text-xs text-muted-foreground">
                   BiasLens is engineered with privacy-first principles. Customize how your resume
-                  data is preserved.
+                  document data is preserved.
                 </p>
               </div>
 
@@ -684,7 +843,7 @@ export function AccountSettingsModal({
                   <div className="flex items-center gap-2">
                     <Database className="size-4 text-primary" />
                     <Label className="text-xs font-bold text-foreground">
-                      Resume Data Retention
+                      Resume Document Retention Mode
                     </Label>
                   </div>
 
@@ -693,17 +852,17 @@ export function AccountSettingsModal({
                       {
                         key: "local",
                         title: "Local Storage Cache (Recommended)",
-                        desc: "Preserves your active resume work across browser refreshes so your edits are never lost.",
+                        desc: "Preserves your active Word resume document across browser refreshes so edits are never lost.",
                       },
                       {
                         key: "session",
                         title: "Session Only",
-                        desc: "Clears your resume immediately when the browser tab or window is closed.",
+                        desc: "Clears your resume document immediately when the browser tab or window is closed.",
                       },
                       {
                         key: "none",
-                        title: "Zero-Retention Mode",
-                        desc: "Disables all persistent caching. Resumes exist only in RAM during the active session.",
+                        title: "Zero-Retention RAM Mode",
+                        desc: "Disables all persistent caching. Document text exists only in RAM during the active session.",
                       },
                     ].map((opt) => (
                       <label
@@ -731,6 +890,40 @@ export function AccountSettingsModal({
                   </div>
                 </div>
 
+                {/* Cloud Vault Sync Switch */}
+                <div className="p-4 rounded-xl border border-border bg-card flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <History className="size-4 text-primary" />
+                      <span className="text-xs font-bold text-foreground">
+                        Cloud Vault Auto-Sync
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatically snapshot version history to Supabase Cloud Vault when major
+                      rewrites are applied.
+                    </p>
+                  </div>
+                  <Switch checked={autoVaultSync} onCheckedChange={setAutoVaultSync} />
+                </div>
+
+                {/* PII Masking Switch */}
+                <div className="p-4 rounded-xl border border-border bg-card flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Lock className="size-4 text-amber-500" />
+                      <span className="text-xs font-bold text-foreground">
+                        Export PII Sanitization
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatically redact personal phone numbers, physical addresses, and emails
+                      in shared audit summaries.
+                    </p>
+                  </div>
+                  <Switch checked={anonymizePii} onCheckedChange={setAnonymizePii} />
+                </div>
+
                 {/* Telemetry Switch */}
                 <div className="p-4 rounded-xl border border-border bg-card flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
@@ -738,8 +931,8 @@ export function AccountSettingsModal({
                       Anonymous Audit Telemetry
                     </span>
                     <p className="text-[11px] text-muted-foreground">
-                      Share anonymous bias signal accuracy to improve counterfactual fairness
-                      benchmarks.
+                      Share aggregated, anonymized bias signal accuracy metrics to calibrate EEOC
+                      fairness benchmarks.
                     </p>
                   </div>
                   <Switch checked={telemetry} onCheckedChange={setTelemetry} />
@@ -749,10 +942,11 @@ export function AccountSettingsModal({
                 <div className="p-4 rounded-xl border border-border bg-card flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
                     <span className="text-xs font-bold text-foreground">
-                      Local Workspace Storage
+                      Workspace Storage & Document Cache
                     </span>
                     <p className="text-[11px] text-muted-foreground">
-                      Free up browser storage memory by flushing cached resume document states.
+                      Free up browser storage memory by flushing cached document states and draft
+                      revisions.
                     </p>
                   </div>
                   <Button
@@ -777,7 +971,7 @@ export function AccountSettingsModal({
 
           {/* TAB 4: ANALYSIS ENGINE */}
           {activeTab === "engine" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
                 <h3 className="text-base font-bold text-foreground">
                   Analysis Engine & NLP Backend
@@ -858,7 +1052,7 @@ export function AccountSettingsModal({
                             </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                            Connects to the Person A/B FastAPI service (
+                            Connects to the FastAPI service (
                             <code className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">
                               http://localhost:8000/api/analyze
                             </code>
@@ -936,6 +1130,50 @@ export function AccountSettingsModal({
                   </div>
                 </div>
 
+                {/* AUDIT SENSITIVITY & ATS ALGORITHM */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="p-4 rounded-xl border border-border bg-card space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Scale className="size-4 text-indigo-500" />
+                      <Label className="text-xs font-bold text-foreground">
+                        EEOC Four-Fifths Sensitivity
+                      </Label>
+                    </div>
+                    <select
+                      value={fourFifthsSensitivity}
+                      onChange={(e) => setFourFifthsSensitivity(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-hidden"
+                    >
+                      <option value="80">Standard 80% (Statutory EEOC Rule)</option>
+                      <option value="90">Strict 90% (High Equity Standard)</option>
+                      <option value="70">Advisory 70% (Exploratory / Broad Flagging)</option>
+                    </select>
+                    <p className="text-[10px] text-muted-foreground">
+                      Controls the threshold for disparate adverse impact in counterfactual audits.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-border bg-card space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Target className="size-4 text-primary" />
+                      <Label className="text-xs font-bold text-foreground">
+                        ATS Job Match Algorithm
+                      </Label>
+                    </div>
+                    <select
+                      value={atsAlgorithm}
+                      onChange={(e) => setAtsAlgorithm(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-hidden"
+                    >
+                      <option value="hybrid">Hybrid (Semantic + Exact Keywords)</option>
+                      <option value="exact">Exact Token Match Only (Legacy ATS)</option>
+                    </select>
+                    <p className="text-[10px] text-muted-foreground">
+                      Used by the Counterfactual Job Matcher simulator.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex justify-end pt-2">
                   <Button
                     size="sm"
@@ -953,13 +1191,16 @@ export function AccountSettingsModal({
             </div>
           )}
 
-          {/* TAB 5: WEBSITE & THEME SETTINGS */}
+          {/* TAB 5: WORD EDITOR & THEME SETTINGS */}
           {activeTab === "appearance" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
-                <h3 className="text-base font-bold text-foreground">Website & Theme Preferences</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  Word Editor & Theme Preferences
+                </h3>
                 <p className="text-xs text-muted-foreground">
-                  Customize the interface appearance, dark mode palette, and canvas behavior.
+                  Customize the Word document editor defaults, typography, margins, and interface
+                  theme.
                 </p>
               </div>
 
@@ -972,7 +1213,7 @@ export function AccountSettingsModal({
                 <p className="text-[11px] text-muted-foreground">
                   Choose your visual aesthetic. The dark mode features our high-contrast Obsidian
                   Slate theme, calibrated specifically for glare-free resume analysis while
-                  maintaining clean A4 paper rendering.
+                  maintaining clean paper rendering.
                 </p>
 
                 <div className="grid grid-cols-3 gap-3 pt-1">
@@ -1029,66 +1270,177 @@ export function AccountSettingsModal({
                 </div>
               </div>
 
-              {/* Editor Workspace Configurations */}
+              {/* Word Resume Editor Typography & Layout Preferences */}
               <div className="p-4 rounded-xl border border-border bg-card space-y-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="size-4 text-primary" />
+                  <FileText className="size-4 text-primary" />
                   <h4 className="text-xs font-bold text-foreground">
-                    Canvas & Export Configurations
+                    Word Resume Editor Defaults
                   </h4>
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-medium text-foreground">
-                      Auto-Save Resume Canvas
-                    </span>
-                    <p className="text-[11px] text-muted-foreground">
-                      Periodically commit live edits to local storage so sudden reloads preserve
-                      your exact layout.
-                    </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium">Default Typography Font</Label>
+                    <select
+                      value={defaultFont}
+                      onChange={(e) => setDefaultFont(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-hidden"
+                    >
+                      <option value="Calibri, sans-serif">Calibri (Word Standard)</option>
+                      <option value="Arial, sans-serif">Arial (Standard Sans)</option>
+                      <option value="'Times New Roman', Times, serif">Times New Roman (Serif)</option>
+                      <option value="Inter, sans-serif">Inter (Modern Sans)</option>
+                      <option value="Georgia, serif">Georgia (Classic Serif)</option>
+                      <option value="Roboto, sans-serif">Roboto (Clean Standard)</option>
+                      <option value="Lato, sans-serif">Lato (Executive)</option>
+                    </select>
                   </div>
-                  <Switch checked={autoSave} onCheckedChange={setAutoSave} />
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium">Default Paper Format</Label>
+                    <select
+                      value={defaultPaperFormat}
+                      onChange={(e) => setDefaultPaperFormat(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-hidden"
+                    >
+                      <option value="letter">US Letter (8.5 × 11 in)</option>
+                      <option value="a4">A4 (210 × 297 mm)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium">Default Page Margins</Label>
+                    <select
+                      value={defaultMargin}
+                      onChange={(e) => setDefaultMargin(e.target.value)}
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-hidden"
+                    >
+                      <option value="54">Normal (1.0 inch / 54pt)</option>
+                      <option value="40">Compact (0.75 inch / 40pt)</option>
+                      <option value="28">Narrow (0.5 inch / 28pt)</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 pt-2 border-t border-border/60">
-                  <Label className="text-xs font-medium">Default Export Document Format</Label>
-                  <select
-                    value={exportFormat}
-                    onChange={(e) =>
-                      setExportFormat(e.target.value as UserProfile["defaultExportFormat"])
-                    }
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
-                  >
-                    <option value="pdf">PDF Document (.pdf) — Production Print Standard</option>
-                    <option value="png">PNG Image (.png) — High-Resolution Raster</option>
-                    <option value="jpeg">JPEG Image (.jpg) — Compressed Raster</option>
-                    <option value="json">BiasLens Report (.json) — Machine-Readable Audit</option>
-                  </select>
+                <div className="pt-2 border-t border-border/60 space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-medium text-foreground">
+                        Auto-Save Word Document
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Periodically commit live document text edits to local storage and Cloud
+                        Vault.
+                      </p>
+                    </div>
+                    <Switch checked={autoSave} onCheckedChange={setAutoSave} />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-medium text-foreground">
+                        Live Bias Underline Highlighting
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">
+                        Display colored underline indicators under detected bias phrases directly in
+                        the Word editor.
+                      </p>
+                    </div>
+                    <Switch checked={showUnderlines} onCheckedChange={setShowUnderlines} />
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-medium">Default Export Document Format</Label>
+                    <select
+                      value={exportFormat}
+                      onChange={(e) =>
+                        setExportFormat(e.target.value as UserProfile["defaultExportFormat"])
+                      }
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="pdf">PDF Document (.pdf) — Vector Print Standard</option>
+                      <option value="png">PNG Image (.png) — High-Resolution Raster</option>
+                      <option value="jpeg">JPEG Image (.jpg) — Compressed Raster</option>
+                      <option value="json">BiasLens Report (.json) — Machine-Readable Audit</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button size="sm" onClick={handleSaveAppearance} className="text-xs font-semibold">
-                  Save Appearance Preferences
+                <Button
+                  size="sm"
+                  onClick={handleSaveEditorAndAppearance}
+                  className="text-xs font-semibold"
+                >
+                  Save Editor & Theme Preferences
                 </Button>
               </div>
             </div>
           )}
 
-          {/* TAB 5: HELP & FEEDBACK */}
+          {/* TAB 6: HELP & SHORTCUTS */}
           {activeTab === "feedback" && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-200">
               <div>
                 <h3 className="text-base font-bold text-foreground">
-                  Help, Documentation & Feedback
+                  Help, Word Editor Shortcuts & Feedback
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Access keyboard shortcuts, fairness audit methodology, and submit recommendations.
+                  Quick keyboard commands, document editor guidance, and feedback submissions.
                 </p>
               </div>
 
-              {/* Quick Documentation Links */}
+              {/* Word Resume Editor Shortcuts */}
+              <div className="p-4 rounded-xl border border-border bg-card space-y-3">
+                <div className="flex items-center gap-2">
+                  <Compass className="size-4 text-emerald-500" />
+                  <h4 className="text-xs font-bold text-foreground">
+                    Word Editor Keyboard Shortcuts
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Ctrl + B</span>
+                    <p className="text-[10px] text-muted-foreground">Bold text</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Ctrl + I</span>
+                    <p className="text-[10px] text-muted-foreground">Italic text</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Ctrl + U</span>
+                    <p className="text-[10px] text-muted-foreground">Underline text</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Ctrl + Z</span>
+                    <p className="text-[10px] text-muted-foreground">Undo change</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Ctrl + Y</span>
+                    <p className="text-[10px] text-muted-foreground">Redo change</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Enter</span>
+                    <p className="text-[10px] text-muted-foreground">New paragraph</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Shift + Enter</span>
+                    <p className="text-[10px] text-muted-foreground">Soft line break</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Tab</span>
+                    <p className="text-[10px] text-muted-foreground">Indent bullet/list</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted/40 border border-border/40">
+                    <span className="font-mono text-primary font-bold">Shift + Tab</span>
+                    <p className="text-[10px] text-muted-foreground">Outdent list</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature Guide Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl border border-border bg-card space-y-2">
                   <div className="flex items-center gap-2">
@@ -1096,19 +1448,19 @@ export function AccountSettingsModal({
                     <h4 className="text-xs font-bold text-foreground">Counterfactual Fairness</h4>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Learn how our multi-signal evaluator audits gender, age, prestige, and career
-                    gap markers using EEOC four-fifths metrics.
+                    Our multi-signal evaluator audits gender, age, prestige, and career gap markers
+                    against statistical four-fifths disparate impact thresholds.
                   </p>
                 </div>
 
                 <div className="p-4 rounded-xl border border-border bg-card space-y-2">
                   <div className="flex items-center gap-2">
-                    <Compass className="size-4 text-emerald-500" />
-                    <h4 className="text-xs font-bold text-foreground">Keyboard Shortcuts</h4>
+                    <FileCheck2 className="size-4 text-emerald-500" />
+                    <h4 className="text-xs font-bold text-foreground">Word Resume Editor</h4>
                   </div>
-                  <p className="text-[11px] text-muted-foreground font-mono">
-                    Ctrl+B: Bold • Ctrl+I: Italic • Ctrl+U: Underline • Ctrl+Z: Undo • T: Add Text •
-                    Del: Remove Block
+                  <p className="text-[11px] text-muted-foreground">
+                    Google Docs / Word style document editing with live paragraph formatting,
+                    margins, fonts, and in-place review rewrites.
                   </p>
                 </div>
               </div>
@@ -1134,8 +1486,8 @@ export function AccountSettingsModal({
                   >
                     <option value="Bug Report">Bug Report</option>
                     <option value="Bias False Positive">Bias Taxonomy False Positive</option>
+                    <option value="Word Editor Feedback">Word Editor Usability</option>
                     <option value="Feature Request">Feature Request</option>
-                    <option value="Design Feedback">Design & Usability Feedback</option>
                     <option value="Other">General Inquiry</option>
                   </select>
                 </div>

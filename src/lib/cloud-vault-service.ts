@@ -177,10 +177,20 @@ export async function loadResumeBundle(resumeId: string): Promise<CloudResumeBun
     bold: b.bold,
     italic: b.italic,
     underline: b.underline,
+    strikethrough: b.strikethrough ?? false,
     color: b.color,
+    backgroundColor: b.background_color ?? undefined,
     align: (b.align as CanvasTextBlock["align"]) || "left",
-    lineHeight: Number(b.line_height),
-    isTitle: b.is_title,
+    lineHeight: Number(b.line_height || 1.3),
+    letterSpacing: Number(b.letter_spacing || 0),
+    spaceBefore: Number(b.space_before || 0),
+    spaceAfter: Number(b.space_after ?? 4),
+    indent: Number(b.indent || 0),
+    isTitle: b.is_title ?? false,
+    isHeading: b.is_heading ?? false,
+    isBullet: b.is_bullet ?? false,
+    isNumbered: b.is_numbered ?? false,
+    listNumber: b.list_number ?? undefined,
   }));
 
   // 4. Fetch latest bias audit
@@ -359,10 +369,20 @@ export async function saveResumeBundleToCloud(params: {
       bold: !!b.bold,
       italic: !!b.italic,
       underline: !!b.underline,
+      strikethrough: !!b.strikethrough,
       color: b.color || "#111827",
+      background_color: b.backgroundColor || null,
       align: b.align || "left",
       line_height: b.lineHeight || 1.3,
+      letter_spacing: b.letterSpacing || 0,
+      space_before: b.spaceBefore || 0,
+      space_after: b.spaceAfter ?? 4,
+      indent: b.indent || 0,
       is_title: !!b.isTitle,
+      is_heading: !!b.isHeading,
+      is_bullet: !!b.isBullet,
+      is_numbered: !!b.isNumbered,
+      list_number: b.listNumber ?? null,
     }));
 
     const { error: blockErr } = await supabase.from("canvas_blocks").insert(blocksPayload);
