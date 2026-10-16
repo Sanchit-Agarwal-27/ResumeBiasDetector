@@ -68,6 +68,7 @@ import {
   parseRawTextToCanvasBlocks,
   type CanvasTextBlock,
   type CanvasPage,
+  type ColumnLayoutPreset,
 } from "@/lib/pdf-cluster-engine";
 import { FairnessAuditModal } from "./fairness-audit-modal";
 import { EvaluationBenchmarkModal } from "./evaluation-benchmark-modal";
@@ -77,6 +78,7 @@ import { CloudVaultModal } from "./cloud-vault-modal";
 import { ResumeDiffModal } from "./resume-diff-modal";
 import { VectorPdfExportModal } from "./vector-pdf-export-modal";
 import { generateVectorPdf } from "@/lib/vector-pdf-engine";
+import { downloadDocxFile } from "@/lib/docx-export-engine";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
 import { useAuth } from "@/lib/auth-context";
@@ -89,9 +91,11 @@ import {
   loadResumeBundle,
   createResumeVersionSnapshot,
   listResumeVersions,
+  type CloudResumeRecord,
   type CloudResumeVersionRecord,
   type CloudResumeBundle,
 } from "@/lib/cloud-vault-service";
+import { sanitizeFilename, sanitizeInputText } from "@/lib/security-sanitizer";
 import { TopProgressBar } from "@/components/loading/top-progress-bar";
 import { CanvasSkeleton } from "@/components/loading/canvas-skeleton";
 import { SidebarSkeleton } from "@/components/loading/sidebar-skeleton";
@@ -157,6 +161,7 @@ function downloadBlob(content: string, filename: string, type: string) {
 const STORAGE_REPORT_KEY = "biaslens_active_report_v1";
 const STORAGE_BLOCKS_KEY = "biaslens_active_blocks_v1";
 const STORAGE_PAGES_KEY = "biaslens_active_pages_v1";
+const STORAGE_COLUMN_LAYOUT_KEY = "biaslens_active_column_layout_v1";
 
 function normalizeFixture(): ResumeBiasReport {
   return structuredClone(sampleReport);
@@ -202,6 +207,7 @@ export function ResumeWorkspace() {
   >("profile");
 
   // Word / Docs Document Editor state
+  const [columnLayout, setColumnLayout] = useState<ColumnLayoutPreset>("single");
   const [canvasPages, setCanvasPages] = useState<CanvasPage[]>([
     { id: "page-1", pageNumber: 1, width: 612, height: 792 },
   ]);
@@ -217,6 +223,7 @@ export function ResumeWorkspace() {
       const savedReport = localStorage.getItem(STORAGE_REPORT_KEY);
       const savedBlocks = localStorage.getItem(STORAGE_BLOCKS_KEY);
       const savedPages = localStorage.getItem(STORAGE_PAGES_KEY);
+      const savedLayout = localStorage.getItem(STORAGE_COLUMN_LAYOUT_KEY);
       if (savedReport && savedBlocks && savedPages) {
         const parsedReport = JSON.parse(savedReport) as ResumeBiasReport;
         const parsedBlocks = JSON.parse(savedBlocks) as CanvasTextBlock[];
@@ -224,6 +231,9 @@ export function ResumeWorkspace() {
         setReport(parsedReport);
         setCanvasBlocks(parsedBlocks);
         setCanvasPages(parsedPages);
+        if (savedLayout) {
+          setColumnLayout(savedLayout as ColumnLayoutPreset);
+        }
         setLoaded(true);
         setActiveId(parsedReport.spans?.[0]?.id || "span-001");
         setStatus("Saved resume restored");
@@ -241,6 +251,26 @@ export function ResumeWorkspace() {
     "local",
   );
   const [isCloudSaving, setIsCloudSaving] = useState(false);
+  const [recentCloudResume, setRecentCloudResume] = useState<CloudResumeRecord | null>(null);
+
+  // Check for existing cloud resumes when authenticated user opens welcome screen
+  useEffect(() => {
+    if (isAuthenticated && user?.id && !loaded) {
+      listUserResumes()
+        .then((resumes) => {
+          if (resumes && resumes.length > 0) {
+            setRecentCloudResume(resumes[0]);
+          } else {
+            setRecentCloudResume(null);
+          }
+        })
+        .catch(() => {
+          setRecentCloudResume(null);
+        });
+    } else {
+      setRecentCloudResume(null);
+    }
+  }, [isAuthenticated, user?.id, loaded]);
 
   // Auto-persist state across page reloads & browser closures (Dual-mode: LocalStorage + Supabase)
   useEffect(() => {
@@ -249,6 +279,7 @@ export function ResumeWorkspace() {
       localStorage.setItem(STORAGE_REPORT_KEY, JSON.stringify(report));
       localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(canvasBlocks));
       localStorage.setItem(STORAGE_PAGES_KEY, JSON.stringify(canvasPages));
+      localStorage.setItem(STORAGE_COLUMN_LAYOUT_KEY, columnLayout);
     } catch {
       // Storage quota safety
     }
@@ -265,6 +296,7 @@ export function ResumeWorkspace() {
             fileName: report.file_name,
             rawText: report.raw_text,
             neutralityScore: report.neutrality_score,
+            columnLayout,
             pages: canvasPages,
             blocks: canvasBlocks,
             report,
@@ -289,6 +321,7 @@ export function ResumeWorkspace() {
     report,
     canvasBlocks,
     canvasPages,
+    columnLayout,
     isAuthenticated,
     user?.id,
     user?.autoSave,
@@ -440,6 +473,11 @@ export function ResumeWorkspace() {
     setCanvasBlocks(version.snapshot.blocks);
     setCanvasPages(version.snapshot.pages);
     setReport(version.snapshot.report);
+    if ((version.snapshot as unknown as { columnLayout?: ColumnLayoutPreset }).columnLayout) {
+      setColumnLayout(
+        (version.snapshot as unknown as { columnLayout: ColumnLayoutPreset }).columnLayout,
+      );
+    }
     setActiveVersionNumber(version.version_number);
     setActiveId(version.snapshot.report.spans?.[0]?.id || "");
     setStatus(`Restored to ${version.version_name} (v${version.version_number})`);
@@ -450,6 +488,9 @@ export function ResumeWorkspace() {
     setCanvasBlocks(bundle.blocks);
     setCanvasPages(bundle.pages);
     setReport(bundle.report);
+    if (bundle.resume.column_layout) {
+      setColumnLayout(bundle.resume.column_layout as ColumnLayoutPreset);
+    }
     setActiveVersionNumber(bundle.resume.active_version || 1);
     setActiveId(bundle.report.spans?.[0]?.id || "");
     setLoaded(true);
@@ -483,6 +524,13 @@ export function ResumeWorkspace() {
     toast.info("Sample resume loaded", {
       description: "Preloaded resume with realistic bias markers and review queue.",
     });
+    if (!isAuthenticated) {
+      setTimeout(() => {
+        toast.info("Working in Guest Mode", {
+          description: "Sign in or create an account anytime to save your work across devices.",
+        });
+      }, 1500);
+    }
   }
 
   function handleCreateBlankResume() {
@@ -516,11 +564,29 @@ export function ResumeWorkspace() {
     toast.success("New blank resume created", {
       description: "Start typing or editing your document.",
     });
+    if (!isAuthenticated) {
+      setTimeout(() => {
+        toast.info("Working in Guest Mode", {
+          description: "Sign in or create an account anytime to enable Cloud Vault backup.",
+        });
+      }, 1500);
+    }
   }
 
   async function handleFile(file?: File) {
     if (!file) return;
-    const valid = /\.(pdf|docx)$/i.test(file.name);
+
+    // Security check: Limit file size to 15MB max to prevent memory exhaustion
+    if (file.size > 15 * 1024 * 1024) {
+      setStatus("File exceeds 15MB limit");
+      toast.error("File exceeds limit", {
+        description: "Please upload a document under 15MB to ensure safe processing.",
+      });
+      return;
+    }
+
+    const cleanFileName = sanitizeFilename(file.name);
+    const valid = /\.(pdf|docx)$/i.test(cleanFileName);
     if (!valid) {
       setStatus("Choose a PDF or DOCX file");
       toast.error("Unsupported file format", {
@@ -531,8 +597,8 @@ export function ResumeWorkspace() {
 
     setIsProcessing(true);
     setProcessingStep(0);
-    setProcessingFileName(file.name);
-    setStatus(`Reading ${file.name}…`);
+    setProcessingFileName(cleanFileName);
+    setStatus(`Reading ${cleanFileName}…`);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -543,7 +609,7 @@ export function ResumeWorkspace() {
       // Step 1: Clustering & Extraction
       setProcessingStep(1);
 
-      if (file.name.toLowerCase().endsWith(".docx")) {
+      if (cleanFileName.toLowerCase().endsWith(".docx")) {
         const mammoth = await import("mammoth");
         const result = await mammoth.extractRawText({ arrayBuffer });
         rawText = result.value.trim();
@@ -625,21 +691,22 @@ export function ResumeWorkspace() {
       }
 
       if (!rawText) throw new Error("No selectable text found in file");
+      const safeRawText = sanitizeInputText(rawText, 500000);
 
       // Step 2: Bias taxonomy analysis
       setProcessingStep(2);
       await new Promise((r) => setTimeout(r, 120));
-      const analysis = analyzeResumeText(rawText);
+      const analysis = analyzeResumeText(safeRawText);
 
       // Step 3: Counterfactual calibration
       setProcessingStep(3);
       await new Promise((r) => setTimeout(r, 150));
-      const fairness = runCounterfactualFairnessAudit(rawText, analysis.spans);
+      const fairness = runCounterfactualFairnessAudit(safeRawText, analysis.spans);
 
       const next = normalizeFixture();
       next.document_id = `local-${Date.now()}`;
-      next.file_name = file.name;
-      next.raw_text = rawText;
+      next.file_name = cleanFileName;
+      next.raw_text = safeRawText;
       next.spans = analysis.spans;
       next.suggestions = analysis.suggestions;
       next.summary = buildSummary(analysis.spans);
@@ -653,13 +720,22 @@ export function ResumeWorkspace() {
       setActiveId(analysis.spans[0]?.id ?? "");
       setCanvasPages(extractedPages);
       setCanvasBlocks(extractedBlocks);
-      setStatus(`${file.name} imported into Word resume editor`);
+      setStatus(`${cleanFileName} imported into Word resume editor`);
       toast.success("Resume imported successfully", {
         description: `Detected ${analysis.spans.length} signals with ${analysis.neutrality_score}% neutrality index.`,
       });
+
+      if (!isAuthenticated) {
+        setTimeout(() => {
+          toast.info("Working in Guest Mode", {
+            description:
+              "Sign in or create an account to save and sync your resume across devices.",
+          });
+        }, 1500);
+      }
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unable to read this file";
-      setStatus(`Could not read ${file.name}: ${detail}`);
+      setStatus(`Could not read ${cleanFileName}: ${detail}`);
       toast.error("Import failed", { description: detail });
     } finally {
       setIsProcessing(false);
@@ -766,6 +842,33 @@ export function ResumeWorkspace() {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Could not render PDF.";
+      toast.error("Export failed", { description: msg });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function exportDocx() {
+    setIsExporting(true);
+    setStatus("Generating Microsoft Word (.docx) document…");
+    toast.info("Preparing DOCX export...", {
+      description: "Compiling native Word styles, fonts, and formatting.",
+    });
+    try {
+      const cleanFileName = report.file_name.replace(/\.[^.]+$/, "-edited.docx");
+      await downloadDocxFile(canvasPages, canvasBlocks, {
+        fileName: cleanFileName,
+        documentTitle: report.file_name.replace(/\.[^.]+$/, ""),
+        candidateName: user?.name || "Candidate",
+        targetRole: report.target_job?.title || "Professional Profile",
+        columnLayout: columnLayout,
+      });
+      setStatus("Microsoft Word (.docx) document exported");
+      toast.success("DOCX exported successfully!", {
+        description: "Ready to open in Microsoft Word, Google Docs, or LibreOffice.",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Could not export DOCX.";
       toast.error("Export failed", { description: msg });
     } finally {
       setIsExporting(false);
@@ -1011,6 +1114,37 @@ export function ResumeWorkspace() {
             </div>
 
             {/* Action Cards Grid */}
+            {isAuthenticated && recentCloudResume && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3.5 text-left">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <FolderArchive className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">
+                      Continue working on:{" "}
+                      <span className="text-primary font-bold">{recentCloudResume.title}</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Last edited {new Date(recentCloudResume.updated_at).toLocaleDateString()} ·
+                      Neutrality index: {recentCloudResume.neutrality_score}%
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const bundle = await loadResumeBundle(recentCloudResume.id);
+                    if (bundle) handleLoadResumeBundle(bundle);
+                  }}
+                  className="shrink-0 h-8 text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <span>Resume Project</span>
+                  <Sparkles className="size-3" />
+                </Button>
+              </div>
+            )}
+
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <button
                 type="button"
@@ -1050,6 +1184,28 @@ export function ResumeWorkspace() {
                 <span className="mt-1 text-[11px] text-muted-foreground">Preloaded bias demo</span>
               </button>
             </div>
+
+            {isAuthenticated ? (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVaultModalOpen(true)}
+                  className="text-xs gap-1.5 border-dashed hover:border-primary cursor-pointer text-muted-foreground hover:text-foreground"
+                >
+                  <FolderArchive className="size-3.5 text-primary" />
+                  <span>Browse all saved resumes in Cloud Vault</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-muted bg-muted/20 p-2.5 text-xs text-muted-foreground flex items-center justify-center gap-2">
+                <ShieldCheck className="size-3.5 text-emerald-500 shrink-0" />
+                <span>
+                  No account required to start! Sign in or register anytime to sync your resumes
+                  securely across devices.
+                </span>
+              </div>
+            )}
 
             <div className="mt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <LockKeyhole className="size-3.5 text-emerald-600" />
@@ -1254,6 +1410,22 @@ export function ResumeWorkspace() {
           </div>
 
           <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 lg:col-start-4">
+            {!isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setAuthModalView("signup");
+                  setAuthModalOpen(true);
+                }}
+                className="hidden lg:inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 h-8 rounded-lg cursor-pointer font-medium"
+                title="Your edits are saved locally. Click to create an account and backup to Cloud Vault."
+              >
+                <ShieldCheck className="size-3.5" />
+                <span>Guest Mode · Save Online</span>
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -1325,6 +1497,9 @@ export function ResumeWorkspace() {
                 <DropdownMenuLabel>Resume export</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={() => setVectorPdfModalOpen(true)}>
                   <FileText className="text-emerald-500" /> Vector PDF (ATS Certified)
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportDocx}>
+                  <FileText className="text-blue-500" /> Microsoft Word (.docx)
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={exportPdf}>
                   <ArrowDownToLine /> Quick PDF Download
@@ -1621,6 +1796,8 @@ export function ResumeWorkspace() {
                 blocks={canvasBlocks}
                 activeBiasSpan={activeSpan}
                 biasSpans={report.spans}
+                columnLayout={columnLayout}
+                onColumnLayoutChange={setColumnLayout}
                 onChange={handleCanvasChange}
                 onSelectBlock={(blockId) => {
                   const block = canvasBlocks.find((b) => b.id === blockId);

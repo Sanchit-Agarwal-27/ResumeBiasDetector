@@ -133,6 +133,64 @@ export async function generateVectorPdf(
       .sort((a, b) => a.y - b.y || a.x - b.x);
 
     pageBlocks.forEach((block) => {
+      // Scaled coordinates
+      const xPt = Math.max(20, block.x * scaleX);
+      const yPt = Math.max(20, block.y * scaleY);
+      const widthPt = Math.max(60, block.width * scaleX);
+
+      // 1. Horizontal Divider Block
+      if (block.isDivider) {
+        const [dr, dg, db] = hexToRgb(block.dividerColor || "#94a3b8");
+        pdf.setDrawColor(dr, dg, db);
+        const lineWidth = block.dividerStyle === "thick" ? 2 : 0.75;
+        pdf.setLineWidth(lineWidth);
+        if (block.dividerStyle === "dashed") {
+          pdf.setLineDashPattern([4, 2], 0);
+        } else if (block.dividerStyle === "dotted") {
+          pdf.setLineDashPattern([1, 2], 0);
+        } else {
+          pdf.setLineDashPattern([], 0);
+        }
+        pdf.line(xPt, yPt + 6, xPt + widthPt, yPt + 6);
+        pdf.setLineDashPattern([], 0);
+        return;
+      }
+
+      // 2. Table / Grid Block
+      if (block.isTable && block.tableData) {
+        const tableData = block.tableData;
+        const colWidth = widthPt / tableData.cols;
+        const rowHeight = 18;
+        const fontSizePt = Math.max(
+          7,
+          Math.round((block.fontSize || 9) * Math.min(scaleX, scaleY)),
+        );
+        pdf.setFontSize(fontSizePt);
+        const [tr, tg, tb] = hexToRgb(block.color);
+        pdf.setTextColor(tr, tg, tb);
+
+        for (let r = 0; r < tableData.rows; r++) {
+          for (let c = 0; c < tableData.cols; c++) {
+            const cellX = xPt + c * colWidth;
+            const cellY = yPt + r * rowHeight;
+            const text = tableData.cells[r]?.[c] || "";
+            const isHeader = r === 0 && Boolean(tableData.headers);
+            const { fontName, fontStyle } = resolvePdfFont(
+              block.fontFamily,
+              isHeader || block.bold,
+              block.italic,
+            );
+            pdf.setFont(fontName, fontStyle);
+            pdf.setDrawColor(226, 232, 240);
+            pdf.setLineWidth(0.5);
+            pdf.rect(cellX, cellY, colWidth, rowHeight);
+            pdf.text(text, cellX + 4, cellY + 12, { maxWidth: colWidth - 8 });
+            totalCharacters += text.length;
+          }
+        }
+        return;
+      }
+
       const { fontName, fontStyle } = resolvePdfFont(block.fontFamily, block.bold, block.italic);
       const [r, g, b] = hexToRgb(block.color);
 
@@ -140,11 +198,6 @@ export async function generateVectorPdf(
       const fontSizePt = Math.max(7, Math.round(block.fontSize * Math.min(scaleX, scaleY)));
       pdf.setFontSize(fontSizePt);
       pdf.setTextColor(r, g, b);
-
-      // Scaled coordinates
-      const xPt = Math.max(20, block.x * scaleX);
-      const yPt = Math.max(20, block.y * scaleY);
-      const widthPt = Math.max(60, block.width * scaleX);
 
       // Clean lines to prevent unprintable unicode characters
       const cleanText = block.text.replace(/\r\n/g, "\n");
@@ -175,6 +228,14 @@ export async function generateVectorPdf(
         pdf.setLineWidth(0.75);
         const textWidth = pdf.getTextWidth(cleanText);
         pdf.line(xPt, yPt + fontSizePt + 2, xPt + textWidth, yPt + fontSizePt + 2);
+      }
+
+      // If text is struck through, draw a crisp vector line through the middle
+      if (block.strikethrough) {
+        pdf.setDrawColor(r, g, b);
+        pdf.setLineWidth(0.75);
+        const textWidth = pdf.getTextWidth(cleanText);
+        pdf.line(xPt, yPt + fontSizePt / 2 + 1, xPt + textWidth, yPt + fontSizePt / 2 + 1);
       }
     });
   });

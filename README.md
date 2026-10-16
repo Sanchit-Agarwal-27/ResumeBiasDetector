@@ -184,7 +184,7 @@ biaslens/
 2. Open [`supabase/schema.sql`](supabase/schema.sql) from this repository.
 3. Paste the contents into a New Query and click **Run**.
 4. This script configures:
-   - `profiles`, `resumes`, `resume_pages`, `canvas_blocks`, `bias_audits`, and `resume_versions` tables.
+   - `profiles`, `resumes`, `resume_pages`, `canvas_blocks`, `bias_audits`, `resume_versions`, and `custom_fonts` tables.
    - Comprehensive **Row-Level Security (RLS)** ensuring strict tenant data isolation.
    - JSONB support for `target_job` and `ats_match` context.
    - Automatic user profile provisioning trigger upon registration.

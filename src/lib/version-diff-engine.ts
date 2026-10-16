@@ -61,11 +61,17 @@ function computeLcsMatrix(tokensA: string[], tokensB: string[]): number[][] {
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
 
   for (let i = 0; i < m; i++) {
+    const rowCurr = dp[i + 1];
+    const rowPrev = dp[i];
+    if (!rowCurr || !rowPrev) continue;
+
+    const tokenA = tokensA[i] ?? "";
     for (let j = 0; j < n; j++) {
-      if (tokensA[i].toLowerCase() === tokensB[j].toLowerCase()) {
-        dp[i + 1][j + 1] = dp[i][j] + 1;
+      const tokenB = tokensB[j] ?? "";
+      if (tokenA.toLowerCase() === tokenB.toLowerCase()) {
+        rowCurr[j + 1] = (rowPrev[j] ?? 0) + 1;
       } else {
-        dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+        rowCurr[j + 1] = Math.max(rowCurr[j] ?? 0, rowPrev[j + 1] ?? 0);
       }
     }
   }
@@ -98,15 +104,20 @@ export function computeWordLevelDiff(textA: string, textB: string): DiffWordChun
   const backtrack: DiffWordChunk[] = [];
 
   while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && tokensA[i - 1].toLowerCase() === tokensB[j - 1].toLowerCase()) {
-      backtrack.push({ type: "unchanged", text: tokensB[j - 1] });
+    const prevA = i > 0 ? (tokensA[i - 1] ?? "") : "";
+    const prevB = j > 0 ? (tokensB[j - 1] ?? "") : "";
+    const dpCurrent = dp[i]?.[j - 1] ?? 0;
+    const dpPrev = dp[i - 1]?.[j] ?? 0;
+
+    if (i > 0 && j > 0 && prevA.toLowerCase() === prevB.toLowerCase()) {
+      backtrack.push({ type: "unchanged", text: prevB });
       i--;
       j--;
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      backtrack.push({ type: "added", text: tokensB[j - 1] });
+    } else if (j > 0 && (i === 0 || dpCurrent >= dpPrev)) {
+      backtrack.push({ type: "added", text: prevB });
       j--;
-    } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
-      backtrack.push({ type: "removed", text: tokensA[i - 1] });
+    } else if (i > 0 && (j === 0 || dpCurrent < dpPrev)) {
+      backtrack.push({ type: "removed", text: prevA });
       i--;
     }
   }

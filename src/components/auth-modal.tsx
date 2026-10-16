@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { checkRateLimit, recordRateLimitFailure, recordRateLimitSuccess } from "@/lib/rate-limiter";
+import { sanitizeEmail, sanitizeInputText } from "@/lib/security-sanitizer";
 import {
   CheckCircle2,
   Eye,
@@ -51,9 +52,15 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
   // Form states
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("biaslens_auth_remember") || "";
+    }
+    return "";
+  });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
@@ -63,6 +70,10 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
       setView(defaultView);
       setError(null);
       setSuccessNotice(null);
+      if (typeof window !== "undefined") {
+        const remembered = localStorage.getItem("biaslens_auth_remember");
+        if (remembered) setEmail(remembered);
+      }
     }
   }, [open, defaultView]);
 
@@ -70,12 +81,13 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
     e.preventDefault();
     setError(null);
     setSuccessNotice(null);
-    if (!email || !password) {
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail || !password) {
       setError("Please fill in both email and password.");
       return;
     }
 
-    const rateCheck = checkRateLimit("auth:login", email);
+    const rateCheck = checkRateLimit("auth:login", cleanEmail);
     if (!rateCheck.allowed) {
       setError(rateCheck.reason || "Rate limit reached. Please wait a moment.");
       return;
@@ -83,11 +95,11 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
     setLoading(true);
     try {
-      await login(email, password);
-      recordRateLimitSuccess("auth:login", email);
+      await login(cleanEmail, password, rememberMe);
+      recordRateLimitSuccess("auth:login", cleanEmail);
       onOpenChange(false);
     } catch (err: unknown) {
-      recordRateLimitFailure("auth:login", email);
+      recordRateLimitFailure("auth:login", cleanEmail);
       const msg =
         err instanceof Error
           ? err.message
@@ -102,11 +114,14 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
     e.preventDefault();
     setError(null);
     setSuccessNotice(null);
-    if (!name.trim()) {
+    const cleanName = sanitizeInputText(name, 100);
+    const cleanEmail = sanitizeEmail(email);
+
+    if (!cleanName.trim()) {
       setError("Please enter your full name.");
       return;
     }
-    if (!email.includes("@")) {
+    if (!cleanEmail.includes("@")) {
       setError("Please enter a valid email address.");
       return;
     }
@@ -119,7 +134,7 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
       return;
     }
 
-    const rateCheck = checkRateLimit("auth:signup", email);
+    const rateCheck = checkRateLimit("auth:signup", cleanEmail);
     if (!rateCheck.allowed) {
       setError(rateCheck.reason || "Too many registration attempts. Please wait.");
       return;
@@ -127,11 +142,11 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
     setLoading(true);
     try {
-      await signup(name, email, password);
-      recordRateLimitSuccess("auth:signup", email);
+      await signup(cleanName, cleanEmail, password);
+      recordRateLimitSuccess("auth:signup", cleanEmail);
       onOpenChange(false);
     } catch (err: unknown) {
-      recordRateLimitFailure("auth:signup", email);
+      recordRateLimitFailure("auth:signup", cleanEmail);
       const msg =
         err instanceof Error ? err.message : "Failed to create account. Please try again.";
       setError(msg);
@@ -144,12 +159,13 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
     e.preventDefault();
     setError(null);
     setSuccessNotice(null);
-    if (!email || !email.includes("@")) {
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail || !cleanEmail.includes("@")) {
       setError("Please enter a valid email address.");
       return;
     }
 
-    const rateCheck = checkRateLimit("auth:magic-link", email);
+    const rateCheck = checkRateLimit("auth:magic-link", cleanEmail);
     if (!rateCheck.allowed) {
       setError(rateCheck.reason || "Please wait before requesting another magic link.");
       return;
@@ -157,13 +173,13 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
 
     setLoading(true);
     try {
-      const ok = await loginWithMagicLink(email);
+      const ok = await loginWithMagicLink(cleanEmail);
       if (ok) {
-        recordRateLimitSuccess("auth:magic-link", email);
+        recordRateLimitSuccess("auth:magic-link", cleanEmail);
         setSuccessNotice("Magic sign-in link dispatched! Please check your email inbox.");
       }
     } catch (err: unknown) {
-      recordRateLimitFailure("auth:magic-link", email);
+      recordRateLimitFailure("auth:magic-link", cleanEmail);
       const msg = err instanceof Error ? err.message : "Could not dispatch magic sign-in link.";
       setError(msg);
     } finally {
@@ -347,6 +363,19 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Remember Me Option */}
+              <div className="flex items-center justify-between pt-0.5 pb-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="size-3.5 rounded border-input text-primary focus:ring-primary accent-primary cursor-pointer"
+                  />
+                  <span>Remember me on this device</span>
+                </label>
               </div>
 
               <Button

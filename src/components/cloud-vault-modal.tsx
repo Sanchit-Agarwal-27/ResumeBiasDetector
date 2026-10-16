@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { CanvasTextBlock, CanvasPage } from "@/lib/pdf-cluster-engine";
 import type { ResumeBiasReport } from "@/lib/resume-contract";
+import { useAuth } from "@/lib/auth-context";
 import {
   listUserResumes,
   loadResumeBundle,
@@ -75,6 +76,7 @@ export function CloudVaultModal({
   onRestoreVersion,
   onLaunchDiffModal,
 }: CloudVaultModalProps) {
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<"resumes" | "versions">("versions");
   const [resumesList, setResumesList] = useState<CloudResumeRecord[]>([]);
   const [versionsList, setVersionsList] = useState<CloudResumeVersionRecord[]>([]);
@@ -215,10 +217,22 @@ export function CloudVaultModal({
           </div>
         </DialogHeader>
 
+        {!isAuthenticated && (
+          <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>
+                <strong>Guest Mode:</strong> Resumes and versions are saved locally in your browser.
+                Sign in or create an account to enable permanent Supabase Cloud backup.
+              </span>
+            </div>
+          </div>
+        )}
+
         <Tabs
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as "resumes" | "versions")}
-          className="w-full mt-2"
+          className="w-full mt-3"
         >
           <TabsList className="grid grid-cols-2 w-full mb-4">
             <TabsTrigger value="versions" className="text-xs font-medium">

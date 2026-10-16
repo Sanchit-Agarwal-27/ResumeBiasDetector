@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase-client";
 import type { CanvasTextBlock, CanvasPage } from "./pdf-cluster-engine";
 import type { ResumeBiasReport } from "./resume-contract";
+import { sanitizeFilename, sanitizeInputText } from "./security-sanitizer";
 
 export interface CloudResumeRecord {
   id: string;
@@ -191,6 +192,12 @@ export async function loadResumeBundle(resumeId: string): Promise<CloudResumeBun
     isBullet: b.is_bullet ?? false,
     isNumbered: b.is_numbered ?? false,
     listNumber: b.list_number ?? undefined,
+    columnSlot: b.column_slot || "full",
+    isDivider: b.is_divider ?? false,
+    dividerStyle: b.divider_style || undefined,
+    dividerColor: b.divider_color || undefined,
+    isTable: b.is_table ?? false,
+    tableData: b.table_data || undefined,
   }));
 
   // 4. Fetch latest bias audit
@@ -250,6 +257,10 @@ export async function saveResumeBundleToCloud(params: {
   const { userId, resumeId, title, fileName, rawText, neutralityScore, pages, blocks, report } =
     params;
 
+  const safeTitle = sanitizeInputText(title || "Untitled Resume", 200);
+  const safeFileName = sanitizeFilename(fileName || "Resume.pdf");
+  const safeRawText = sanitizeInputText(rawText || "", 500000);
+
   // Local Guest Fallback
   if (!isSupabaseConfigured) {
     const localList = getLocalGuestResumes();
@@ -257,18 +268,19 @@ export async function saveResumeBundleToCloud(params: {
     const finalId = existingIdx >= 0 ? resumeId! : `local-${Date.now()}`;
     const now = new Date().toISOString();
 
+    const existingRecord = existingIdx >= 0 ? localList[existingIdx] : undefined;
     const record: CloudResumeRecord = {
       id: finalId,
       user_id: userId || "guest-user",
-      title: title || "Untitled Resume",
-      file_name: fileName || "Resume.pdf",
-      raw_text: rawText,
+      title: safeTitle,
+      file_name: safeFileName,
+      raw_text: safeRawText,
       neutrality_score: neutralityScore,
-      active_version: existingIdx >= 0 ? localList[existingIdx].active_version : 1,
+      active_version: existingRecord ? existingRecord.active_version : 1,
       target_job: report.target_job,
       ats_match: report.ats_match,
       is_archived: false,
-      created_at: existingIdx >= 0 ? localList[existingIdx].created_at : now,
+      created_at: existingRecord ? existingRecord.created_at : now,
       updated_at: now,
     };
 
@@ -306,9 +318,9 @@ export async function saveResumeBundleToCloud(params: {
     const { error: updateErr } = await supabase
       .from("resumes")
       .update({
-        title,
-        file_name: fileName,
-        raw_text: rawText,
+        title: safeTitle,
+        file_name: safeFileName,
+        raw_text: safeRawText,
         neutrality_score: neutralityScore,
         target_job: report.target_job || null,
         ats_match: report.ats_match || null,
@@ -322,9 +334,9 @@ export async function saveResumeBundleToCloud(params: {
       .from("resumes")
       .insert({
         user_id: userId,
-        title,
-        file_name: fileName,
-        raw_text: rawText,
+        title: safeTitle,
+        file_name: safeFileName,
+        raw_text: safeRawText,
         neutrality_score: neutralityScore,
         target_job: report.target_job || null,
         ats_match: report.ats_match || null,
@@ -383,6 +395,12 @@ export async function saveResumeBundleToCloud(params: {
       is_bullet: !!b.isBullet,
       is_numbered: !!b.isNumbered,
       list_number: b.listNumber ?? null,
+      column_slot: b.columnSlot || "full",
+      is_divider: !!b.isDivider,
+      divider_style: b.dividerStyle || null,
+      divider_color: b.dividerColor || null,
+      is_table: !!b.isTable,
+      table_data: b.tableData || null,
     }));
 
     const { error: blockErr } = await supabase.from("canvas_blocks").insert(blocksPayload);
@@ -415,6 +433,8 @@ export async function createResumeVersionSnapshot(params: {
 }): Promise<CloudResumeVersionRecord> {
   const now = new Date().toISOString();
 
+  const safeVersionName = sanitizeInputText(params.versionName || "Snapshot", 100);
+
   // Local Guest Fallback
   if (!isSupabaseConfigured) {
     const versionsCatalog = getLocalGuestVersions();
@@ -426,7 +446,7 @@ export async function createResumeVersionSnapshot(params: {
       id: `ver-local-${Date.now()}`,
       resume_id: params.resumeId,
       version_number: nextVer,
-      version_name: params.versionName || `Version ${nextVer}`,
+      version_name: safeVersionName || `Version ${nextVer}`,
       neutrality_score: params.neutralityScore,
       ats_score: params.report?.ats_match?.overall_match_score || null,
       snapshot: {
@@ -443,8 +463,9 @@ export async function createResumeVersionSnapshot(params: {
     // Update active version in resume record
     const localResumes = getLocalGuestResumes();
     const targetIdx = localResumes.findIndex((r) => r.id === params.resumeId);
-    if (targetIdx >= 0) {
-      localResumes[targetIdx].active_version = nextVer;
+    const targetRecord = targetIdx >= 0 ? localResumes[targetIdx] : undefined;
+    if (targetRecord) {
+      targetRecord.active_version = nextVer;
       saveLocalGuestResumes(localResumes);
     }
 
@@ -466,7 +487,7 @@ export async function createResumeVersionSnapshot(params: {
     .insert({
       resume_id: params.resumeId,
       version_number: nextVer,
-      version_name: params.versionName || `Version ${nextVer}`,
+      version_name: safeVersionName || `Version ${nextVer}`,
       neutrality_score: params.neutralityScore,
       ats_score: params.report?.ats_match?.overall_match_score || null,
       snapshot: {
@@ -550,11 +571,14 @@ export async function duplicateResume(sourceResumeId: string, newTitle?: string)
  * Rename a resume document
  */
 export async function renameResume(resumeId: string, newTitle: string): Promise<boolean> {
+  const safeTitle = sanitizeInputText(newTitle || "Untitled Resume", 200);
+
   if (!isSupabaseConfigured) {
     const localList = getLocalGuestResumes();
     const targetIdx = localList.findIndex((r) => r.id === resumeId);
-    if (targetIdx >= 0) {
-      localList[targetIdx].title = newTitle;
+    const target = targetIdx >= 0 ? localList[targetIdx] : undefined;
+    if (target) {
+      target.title = safeTitle;
       saveLocalGuestResumes(localList);
       return true;
     }
@@ -563,7 +587,7 @@ export async function renameResume(resumeId: string, newTitle: string): Promise<
 
   const { error } = await supabase
     .from("resumes")
-    .update({ title: newTitle, updated_at: new Date().toISOString() })
+    .update({ title: safeTitle, updated_at: new Date().toISOString() })
     .eq("id", resumeId);
 
   return !error;

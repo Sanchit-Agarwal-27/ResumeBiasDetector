@@ -917,8 +917,8 @@ export function AccountSettingsModal({
                       </span>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Automatically redact personal phone numbers, physical addresses, and emails
-                      in shared audit summaries.
+                      Automatically redact personal phone numbers, physical addresses, and emails in
+                      shared audit summaries.
                     </p>
                   </div>
                   <Switch checked={anonymizePii} onCheckedChange={setAnonymizePii} />
@@ -1274,9 +1274,7 @@ export function AccountSettingsModal({
               <div className="p-4 rounded-xl border border-border bg-card space-y-4">
                 <div className="flex items-center gap-2">
                   <FileText className="size-4 text-primary" />
-                  <h4 className="text-xs font-bold text-foreground">
-                    Word Resume Editor Defaults
-                  </h4>
+                  <h4 className="text-xs font-bold text-foreground">Word Resume Editor Defaults</h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1289,7 +1287,9 @@ export function AccountSettingsModal({
                     >
                       <option value="Calibri, sans-serif">Calibri (Word Standard)</option>
                       <option value="Arial, sans-serif">Arial (Standard Sans)</option>
-                      <option value="'Times New Roman', Times, serif">Times New Roman (Serif)</option>
+                      <option value="'Times New Roman', Times, serif">
+                        Times New Roman (Serif)
+                      </option>
                       <option value="Inter, sans-serif">Inter (Modern Sans)</option>
                       <option value="Georgia, serif">Georgia (Classic Serif)</option>
                       <option value="Roboto, sans-serif">Roboto (Clean Standard)</option>

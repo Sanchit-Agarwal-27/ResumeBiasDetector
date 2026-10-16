@@ -11,8 +11,8 @@ function cleanSupabaseUrl(url: string | undefined): string {
   return clean;
 }
 
-const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-const rawAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const rawUrl = import.meta.env["VITE_SUPABASE_URL"];
+const rawAnonKey = import.meta.env["VITE_SUPABASE_ANON_KEY"];
 
 export const supabaseUrl = cleanSupabaseUrl(rawUrl);
 export const supabaseAnonKey = (rawAnonKey || "").trim();

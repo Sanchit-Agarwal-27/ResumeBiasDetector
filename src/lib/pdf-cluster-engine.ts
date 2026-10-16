@@ -25,7 +25,23 @@ export interface CanvasTextBlock {
   isBullet?: boolean;
   isNumbered?: boolean;
   listNumber?: number;
+  columnSlot?: "full" | "left" | "right";
+  isDivider?: boolean;
+  dividerStyle?: "solid" | "dashed" | "dotted" | "double" | "thick";
+  dividerColor?: string;
+  isTable?: boolean;
+  tableData?: {
+    rows: number;
+    cols: number;
+    cells: string[][];
+    headers?: boolean;
+  };
 }
+
+export type ColumnSlot = "full" | "left" | "right";
+export type DividerStyle = "solid" | "dashed" | "dotted" | "double" | "thick";
+export type ColumnLayoutPreset =
+  "single" | "two-column-left" | "two-column-right" | "two-column-equal";
 
 export interface CanvasPage {
   id: string;
@@ -172,7 +188,7 @@ export function clusterPdfTextContent(
   > = {};
 
   for (const fontId of Object.keys(styles || {})) {
-    const fontObj = commonObjs?.has?.(fontId) ? commonObjs.get(fontId) : null;
+    const fontObj = commonObjs?.has?.(fontId) && commonObjs.get ? commonObjs.get(fontId) : null;
     const fontName =
       fontObj?.name || fontObj?.loadedName || styles[fontId]?.fontFamily || "Calibri, sans-serif";
     const isBold = Boolean(fontObj?.bold || /bold|black|heavy|medium|semibold|bld/i.test(fontName));
@@ -232,7 +248,10 @@ export function clusterPdfTextContent(
     }
 
     const transform = it.transform || [12, 0, 0, 12, 0, 0];
-    const fontSize = Math.max(7, Math.round(Math.abs(transform[0]) * 10) / 10);
+    const scaleX = transform[0] ?? 12;
+    const posX = transform[4] ?? 0;
+    const posY = transform[5] ?? 0;
+    const fontSize = Math.max(7, Math.round(Math.abs(scaleX) * 10) / 10);
     const fontInfo =
       it.fontName && fontMap[it.fontName]
         ? fontMap[it.fontName]!
@@ -244,7 +263,7 @@ export function clusterPdfTextContent(
           };
 
     let text = it.str;
-    if (transform[0] < 0 || it.dir === "rtl") {
+    if (scaleX < 0 || it.dir === "rtl") {
       if (/^[a-z].*[A-Z]$/.test(text.trim())) {
         text = text.split("").reverse().join("");
       }
@@ -252,11 +271,9 @@ export function clusterPdfTextContent(
 
     const itemWidth = typeof it.width === "number" ? it.width : fontSize * 0.55 * text.length;
     const x =
-      Math.round(
-        (transform[0] < 0 ? transform[4] - Math.max(itemWidth, fontSize * 0.8) : transform[4]) * 10,
-      ) / 10;
+      Math.round((scaleX < 0 ? posX - Math.max(itemWidth, fontSize * 0.8) : posX) * 10) / 10;
 
-    const baselineY = viewportHeight - transform[5];
+    const baselineY = viewportHeight - posY;
     const y = Math.round((baselineY - fontSize * 0.8) * 10) / 10;
     const width = Math.round(Math.max(itemWidth, fontSize * 0.4) * 10) / 10;
     const height = Math.round(fontSize * 1.25 * 10) / 10;

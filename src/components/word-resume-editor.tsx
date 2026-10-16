@@ -39,6 +39,10 @@ import {
   Indent,
   Outdent,
   RemoveFormatting,
+  Columns2,
+  Table as TableIcon,
+  SeparatorHorizontal,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +54,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { CanvasTextBlock, CanvasPage } from "@/lib/pdf-cluster-engine";
+import { FontUploadModal } from "./font-upload-modal";
+import { initializeCustomFonts, type CustomFontRecord } from "@/lib/custom-font-service";
+import type {
+  CanvasTextBlock,
+  CanvasPage,
+  ColumnLayoutPreset,
+  ColumnSlot,
+  DividerStyle,
+} from "@/lib/pdf-cluster-engine";
 import type { BiasSpan } from "@/lib/resume-contract";
 
 export const FONT_FAMILIES = [
@@ -140,6 +152,82 @@ export const STYLE_PRESETS = [
   { label: "Heading 3", fontSize: 10, bold: true, spaceBefore: 4, spaceAfter: 2 },
 ];
 
+export const COLUMN_LAYOUT_PRESETS: Array<{
+  id: ColumnLayoutPreset;
+  label: string;
+  desc: string;
+}> = [
+  {
+    id: "single",
+    label: "Single Column",
+    desc: "100% full width standard flow",
+  },
+  {
+    id: "two-column-left",
+    label: "2-Col (Left Sidebar)",
+    desc: "35% left sidebar (skills/contact) + 65% main body",
+  },
+  {
+    id: "two-column-right",
+    label: "2-Col (Right Sidebar)",
+    desc: "65% main body + 35% right sidebar",
+  },
+  {
+    id: "two-column-equal",
+    label: "2-Col (Balanced 50/50)",
+    desc: "Two equal width columns side-by-side",
+  },
+];
+
+export const SECTION_DIVIDER_PRESETS: Array<{
+  label: string;
+  style: DividerStyle;
+  color: string;
+}> = [
+  { label: "Classic Thin Rule", style: "solid", color: "#cbd5e1" },
+  { label: "Executive Charcoal", style: "solid", color: "#334155" },
+  { label: "Corporate Accent Blue", style: "solid", color: "#2563eb" },
+  { label: "Modern Thick Bar", style: "thick", color: "#0f172a" },
+  { label: "Dashed Divider", style: "dashed", color: "#94a3b8" },
+  { label: "Dotted Divider", style: "dotted", color: "#94a3b8" },
+  { label: "Double Line Rule", style: "double", color: "#64748b" },
+];
+
+export const TABLE_PRESETS = [
+  {
+    label: "Skills Matrix (2×3)",
+    rows: 3,
+    cols: 2,
+    headers: true,
+    cells: [
+      ["Technical Domain", "Core Competencies & Tools"],
+      ["Programming", "Python, TypeScript, SQL, Go"],
+      ["Cloud & Infra", "AWS, Docker, Kubernetes, CI/CD"],
+    ],
+  },
+  {
+    label: "Two-Column Key Grid (2×2)",
+    rows: 2,
+    cols: 2,
+    headers: false,
+    cells: [
+      ["Degree: B.S. Computer Science", "Institution: Stanford University"],
+      ["Graduation: June 2024", "GPA / Honors: Magna Cum Laude"],
+    ],
+  },
+  {
+    label: "Standard Project Table (3×3)",
+    rows: 3,
+    cols: 3,
+    headers: true,
+    cells: [
+      ["Project / Scope", "Technology Stack", "Key Impact"],
+      ["Cloud Migration", "Terraform, GCP", "Reduced latency by 35%"],
+      ["ML Pipeline", "PyTorch, FastAPI", "Scaled inference to 10k RPS"],
+    ],
+  },
+];
+
 export const BULLET_PREFIX_REGEX =
   /^[\u2022\u25cf\u25cb\u25aa\u25b8\uf0b7\u00b7\u2013\u2014■●○►*•]\s*|^-\s+/;
 export const NUMBERED_PREFIX_REGEX = /^(\d+[.)])\s*/;
@@ -154,34 +242,51 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Calculates accurate character offset within a contentEditable container
+ * Calculates accurate start and end character offsets within a contentEditable container
  */
-function getCaretCharacterOffsetWithin(element: HTMLElement): number {
-  let caretOffset = 0;
+function getSelectionOffsetsWithin(element: HTMLElement): { start: number; end: number } {
+  let start = 0;
+  let end = 0;
   const doc = element.ownerDocument || document;
   const win = doc.defaultView || window;
   const sel = win.getSelection();
   if (sel && sel.rangeCount > 0) {
     const range = sel.getRangeAt(0);
-    if (element.contains(range.startContainer)) {
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(element);
-      preCaretRange.setEnd(range.startContainer, range.startOffset);
-      caretOffset = preCaretRange.toString().length;
+    if (element.contains(range.startContainer) && element.contains(range.endContainer)) {
+      const preStartRange = range.cloneRange();
+      preStartRange.selectNodeContents(element);
+      preStartRange.setEnd(range.startContainer, range.startOffset);
+      start = preStartRange.toString().length;
+
+      const preEndRange = range.cloneRange();
+      preEndRange.selectNodeContents(element);
+      preEndRange.setEnd(range.endContainer, range.endOffset);
+      end = preEndRange.toString().length;
     }
   }
-  return caretOffset;
+  return { start, end };
 }
 
 /**
- * Sets DOM caret position inside contentEditable element with 100% precision.
+ * Calculates accurate character offset within a contentEditable container
+ */
+function getCaretCharacterOffsetWithin(element: HTMLElement): number {
+  return getSelectionOffsetsWithin(element).start;
+}
+
+/**
+ * Sets DOM selection range inside contentEditable element with 100% precision.
+ * Supports both collapsed caret (start === end) and non-collapsed text selections.
  * Correctly anchors before <br> on empty lines so the blinking cursor never disappears.
  */
-function setCaretPosition(element: HTMLElement, offset: number) {
+function setSelectionRange(element: HTMLElement, start: number, end: number = start) {
   element.focus();
-  const range = document.createRange();
-  const sel = window.getSelection();
+  const doc = element.ownerDocument || document;
+  const win = doc.defaultView || window;
+  const sel = win.getSelection();
   if (!sel) return;
+
+  const range = doc.createRange();
 
   // Empty or only a <br> placeholder
   if (!element.childNodes || element.childNodes.length === 0) {
@@ -201,36 +306,54 @@ function setCaretPosition(element: HTMLElement, offset: number) {
   }
 
   let currentOffset = 0;
-  let found = false;
+  let startNode: Node | null = null;
+  let startNodeOffset = 0;
+  let endNode: Node | null = null;
+  let endNodeOffset = 0;
 
   function traverse(node: Node) {
-    if (found) return;
     if (node.nodeType === Node.TEXT_NODE) {
       const textLen = (node.textContent || "").length;
-      if (currentOffset + textLen >= offset) {
-        range.setStart(node, Math.min(Math.max(0, offset - currentOffset), textLen));
-        range.collapse(true);
-        found = true;
-      } else {
-        currentOffset += textLen;
+      if (!startNode && currentOffset + textLen >= start) {
+        startNode = node;
+        startNodeOffset = Math.min(Math.max(0, start - currentOffset), textLen);
       }
+      if (!endNode && currentOffset + textLen >= end) {
+        endNode = node;
+        endNodeOffset = Math.min(Math.max(0, end - currentOffset), textLen);
+      }
+      currentOffset += textLen;
     } else {
       for (let i = 0; i < node.childNodes.length; i++) {
         traverse(node.childNodes[i]!);
-        if (found) break;
+        if (startNode && endNode) break;
       }
     }
   }
 
   traverse(element);
 
-  if (!found) {
+  if (startNode && endNode) {
+    range.setStart(startNode, startNodeOffset);
+    range.setEnd(endNode, endNodeOffset);
+  } else if (startNode) {
+    range.setStart(startNode, startNodeOffset);
+    range.collapse(true);
+  } else {
     range.selectNodeContents(element);
     range.collapse(false);
   }
 
   sel.removeAllRanges();
   sel.addRange(range);
+}
+
+/**
+ * Sets DOM caret position inside contentEditable element with 100% precision.
+ * Correctly anchors before <br> on empty lines so the blinking cursor never disappears.
+ */
+function setCaretPosition(element: HTMLElement, offset: number) {
+  setSelectionRange(element, offset, offset);
 }
 
 /**
@@ -298,6 +421,7 @@ interface ParagraphBlockItemProps {
   isSelected: boolean;
   onSelect: () => void;
   onTextChange: (newText: string) => void;
+  onCellChange?: (blockId: string, row: number, col: number, text: string) => void;
   onEnter: (e: ReactKeyboardEvent<HTMLDivElement>, currentText: string, selOffset: number) => void;
   onBackspace: (
     e: ReactKeyboardEvent<HTMLDivElement>,
@@ -307,7 +431,12 @@ interface ParagraphBlockItemProps {
   onDelete: (e: ReactKeyboardEvent<HTMLDivElement>, currentText: string, selOffset: number) => void;
   onArrowUp: (e: ReactKeyboardEvent<HTMLDivElement>, selOffset: number) => void;
   onArrowDown: (e: ReactKeyboardEvent<HTMLDivElement>, selOffset: number, textLen: number) => void;
-  onTab: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
+  onTab: (
+    e: ReactKeyboardEvent<HTMLDivElement>,
+    currentText: string,
+    selStart: number,
+    selEnd: number,
+  ) => void;
   registerRef: (el: HTMLDivElement | null) => void;
 }
 
@@ -315,8 +444,10 @@ function ParagraphBlockItem({
   block,
   zoom,
   biasSpans,
+  isSelected,
   onSelect,
   onTextChange,
+  onCellChange,
   onEnter,
   onBackspace,
   onDelete,
@@ -360,6 +491,88 @@ function ParagraphBlockItem({
       }
     }
   }, [block.text]);
+
+  // 1. Horizontal Divider Block Rendering
+  if (block.isDivider) {
+    let borderClass = "border-b";
+    if (block.dividerStyle === "dashed") borderClass = "border-b border-dashed";
+    else if (block.dividerStyle === "dotted") borderClass = "border-b border-dotted";
+    else if (block.dividerStyle === "double") borderClass = "border-b-4 border-double";
+    else if (block.dividerStyle === "thick") borderClass = "border-b-2";
+
+    return (
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        className={cn(
+          "relative my-2.5 py-1.5 cursor-pointer group transition-all select-none",
+          isSelected && "ring-1 ring-primary/60 rounded px-1",
+        )}
+      >
+        <div
+          className={cn("w-full transition-colors", borderClass)}
+          style={{ borderColor: block.dividerColor || "#cbd5e1" }}
+        />
+        {isSelected && (
+          <span className="absolute right-0 -top-2.5 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+            Divider Line
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Table / Grid Block Rendering
+  if (block.isTable && block.tableData) {
+    return (
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        className={cn(
+          "my-2.5 w-full overflow-x-auto rounded border border-border/80 transition-all select-text",
+          isSelected && "ring-2 ring-primary/60",
+        )}
+        style={{
+          fontFamily: block.fontFamily || "Calibri, sans-serif",
+          fontSize: `${(block.fontSize || 9.5) * zoom}pt`,
+          color: block.color || "#111827",
+        }}
+      >
+        <table className="w-full border-collapse text-left">
+          <tbody>
+            {block.tableData.cells.map((rowCells, rIdx) => (
+              <tr
+                key={rIdx}
+                className={cn(
+                  "border-b border-border/60 last:border-0",
+                  rIdx === 0 && block.tableData?.headers && "bg-muted/30 font-semibold",
+                )}
+              >
+                {rowCells.map((cellText, cIdx) => (
+                  <td
+                    key={cIdx}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => {
+                      const updatedText = e.currentTarget.innerText;
+                      onCellChange?.(block.id, rIdx, cIdx, updatedText);
+                    }}
+                    className="border-r border-border/60 p-2 last:border-0 outline-hidden focus:bg-primary/5 min-w-[80px]"
+                  >
+                    {cellText}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   const matchingBias = biasSpans.filter((s) =>
     block.text.toLowerCase().includes(s.matched_text.toLowerCase()),
@@ -422,7 +635,8 @@ function ParagraphBlockItem({
             .replace(/\r\n/g, "\n")
             .replace(/\r/g, "\n")
             .replace(/\n$/, "");
-          const selOffset = getCaretCharacterOffsetWithin(e.currentTarget);
+          const { start: selStart, end: selEnd } = getSelectionOffsetsWithin(e.currentTarget);
+          const selOffset = selStart;
 
           if (e.key === "Enter" && !e.shiftKey) {
             onEnter(e, currentText, selOffset);
@@ -435,7 +649,7 @@ function ParagraphBlockItem({
           } else if (e.key === "ArrowDown") {
             onArrowDown(e, selOffset, currentText.length);
           } else if (e.key === "Tab") {
-            onTab(e);
+            onTab(e, currentText, selStart, selEnd);
           }
         }}
         className="outline-hidden min-h-[1.25em] whitespace-pre-wrap break-words"
@@ -458,6 +672,8 @@ interface WordResumeEditorProps {
   blocks: CanvasTextBlock[];
   activeBiasSpan?: BiasSpan;
   biasSpans?: BiasSpan[];
+  columnLayout?: ColumnLayoutPreset;
+  onColumnLayoutChange?: (layout: ColumnLayoutPreset) => void;
   onChange: (updatedBlocks: CanvasTextBlock[], updatedPages: CanvasPage[]) => void;
   onSelectBlock?: (blockId: string) => void;
 }
@@ -467,9 +683,29 @@ export function WordResumeEditor({
   blocks: initialBlocks,
   activeBiasSpan,
   biasSpans = [],
+  columnLayout: initialColumnLayout = "single",
+  onColumnLayoutChange,
   onChange,
   onSelectBlock,
 }: WordResumeEditorProps) {
+  const [columnLayout, setColumnLayout] = useState<ColumnLayoutPreset>(
+    initialColumnLayout || "single",
+  );
+  const [customFonts, setCustomFonts] = useState<CustomFontRecord[]>([]);
+  const [fontUploadModalOpen, setFontUploadModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialColumnLayout) {
+      setColumnLayout(initialColumnLayout);
+    }
+  }, [initialColumnLayout]);
+
+  useEffect(() => {
+    initializeCustomFonts().then((fonts) => {
+      setCustomFonts(fonts);
+    });
+  }, []);
+
   const [paperFormat, setPaperFormat] = useState<"letter" | "a4">(() => {
     if (initialPages[0] && initialPages[0].width < 605) return "a4";
     return "letter";
@@ -1140,16 +1376,16 @@ export function WordResumeEditor({
     [blocks, pages, pushHistory],
   );
 
-  // Arrow Up: navigate to previous line when caret is at beginning
+  // Arrow Up: navigate to previous paragraph when caret is at beginning
   const handleBlockArrowUp = useCallback(
     (e: ReactKeyboardEvent<HTMLDivElement>, block: CanvasTextBlock, selOffset: number) => {
       if (selOffset === 0) {
-        const pageBlocks = blocks.filter((b) => b.pageIndex === block.pageIndex);
-        const bIdx = pageBlocks.findIndex((b) => b.id === block.id);
+        const bIdx = blocks.findIndex((b) => b.id === block.id);
         if (bIdx > 0) {
           e.preventDefault();
-          const prev = pageBlocks[bIdx - 1]!;
+          const prev = blocks[bIdx - 1]!;
           setSelectedBlockId(prev.id);
+          setActivePageIndex(prev.pageIndex);
           const prevEl = editableRefs.current.get(prev.id);
           if (prevEl) {
             setCaretPosition(prevEl, prev.text.length);
@@ -1160,7 +1396,7 @@ export function WordResumeEditor({
     [blocks],
   );
 
-  // Arrow Down: navigate to next line when caret is at end
+  // Arrow Down: navigate to next paragraph when caret is at end
   const handleBlockArrowDown = useCallback(
     (
       e: ReactKeyboardEvent<HTMLDivElement>,
@@ -1169,12 +1405,12 @@ export function WordResumeEditor({
       textLen: number,
     ) => {
       if (selOffset >= textLen) {
-        const pageBlocks = blocks.filter((b) => b.pageIndex === block.pageIndex);
-        const bIdx = pageBlocks.findIndex((b) => b.id === block.id);
-        if (bIdx < pageBlocks.length - 1) {
+        const bIdx = blocks.findIndex((b) => b.id === block.id);
+        if (bIdx >= 0 && bIdx < blocks.length - 1) {
           e.preventDefault();
-          const next = pageBlocks[bIdx + 1]!;
+          const next = blocks[bIdx + 1]!;
           setSelectedBlockId(next.id);
+          setActivePageIndex(next.pageIndex);
           const nextEl = editableRefs.current.get(next.id);
           if (nextEl) {
             setCaretPosition(nextEl, 0);
@@ -1183,6 +1419,93 @@ export function WordResumeEditor({
       }
     },
     [blocks],
+  );
+
+  // Tab key handler: Inserts spaces at cursor position or indents line/block
+  const handleBlockTab = useCallback(
+    (
+      e: ReactKeyboardEvent<HTMLDivElement>,
+      block: CanvasTextBlock,
+      currentDomText: string,
+      selStart: number,
+      selEnd: number,
+    ) => {
+      e.preventDefault();
+      isLocalEditRef.current = true;
+
+      // 1. Shift+Tab: Decrease block-level indent (outdent) or remove leading tab spaces
+      if (e.shiftKey) {
+        if ((block.indent || 0) > 0) {
+          updateSelectedBlock((b) => ({
+            ...b,
+            indent: Math.max(0, (b.indent || 0) - 12),
+          }));
+          return;
+        }
+        // If indent is 0, check if line starts with 4 spaces or tab, remove them
+        if (currentDomText.startsWith("    ")) {
+          const newText = currentDomText.slice(4);
+          e.currentTarget.textContent = newText;
+          const newOffset = Math.max(0, selStart - 4);
+          setCaretPosition(e.currentTarget, newOffset);
+          pendingFocusRef.current = { blockId: block.id, offset: newOffset };
+          const updated = blocks.map((b) => (b.id === block.id ? { ...b, text: newText } : b));
+          pushHistory(updated, pages);
+        }
+        return;
+      }
+
+      // 2. Tab with text selected: Indent selection or entire block if cursor at start
+      if (selStart !== selEnd) {
+        const textBefore = currentDomText.slice(0, selStart);
+        const textSelected = currentDomText.slice(selStart, selEnd);
+        const textAfter = currentDomText.slice(selEnd);
+
+        // Standard Word/Docs tab spacing: 4 spaces for aligned monospace/variable tabs
+        const tabString = "    ";
+        const newText = textBefore + tabString + textSelected + textAfter;
+
+        e.currentTarget.textContent = newText;
+        setSelectionRange(e.currentTarget, selStart + tabString.length, selEnd + tabString.length);
+        pendingFocusRef.current = { blockId: block.id, offset: selStart + tabString.length };
+
+        const updated = blocks.map((b) => (b.id === block.id ? { ...b, text: newText } : b));
+        pushHistory(updated, pages);
+        return;
+      }
+
+      // 3. Tab at beginning of line (selStart === 0) on a bullet or list item:
+      // In Word/Docs, pressing Tab at the start of a bullet indents the sub-bullet level
+      const isBulletOrNum =
+        BULLET_PREFIX_REGEX.test(currentDomText.trim()) ||
+        NUMBERED_PREFIX_REGEX.test(currentDomText.trim()) ||
+        Boolean(block.isBullet) ||
+        Boolean(block.isNumbered);
+
+      if (selStart === 0 && isBulletOrNum) {
+        updateSelectedBlock((b) => ({
+          ...b,
+          indent: Math.min(72, (b.indent || 0) + 12),
+        }));
+        return;
+      }
+
+      // 4. Tab at cursor position anywhere in the text:
+      // Insert tab spaces (4 spaces) exactly where the cursor is, pushing subsequent text forward
+      const tabString = "    ";
+      const textBefore = currentDomText.slice(0, selStart);
+      const textAfter = currentDomText.slice(selStart);
+      const newText = textBefore + tabString + textAfter;
+
+      e.currentTarget.textContent = newText;
+      const newCaretOffset = selStart + tabString.length;
+      setCaretPosition(e.currentTarget, newCaretOffset);
+      pendingFocusRef.current = { blockId: block.id, offset: newCaretOffset };
+
+      const updated = blocks.map((b) => (b.id === block.id ? { ...b, text: newText } : b));
+      pushHistory(updated, pages);
+    },
+    [blocks, pages, pushHistory, updateSelectedBlock],
   );
 
   // Insert a new paragraph from toolbar buttons (Heading, Bullet, Normal, Divider)
@@ -1276,6 +1599,161 @@ export function WordResumeEditor({
       pushHistory,
       pages,
     ],
+  );
+
+  // Insert Horizontal Rule Divider Block
+  const handleInsertDivider = useCallback(
+    (style: DividerStyle = "solid", color = "#cbd5e1") => {
+      const newBlockId = `div-${Date.now()}`;
+      const newBlock: CanvasTextBlock = {
+        id: newBlockId,
+        pageIndex: activePageIndex,
+        text: "---",
+        x: pageMargin,
+        y: 100,
+        width: targetPreset.width - pageMargin * 2,
+        height: 12,
+        fontSize: 10,
+        fontFamily: "Calibri, sans-serif",
+        isDivider: true,
+        dividerStyle: style,
+        dividerColor: color,
+        columnSlot: selectedBlock?.columnSlot || "full",
+        spaceBefore: 6,
+        spaceAfter: 6,
+      };
+
+      const selIdx = blocks.findIndex((b) => b.id === selectedBlockId);
+      const updated =
+        selIdx >= 0
+          ? [...blocks.slice(0, selIdx + 1), newBlock, ...blocks.slice(selIdx + 1)]
+          : [...blocks, newBlock];
+
+      pushHistory(updated, pages);
+      setSelectedBlockId(newBlockId);
+    },
+    [
+      activePageIndex,
+      pageMargin,
+      targetPreset,
+      selectedBlock?.columnSlot,
+      blocks,
+      selectedBlockId,
+      pushHistory,
+      pages,
+    ],
+  );
+
+  // Insert Table / Grid Block
+  const handleInsertTable = useCallback(
+    (preset: (typeof TABLE_PRESETS)[0]) => {
+      const newBlockId = `tbl-${Date.now()}`;
+      const newBlock: CanvasTextBlock = {
+        id: newBlockId,
+        pageIndex: activePageIndex,
+        text: preset.cells.map((row) => row.join(" | ")).join("\n"),
+        x: pageMargin,
+        y: 100,
+        width: targetPreset.width - pageMargin * 2,
+        height: preset.rows * 24,
+        fontSize: 9.5,
+        fontFamily: selectedBlock?.fontFamily || "Calibri, sans-serif",
+        isTable: true,
+        tableData: {
+          rows: preset.rows,
+          cols: preset.cols,
+          headers: preset.headers,
+          cells: JSON.parse(JSON.stringify(preset.cells)),
+        },
+        columnSlot: selectedBlock?.columnSlot || "full",
+        spaceBefore: 8,
+        spaceAfter: 8,
+      };
+
+      const selIdx = blocks.findIndex((b) => b.id === selectedBlockId);
+      const updated =
+        selIdx >= 0
+          ? [...blocks.slice(0, selIdx + 1), newBlock, ...blocks.slice(selIdx + 1)]
+          : [...blocks, newBlock];
+
+      pushHistory(updated, pages);
+      setSelectedBlockId(newBlockId);
+    },
+    [
+      activePageIndex,
+      pageMargin,
+      targetPreset,
+      selectedBlock?.fontFamily,
+      selectedBlock?.columnSlot,
+      blocks,
+      selectedBlockId,
+      pushHistory,
+      pages,
+    ],
+  );
+
+  // Insert Paragraph explicitly into Left or Right Column slot
+  const handleInsertInSlot = useCallback(
+    (slot: ColumnSlot) => {
+      const newBlockId = `para-${Date.now()}`;
+      const newBlock: CanvasTextBlock = {
+        id: newBlockId,
+        pageIndex: activePageIndex,
+        text: "",
+        x: pageMargin,
+        y: 100,
+        width: targetPreset.width - pageMargin * 2,
+        height: 14,
+        fontSize: 9.5,
+        fontFamily: selectedBlock?.fontFamily || "Calibri, sans-serif",
+        columnSlot: slot,
+        spaceBefore: 2,
+        spaceAfter: 2,
+      };
+
+      const updated = [...blocks, newBlock];
+      pendingFocusRef.current = { blockId: newBlockId, offset: 0 };
+      pushHistory(updated, pages);
+      setSelectedBlockId(newBlockId);
+    },
+    [
+      activePageIndex,
+      pageMargin,
+      targetPreset.width,
+      selectedBlock?.fontFamily,
+      blocks,
+      pushHistory,
+      pages,
+    ],
+  );
+
+  // Handle cell edit inside a table block
+  const handleTableCellChange = useCallback(
+    (blockId: string, row: number, col: number, val: string) => {
+      isLocalEditRef.current = true;
+      setBlocks((prev) => {
+        const updated = prev.map((b) => {
+          if (b.id !== blockId || !b.tableData) return b;
+          const newCells = b.tableData.cells.map((r, rIdx) =>
+            rIdx === row ? r.map((c, cIdx) => (cIdx === col ? val : c)) : [...r],
+          );
+          const newText = newCells.map((r) => r.join(" | ")).join("\n");
+          return {
+            ...b,
+            text: newText,
+            tableData: { ...b.tableData, cells: newCells },
+          };
+        });
+
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          onChange(updated, pages);
+        }, 250);
+
+        return updated;
+      });
+    },
+    [pages, onChange],
   );
 
   // Delete currently selected paragraph
@@ -1719,7 +2197,34 @@ export function WordResumeEditor({
                 <ChevronDown className="size-3 shrink-0 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
+            <DropdownMenuContent align="start" className="w-60 max-h-72 overflow-y-auto">
+              {customFonts.length > 0 && (
+                <>
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    Custom Fonts
+                  </DropdownMenuLabel>
+                  {customFonts.map((font) => (
+                    <DropdownMenuItem
+                      key={font.id}
+                      className={cn(
+                        "cursor-pointer text-xs flex items-center justify-between text-foreground",
+                        selectedBlock?.fontFamily === font.family && "bg-accent font-semibold",
+                      )}
+                      style={{ fontFamily: font.family }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() =>
+                        updateSelectedBlock((b) => ({ ...b, fontFamily: font.family }))
+                      }
+                    >
+                      <span className="truncate">{font.name}</span>
+                      {selectedBlock?.fontFamily === font.family && (
+                        <Check className="size-3.5 text-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-semibold">
                 Document Fonts
               </DropdownMenuLabel>
@@ -1733,7 +2238,9 @@ export function WordResumeEditor({
                   )}
                   style={{ fontFamily: font.value }}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => updateSelectedBlock((b) => ({ ...b, fontFamily: font.value }))}
+                  onClick={() =>
+                    updateSelectedBlock((b) => ({ ...b, fontFamily: font.family || font.value }))
+                  }
                 >
                   <span>{font.label}</span>
                   {selectedBlock?.fontFamily === font.value && (
@@ -1741,6 +2248,15 @@ export function WordResumeEditor({
                   )}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-xs font-medium text-primary flex items-center gap-2"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setFontUploadModalOpen(true)}
+              >
+                <Upload className="size-3.5" />
+                <span>+ Upload Custom Font...</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -2213,6 +2729,85 @@ export function WordResumeEditor({
             <span className="hidden sm:inline font-medium">Line</span>
           </Button>
 
+          {/* Section Divider Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs px-2.5 gap-1.5 shrink-0 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                title="Insert Section Divider Rule"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <SeparatorHorizontal className="size-3.5 text-slate-600 dark:text-slate-300" />
+                <span className="hidden sm:inline font-medium">Divider</span>
+                <ChevronDown className="size-2.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-semibold">
+                Insert Section Divider
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {SECTION_DIVIDER_PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.label}
+                  className="cursor-pointer text-xs flex flex-col items-start gap-1 py-1.5"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleInsertDivider(preset.style, preset.color)}
+                >
+                  <span className="font-medium text-foreground">{preset.label}</span>
+                  <div
+                    className={cn(
+                      "w-full h-0 border-t",
+                      preset.style === "dashed" && "border-dashed",
+                      preset.style === "dotted" && "border-dotted",
+                      preset.style === "double" && "border-double border-t-2",
+                      preset.style === "thick" && "border-t-2",
+                    )}
+                    style={{ borderColor: preset.color }}
+                  />
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Table / Grid Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs px-2.5 gap-1.5 shrink-0 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                title="Insert Table Grid (Skills, Key-Value, Projects)"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <TableIcon className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden sm:inline font-medium">Table</span>
+                <ChevronDown className="size-2.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-semibold">
+                Insert Table Grid
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {TABLE_PRESETS.map((tbl) => (
+                <DropdownMenuItem
+                  key={tbl.label}
+                  className="cursor-pointer text-xs flex flex-col items-start gap-0.5 py-1.5"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleInsertTable(tbl)}
+                >
+                  <span className="font-medium text-foreground">{tbl.label}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {tbl.rows} rows × {tbl.cols} cols {tbl.headers ? "• With Header" : ""}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Move Up / Down */}
           <Button
             variant="ghost"
@@ -2261,8 +2856,109 @@ export function WordResumeEditor({
           </Button>
         </div>
 
+        {/* Block Column Slot Selector (Active in Multi-Column Mode) */}
+        {columnLayout !== "single" && (
+          <div className="flex items-center gap-1 bg-muted/70 px-1.5 py-0.5 rounded border border-border shrink-0">
+            <span className="text-[10px] text-muted-foreground font-semibold">Slot:</span>
+            <Button
+              variant={
+                !selectedBlock?.columnSlot || selectedBlock.columnSlot === "full"
+                  ? "secondary"
+                  : "ghost"
+              }
+              size="sm"
+              className={cn(
+                "h-6 text-[10px] px-2 font-medium rounded",
+                (!selectedBlock?.columnSlot || selectedBlock.columnSlot === "full") &&
+                  "bg-background text-foreground shadow-xs font-semibold",
+              )}
+              title="Span 100% full width banner"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => updateSelectedBlock((b) => ({ ...b, columnSlot: "full" }))}
+            >
+              Full Width
+            </Button>
+            <Button
+              variant={selectedBlock?.columnSlot === "left" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-6 text-[10px] px-2 font-medium rounded",
+                selectedBlock?.columnSlot === "left" &&
+                  "bg-background text-foreground shadow-xs font-semibold",
+              )}
+              title="Place in Left Column"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => updateSelectedBlock((b) => ({ ...b, columnSlot: "left" }))}
+            >
+              Left Col
+            </Button>
+            <Button
+              variant={selectedBlock?.columnSlot === "right" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-6 text-[10px] px-2 font-medium rounded",
+                selectedBlock?.columnSlot === "right" &&
+                  "bg-background text-foreground shadow-xs font-semibold",
+              )}
+              title="Place in Right Column"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => updateSelectedBlock((b) => ({ ...b, columnSlot: "right" }))}
+            >
+              Right Col
+            </Button>
+          </div>
+        )}
+
         {/* Document Page Setup & Zoom */}
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          {/* Column Layout Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onMouseDown={(e) => e.preventDefault()}
+                className="h-7 text-xs px-2 w-[112px] shrink-0 justify-between gap-1 font-medium text-foreground"
+                title="Resume Column Layout"
+              >
+                <Columns2 className="size-3.5 text-muted-foreground shrink-0" />
+                <span className="truncate flex-1 text-left">
+                  {COLUMN_LAYOUT_PRESETS.find((p) => p.id === columnLayout)?.label.split(" ")[0] ||
+                    "Layout"}
+                </span>
+                <ChevronDown className="size-3 opacity-60 shrink-0" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-semibold">
+                Resume Column Layout
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {COLUMN_LAYOUT_PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.id}
+                  className={cn(
+                    "cursor-pointer text-xs flex flex-col items-start gap-0.5 text-foreground py-1.5",
+                    columnLayout === preset.id && "bg-accent font-semibold",
+                  )}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setColumnLayout(preset.id);
+                    onColumnLayoutChange?.(preset.id);
+                  }}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>{preset.label}</span>
+                    {columnLayout === preset.id && <Check className="size-3.5 text-primary" />}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    {preset.desc}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Paper Size Switcher (US Letter vs A4) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -2497,7 +3193,7 @@ export function WordResumeEditor({
                     <Plus className="size-5 mx-auto mb-1 text-slate-400" />
                     <p className="text-xs">Page is empty. Click to add text.</p>
                   </div>
-                ) : (
+                ) : columnLayout === "single" ? (
                   pageBlocks.map((block) => (
                     <ParagraphBlockItem
                       key={block.id}
@@ -2511,6 +3207,7 @@ export function WordResumeEditor({
                         if (onSelectBlock) onSelectBlock(block.id);
                       }}
                       onTextChange={(newText) => handleParagraphTextChange(block.id, newText)}
+                      onCellChange={handleTableCellChange}
                       onEnter={(e, currentText, selOffset) =>
                         handleBlockEnter(e, block, currentText, selOffset)
                       }
@@ -2524,16 +3221,169 @@ export function WordResumeEditor({
                       onArrowDown={(e, selOffset, textLen) =>
                         handleBlockArrowDown(e, block, selOffset, textLen)
                       }
-                      onTab={(e) => {
-                        e.preventDefault();
-                        handleIndent(e.shiftKey ? -12 : 12);
-                      }}
+                      onTab={(e, currentText, selStart, selEnd) =>
+                        handleBlockTab(e, block, currentText, selStart, selEnd)
+                      }
                       registerRef={(el) => {
                         if (el) editableRefs.current.set(block.id, el);
                         else editableRefs.current.delete(block.id);
                       }}
                     />
                   ))
+                ) : (
+                  (() => {
+                    const topFullBlocks: CanvasTextBlock[] = [];
+                    const leftColBlocks: CanvasTextBlock[] = [];
+                    const rightColBlocks: CanvasTextBlock[] = [];
+                    const bottomFullBlocks: CanvasTextBlock[] = [];
+
+                    let inColumnSection = false;
+                    for (const b of pageBlocks) {
+                      if (b.columnSlot === "left") {
+                        inColumnSection = true;
+                        leftColBlocks.push(b);
+                      } else if (b.columnSlot === "right") {
+                        inColumnSection = true;
+                        rightColBlocks.push(b);
+                      } else if (b.columnSlot === "full") {
+                        if (!inColumnSection) {
+                          topFullBlocks.push(b);
+                        } else {
+                          bottomFullBlocks.push(b);
+                        }
+                      } else {
+                        // Unassigned slot
+                        if (!inColumnSection) {
+                          topFullBlocks.push(b);
+                        } else {
+                          if (columnLayout === "two-column-left") {
+                            rightColBlocks.push(b);
+                          } else {
+                            leftColBlocks.push(b);
+                          }
+                        }
+                      }
+                    }
+
+                    // If user enabled multi-column but has not assigned left blocks yet
+                    if (
+                      leftColBlocks.length === 0 &&
+                      rightColBlocks.length === 0 &&
+                      topFullBlocks.length > 2
+                    ) {
+                      const splitIdx = Math.min(2, topFullBlocks.length);
+                      const moved = topFullBlocks.splice(splitIdx);
+                      if (columnLayout === "two-column-left") {
+                        rightColBlocks.push(...moved);
+                      } else {
+                        leftColBlocks.push(...moved);
+                      }
+                    }
+
+                    let leftColPercent = "35%";
+                    let rightColPercent = "65%";
+                    if (columnLayout === "two-column-right") {
+                      leftColPercent = "65%";
+                      rightColPercent = "35%";
+                    } else if (columnLayout === "two-column-equal") {
+                      leftColPercent = "50%";
+                      rightColPercent = "50%";
+                    }
+
+                    const renderBlock = (block: CanvasTextBlock) => (
+                      <ParagraphBlockItem
+                        key={block.id}
+                        block={block}
+                        zoom={zoom}
+                        biasSpans={biasSpans}
+                        isSelected={selectedBlockId === block.id}
+                        onSelect={() => {
+                          setSelectedBlockId(block.id);
+                          setActivePageIndex(block.pageIndex);
+                          if (onSelectBlock) onSelectBlock(block.id);
+                        }}
+                        onTextChange={(newText) => handleParagraphTextChange(block.id, newText)}
+                        onCellChange={handleTableCellChange}
+                        onEnter={(e, currentText, selOffset) =>
+                          handleBlockEnter(e, block, currentText, selOffset)
+                        }
+                        onBackspace={(e, currentText, selOffset) =>
+                          handleBlockBackspace(e, block, currentText, selOffset)
+                        }
+                        onDelete={(e, currentText, selOffset) =>
+                          handleBlockDelete(e, block, currentText, selOffset)
+                        }
+                        onArrowUp={(e, selOffset) => handleBlockArrowUp(e, block, selOffset)}
+                        onArrowDown={(e, selOffset, textLen) =>
+                          handleBlockArrowDown(e, block, selOffset, textLen)
+                        }
+                        onTab={(e, currentText, selStart, selEnd) =>
+                          handleBlockTab(e, block, currentText, selStart, selEnd)
+                        }
+                        registerRef={(el) => {
+                          if (el) editableRefs.current.set(block.id, el);
+                          else editableRefs.current.delete(block.id);
+                        }}
+                      />
+                    );
+
+                    return (
+                      <div className="flex flex-col flex-1">
+                        {/* Top Full Width Section (Banner, Name, Contact) */}
+                        {topFullBlocks.map(renderBlock)}
+
+                        {/* 2-Column Responsive Body */}
+                        <div className="flex items-start w-full gap-4 mt-2 flex-1">
+                          {/* Left Column */}
+                          <div
+                            style={{ width: leftColPercent }}
+                            className={cn(
+                              "flex flex-col min-h-[80px]",
+                              columnLayout === "two-column-left" &&
+                                "pr-3 border-r border-slate-200 dark:border-zinc-800",
+                            )}
+                          >
+                            {leftColBlocks.length === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleInsertInSlot("left")}
+                                className="p-3 text-center text-slate-400 hover:text-primary border border-dashed border-slate-200 dark:border-zinc-800 rounded text-xs cursor-pointer transition-colors"
+                              >
+                                + Add Left Column Block
+                              </button>
+                            ) : (
+                              leftColBlocks.map(renderBlock)
+                            )}
+                          </div>
+
+                          {/* Right Column */}
+                          <div
+                            style={{ width: rightColPercent }}
+                            className={cn(
+                              "flex flex-col min-h-[80px]",
+                              columnLayout === "two-column-right" &&
+                                "pl-3 border-l border-slate-200 dark:border-zinc-800",
+                            )}
+                          >
+                            {rightColBlocks.length === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleInsertInSlot("right")}
+                                className="p-3 text-center text-slate-400 hover:text-primary border border-dashed border-slate-200 dark:border-zinc-800 rounded text-xs cursor-pointer transition-colors"
+                              >
+                                + Add Right Column Block
+                              </button>
+                            ) : (
+                              rightColBlocks.map(renderBlock)
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Full Width Section */}
+                        {bottomFullBlocks.map(renderBlock)}
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 
@@ -2551,6 +3401,17 @@ export function WordResumeEditor({
           );
         })}
       </div>
+
+      {/* Custom Font Studio Modal */}
+      <FontUploadModal
+        open={fontUploadModalOpen}
+        onOpenChange={setFontUploadModalOpen}
+        customFonts={customFonts}
+        onFontsChanged={(newFonts) => setCustomFonts(newFonts)}
+        onSelectFont={(fontFamily) => {
+          updateSelectedBlock((b) => ({ ...b, fontFamily }));
+        }}
+      />
     </div>
   );
 }

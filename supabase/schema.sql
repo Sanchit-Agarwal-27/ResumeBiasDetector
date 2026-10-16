@@ -80,6 +80,12 @@ create table if not exists public.canvas_blocks (
   is_bullet boolean default false,
   is_numbered boolean default false,
   list_number int default null,
+  column_slot text default 'full',
+  is_divider boolean default false,
+  divider_style text default null,
+  divider_color text default null,
+  is_table boolean default false,
+  table_data jsonb default null,
   primary key (resume_id, id)
 );
 
@@ -106,9 +112,22 @@ create table if not exists public.resume_versions (
   created_at timestamptz default now()
 );
 
+-- 8. USER_FONTS TABLE (Custom typography uploaded by users)
+create table if not exists public.user_fonts (
+  id text not null primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  family text not null,
+  format text not null default 'woff2',
+  data_url text not null,
+  file_size int default 0,
+  created_at timestamptz default now()
+);
+
 -- Backward compatibility / idempotency additions for existing databases:
 alter table public.resumes add column if not exists target_job jsonb default null;
 alter table public.resumes add column if not exists ats_match jsonb default null;
+alter table public.resumes add column if not exists column_layout text default 'single';
 alter table public.resume_versions add column if not exists ats_score int default null;
 alter table public.canvas_blocks add column if not exists strikethrough boolean default false;
 alter table public.canvas_blocks add column if not exists background_color text default null;
@@ -120,6 +139,12 @@ alter table public.canvas_blocks add column if not exists is_heading boolean def
 alter table public.canvas_blocks add column if not exists is_bullet boolean default false;
 alter table public.canvas_blocks add column if not exists is_numbered boolean default false;
 alter table public.canvas_blocks add column if not exists list_number int default null;
+alter table public.canvas_blocks add column if not exists column_slot text default 'full';
+alter table public.canvas_blocks add column if not exists is_divider boolean default false;
+alter table public.canvas_blocks add column if not exists divider_style text default null;
+alter table public.canvas_blocks add column if not exists divider_color text default null;
+alter table public.canvas_blocks add column if not exists is_table boolean default false;
+alter table public.canvas_blocks add column if not exists table_data jsonb default null;
 
 -- ==============================================================================
 -- INDEXES FOR PERFORMANCE
@@ -130,6 +155,7 @@ create index if not exists idx_canvas_blocks_resume_id on public.canvas_blocks(r
 create index if not exists idx_bias_audits_resume_id on public.bias_audits(resume_id);
 create index if not exists idx_resume_versions_resume_id on public.resume_versions(resume_id);
 create index if not exists idx_resume_versions_ats_score on public.resume_versions(ats_score);
+create index if not exists idx_user_fonts_user_id on public.user_fonts(user_id);
 
 -- ==============================================================================
 -- ROW-LEVEL SECURITY (RLS) POLICIES
@@ -225,6 +251,14 @@ create policy "Users can manage versions of their own resumes"
       and public.resumes.user_id = auth.uid()
     )
   );
+
+-- USER_FONTS RLS
+alter table public.user_fonts enable row level security;
+drop policy if exists "Users can manage their own custom fonts" on public.user_fonts;
+create policy "Users can manage their own custom fonts"
+  on public.user_fonts for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 -- ==============================================================================
 -- AUTOMATIC PROFILE CREATION TRIGGER ON AUTH.USERS INSERT

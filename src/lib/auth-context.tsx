@@ -26,7 +26,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isCloudConnected: boolean;
-  login: (email: string, password?: string) => Promise<boolean>;
+  login: (email: string, password?: string, rememberMe?: boolean) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithMagicLink: (email: string) => Promise<boolean>;
   signup: (name: string, email: string, password?: string) => Promise<boolean>;
@@ -39,6 +39,8 @@ interface AuthContextType {
 }
 
 const AUTH_STORAGE_KEY = "biaslens_auth_user";
+const AUTH_REMEMBER_KEY = "biaslens_auth_remember";
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days session inactivity limit
 
 const defaultDemoUser: UserProfile = {
   id: "usr_bl_01",
@@ -66,7 +68,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return null;
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as UserProfile;
+        // Verify session freshness (7 days max age)
+        const lastLoginTime = new Date(parsed.lastLogin || parsed.createdAt).getTime();
+        const now = Date.now();
+        if (now - lastLoginTime > SESSION_MAX_AGE_MS) {
+          // Session expired due to inactivity
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          return null;
+        }
+        return parsed;
+      }
     } catch {
       // fallback
     }
@@ -190,10 +203,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const login = async (email: string, password?: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password?: string,
+    rememberMe: boolean = true,
+  ): Promise<boolean> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (rememberMe) {
+      localStorage.setItem(AUTH_REMEMBER_KEY, cleanEmail);
+    } else {
+      localStorage.removeItem(AUTH_REMEMBER_KEY);
+    }
+
     if (isSupabaseConfigured && password) {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -214,12 +238,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Graceful offline mock fallback
     await new Promise((resolve) => setTimeout(resolve, 500));
-    const generatedName = email.split("@")[0].replace(/[._]/g, " ");
+    const generatedName = cleanEmail.split("@")[0].replace(/[._]/g, " ");
     const userToLogin: UserProfile = {
       ...defaultDemoUser,
       id: `usr_${Math.random().toString(36).substring(2, 9)}`,
       name: generatedName || "BiasLens Professional",
-      email: email.toLowerCase(),
+      email: cleanEmail,
       lastLogin: new Date().toISOString(),
     };
     setUser(userToLogin);
@@ -401,19 +425,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const dbUpdates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
-      if (updates.name !== undefined) dbUpdates.name = updates.name;
-      if (updates.role !== undefined) dbUpdates.role = updates.role;
-      if (updates.headline !== undefined) dbUpdates.headline = updates.headline;
-      if (updates.organization !== undefined) dbUpdates.organization = updates.organization;
-      if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+      if (updates.name !== undefined) dbUpdates["name"] = updates.name;
+      if (updates.role !== undefined) dbUpdates["role"] = updates.role;
+      if (updates.headline !== undefined) dbUpdates["headline"] = updates.headline;
+      if (updates.organization !== undefined) dbUpdates["organization"] = updates.organization;
+      if (updates.avatarUrl !== undefined) dbUpdates["avatar_url"] = updates.avatarUrl;
       if (updates.twoFactorEnabled !== undefined)
-        dbUpdates.two_factor_enabled = updates.twoFactorEnabled;
-      if (updates.autoSave !== undefined) dbUpdates.auto_save = updates.autoSave;
+        dbUpdates["two_factor_enabled"] = updates.twoFactorEnabled;
+      if (updates.autoSave !== undefined) dbUpdates["auto_save"] = updates.autoSave;
       if (updates.telemetryEnabled !== undefined)
-        dbUpdates.telemetry_enabled = updates.telemetryEnabled;
-      if (updates.dataRetention !== undefined) dbUpdates.data_retention = updates.dataRetention;
+        dbUpdates["telemetry_enabled"] = updates.telemetryEnabled;
+      if (updates.dataRetention !== undefined) dbUpdates["data_retention"] = updates.dataRetention;
       if (updates.defaultExportFormat !== undefined)
-        dbUpdates.default_export_format = updates.defaultExportFormat;
+        dbUpdates["default_export_format"] = updates.defaultExportFormat;
 
       const { error } = await supabase.from("profiles").update(dbUpdates).eq("id", session.user.id);
 
