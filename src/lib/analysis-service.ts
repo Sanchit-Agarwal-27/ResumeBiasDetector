@@ -61,6 +61,7 @@ export async function processResumeAnalysis(
     prestige_proxy: 0,
     gap_framing: 0,
     disability_coded: 0,
+    personality_behavioral: 0,
   };
   const bySeverity: Record<SeverityLevel, number> = { low: 0, medium: 0, high: 0 };
 
@@ -85,5 +86,7 @@ export async function processResumeAnalysis(
     suggestions: analysis.suggestions,
     fairness_audit: fairnessAudit,
     evaluation_benchmarks: EVALUATION_BENCHMARK_DATA,
+    classified_sentences: analysis.classified_sentences,
+    context_summary: analysis.context_summary,
   };
 }

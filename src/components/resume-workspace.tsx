@@ -110,6 +110,7 @@ const categories: Array<{ key: "all" | BiasCategory; short: string; label: strin
     { key: "prestige_proxy", short: "Prestige", label: "Prestige proxy", dot: "bg-prestige" },
     { key: "gap_framing", short: "Career gap", label: "Career gap", dot: "bg-gap" },
     { key: "disability_coded", short: "Disability", label: "Disability-coded", dot: "bg-gap" },
+    { key: "personality_behavioral", short: "Personality", label: "Personality & Behavioral", dot: "bg-amber-500" },
   ];
 
 const categoryLabels: Record<BiasCategory, string> = {
@@ -118,6 +119,7 @@ const categoryLabels: Record<BiasCategory, string> = {
   prestige_proxy: "Prestige proxy",
   gap_framing: "Career gap",
   disability_coded: "Disability-coded",
+  personality_behavioral: "Personality & Behavioral",
 };
 
 const severityWeights: Record<SeverityLevel, number> = { low: 3, medium: 7, high: 12 };
@@ -129,6 +131,7 @@ function buildSummary(spans: BiasSpan[]) {
     prestige_proxy: 0,
     gap_framing: 0,
     disability_coded: 0,
+    personality_behavioral: 0,
   };
   const bySeverity: Record<SeverityLevel, number> = { low: 0, medium: 0, high: 0 };
   spans.forEach((span) => {
@@ -194,6 +197,8 @@ export function ResumeWorkspace() {
   const [diffVersionsList, setDiffVersionsList] = useState<CloudResumeVersionRecord[]>([]);
   const [activeVersionNumber, setActiveVersionNumber] = useState<number>(1);
   const [vectorPdfModalOpen, setVectorPdfModalOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"issues" | "sentences">("issues");
+  const [sentenceFilter, setSentenceFilter] = useState<"all" | "flagged" | "fine">("all");
 
   // User Authentication & Theme State
   const { user, isAuthenticated, logout } = useAuth();
@@ -427,6 +432,8 @@ export function ResumeWorkspace() {
         fairness_audit: fairness,
         evaluation_benchmarks: EVALUATION_BENCHMARK_DATA,
         ats_match: updatedAts,
+        classified_sentences: analysis.classified_sentences,
+        context_summary: analysis.context_summary,
       };
     });
     if (!analysis.spans.some((span) => span.id === activeId)) {
@@ -505,6 +512,13 @@ export function ResumeWorkspace() {
   function loadSample() {
     setIsTransitioning(true);
     const fixture = normalizeFixture();
+    const analysis = analyzeResumeText(fixture.raw_text);
+    fixture.spans = analysis.spans;
+    fixture.suggestions = analysis.suggestions;
+    fixture.neutrality_score = analysis.neutrality_score;
+    fixture.summary = buildSummary(analysis.spans);
+    fixture.classified_sentences = analysis.classified_sentences;
+    fixture.context_summary = analysis.context_summary;
     const fairness = runCounterfactualFairnessAudit(fixture.raw_text, fixture.spans);
     fixture.fairness_audit = fairness;
     fixture.evaluation_benchmarks = EVALUATION_BENCHMARK_DATA;
@@ -552,6 +566,8 @@ export function ResumeWorkspace() {
       neutrality_score: analysis.neutrality_score,
       fairness_audit: fairness,
       evaluation_benchmarks: EVALUATION_BENCHMARK_DATA,
+      classified_sentences: analysis.classified_sentences,
+      context_summary: analysis.context_summary,
     };
     setReport(blankReport);
     setLoaded(true);
@@ -713,6 +729,8 @@ export function ResumeWorkspace() {
       next.neutrality_score = analysis.neutrality_score;
       next.fairness_audit = fairness;
       next.evaluation_benchmarks = EVALUATION_BENCHMARK_DATA;
+      next.classified_sentences = analysis.classified_sentences;
+      next.context_summary = analysis.context_summary;
 
       setReport(next);
       setLoaded(true);
@@ -1830,10 +1848,12 @@ export function ResumeWorkspace() {
                     <p className="text-[10px] font-bold uppercase text-muted-foreground">
                       Review queue {filter !== "all" && `• ${categoryLabels[filter] ?? filter}`}
                     </p>
-                    <h2 className="font-display text-lg font-semibold">Issue & rewrite</h2>
+                    <h2 className="font-display text-lg font-semibold">
+                      {sidebarTab === "issues" ? "Issue & rewrite" : "Context-Aware AI"}
+                    </h2>
                   </div>
                   <div className="flex items-center gap-2">
-                    {filter !== "all" && (
+                    {filter !== "all" && sidebarTab === "issues" && (
                       <button
                         type="button"
                         onClick={() => handleSelectCategoryFilter("all")}
@@ -1843,12 +1863,44 @@ export function ResumeWorkspace() {
                       </button>
                     )}
                     <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">
-                      {filteredSpans.length} open
+                      {sidebarTab === "issues"
+                        ? `${filteredSpans.length} open`
+                        : `${report.classified_sentences?.length || 0} sentences`}
                     </span>
                   </div>
                 </div>
-                {filteredSpans.length > 0 && (
-                  <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1">
+
+                {/* Tab Switcher: Issues vs Context AI Sentences */}
+                <div className="mt-3 flex items-center gap-1 bg-muted/60 p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("issues")}
+                    className={cn(
+                      "flex-1 text-xs font-semibold py-1 px-3 rounded-md transition-all cursor-pointer",
+                      sidebarTab === "issues"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    Flagged Issues ({filteredSpans.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarTab("sentences")}
+                    className={cn(
+                      "flex-1 text-xs font-semibold py-1 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                      sidebarTab === "sentences"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Sparkles className="size-3 text-emerald-500" />
+                    <span>Sentence XAI ({report.classified_sentences?.length || 0})</span>
+                  </button>
+                </div>
+
+                {sidebarTab === "issues" && filteredSpans.length > 0 && (
+                  <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
                     {filteredSpans.map((span, index) => (
                       <Button
                         id={`issue-${span.id}`}
@@ -1865,160 +1917,307 @@ export function ResumeWorkspace() {
                 )}
               </div>
 
-              {activeSpan && activeSuggestion ? (
-                <div className="space-y-6 p-5 animate-in fade-in duration-200">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
-                      {categoryLabels[activeSpan.category]}
-                    </span>
-                    <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
-                      {activeSpan.severity} severity
-                    </span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {Math.round(activeSpan.confidence * 100)}% confidence
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-display text-2xl font-bold tracking-tight">
-                      “{activeSpan.matched_text}”
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {activeSpan.explanation}
-                    </p>
-                    {activeSpan.research_citation && (
-                      <p className="mt-2 text-[11px] text-muted-foreground/80 italic">
-                        Citation: {activeSpan.research_citation}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-md border p-4 bg-muted/20">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                        Suggested revision
-                      </p>
-                      {customRewrite !== (activeSuggestion.suggested_text || "") && (
-                        <button
-                          type="button"
-                          onClick={() => setCustomRewrite(activeSuggestion.suggested_text || "")}
-                          className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
-                        >
-                          Reset to suggestion
-                        </button>
-                      )}
+              {sidebarTab === "issues" ? (
+                activeSpan && activeSuggestion ? (
+                  <div className="space-y-6 p-5 animate-in fade-in duration-200">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-sm bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase text-rose-600 dark:text-rose-400">
+                        Flagged
+                      </span>
+                      <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
+                        {categoryLabels[activeSpan.category]}
+                      </span>
+                      <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
+                        {activeSpan.severity} severity
+                      </span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {Math.round(activeSpan.confidence * 100)}% confidence
+                      </span>
                     </div>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                        <span className="text-[10px] font-bold uppercase text-destructive">
-                          Before
+
+                    {activeSpan.sentence && (
+                      <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed">
+                        <span className="font-semibold text-muted-foreground block mb-1">
+                          Full Sentence Context:
                         </span>
-                        <p className="mt-2 text-sm font-semibold text-destructive break-words">
-                          {activeSuggestion.original_text}
+                        <p className="italic text-foreground">
+                          “{activeSpan.sentence}”
                         </p>
                       </div>
-                      <div className="rounded-md border border-success/30 bg-success/5 p-3 flex flex-col">
-                        <span className="text-[10px] font-bold uppercase text-success">
-                          After (Editable)
-                        </span>
-                        <textarea
-                          value={customRewrite}
-                          onChange={(e) => setCustomRewrite(e.target.value)}
-                          placeholder="Type or customize neutral rewrite..."
-                          rows={2}
-                          className="mt-2 w-full flex-1 resize-none rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
-                        />
-                      </div>
-                    </div>
-                    <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                      {activeSuggestion.rationale}
-                    </p>
-                  </div>
+                    )}
 
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                    <Button size="lg" onClick={() => resolveIssue("accept", customRewrite)}>
-                      <CheckCircle2 className="size-4 mr-1.5" /> Accept rewrite
-                    </Button>
-                    <Button variant="outline" size="lg" onClick={() => resolveIssue("dismiss")}>
-                      <X className="size-4 mr-1.5" /> Dismiss
-                    </Button>
-                  </div>
-                </div>
-              ) : report.spans.length === 0 ? (
-                <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
-                  <div className="max-w-xs space-y-4">
-                    <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-8 ring-emerald-500/5">
-                      <ShieldCheck className="size-8" />
-                    </div>
                     <div>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        <Sparkles className="size-3" />
-                        100% Bias-Free
-                      </span>
-                      <h3 className="mt-2.5 font-display text-xl font-bold tracking-tight text-foreground">
-                        Screening-Optimized
+                      <h3 className="font-display text-2xl font-bold tracking-tight">
+                        “{activeSpan.matched_text}”
                       </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        Zero bias markers detected across gender, age, prestige, gap, and disability
-                        taxonomy. Your resume is ready for fair applicant tracking.
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {activeSpan.explanation}
+                      </p>
+                      {activeSpan.research_citation && (
+                        <p className="mt-2 text-[11px] text-muted-foreground/80 italic">
+                          Citation: {activeSpan.research_citation}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="rounded-md border p-4 bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                          Suggested revision
+                        </p>
+                        {customRewrite !== (activeSuggestion.suggested_text || "") && (
+                          <button
+                            type="button"
+                            onClick={() => setCustomRewrite(activeSuggestion.suggested_text || "")}
+                            className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                          >
+                            Reset to suggestion
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                          <span className="text-[10px] font-bold uppercase text-destructive">
+                            Before
+                          </span>
+                          <p className="mt-2 text-sm font-semibold text-destructive break-words">
+                            {activeSuggestion.original_text}
+                          </p>
+                        </div>
+                        <div className="rounded-md border border-success/30 bg-success/5 p-3 flex flex-col">
+                          <span className="text-[10px] font-bold uppercase text-success">
+                            After (Editable)
+                          </span>
+                          <textarea
+                            value={customRewrite}
+                            onChange={(e) => setCustomRewrite(e.target.value)}
+                            placeholder="Type or customize neutral rewrite..."
+                            rows={2}
+                            className="mt-2 w-full flex-1 resize-none rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                        {activeSuggestion.rationale}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-2 pt-2">
-                      <Button
-                        className="w-full gap-2 shadow-xs"
-                        onClick={exportPdf}
-                        disabled={isExporting}
-                      >
-                        {isExporting ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Download className="size-4" />
-                        )}
-                        <span>Download Clean PDF</span>
+
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                      <Button size="lg" onClick={() => resolveIssue("accept", customRewrite)}>
+                        <CheckCircle2 className="size-4 mr-1.5" /> Accept rewrite
                       </Button>
+                      <Button variant="outline" size="lg" onClick={() => resolveIssue("dismiss")}>
+                        <X className="size-4 mr-1.5" /> Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                ) : report.spans.length === 0 ? (
+                  <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
+                    <div className="max-w-xs space-y-4">
+                      <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-8 ring-emerald-500/5">
+                        <ShieldCheck className="size-8" />
+                      </div>
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          <Sparkles className="size-3" />
+                          100% Bias-Free
+                        </span>
+                        <h3 className="mt-2.5 font-display text-xl font-bold tracking-tight text-foreground">
+                          Screening-Optimized
+                        </h3>
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                          Zero bias markers detected across gender, age, prestige, gap, and disability
+                          taxonomy. Your resume is ready for fair applicant tracking.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Button
+                          className="w-full gap-2 shadow-xs"
+                          onClick={exportPdf}
+                          disabled={isExporting}
+                        >
+                          {isExporting ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Download className="size-4" />
+                          )}
+                          <span>Download Clean PDF</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 text-xs"
+                          onClick={() => setSidebarTab("sentences")}
+                        >
+                          <Sparkles className="size-3.5 text-emerald-500" />
+                          <span>View Sentence Breakdown</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 text-xs"
+                          onClick={() => setFairnessModalOpen(true)}
+                        >
+                          <Scale className="size-3.5 text-primary" />
+                          <span>Run Counterfactual Audit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs text-muted-foreground"
+                          onClick={loadSample}
+                        >
+                          <RotateCcw className="size-3 mr-1.5" />
+                          Reload Sample Demo
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
+                    <div className="max-w-xs space-y-3">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CheckCircle2 className="size-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-display text-base font-bold text-foreground">
+                          No {categoryLabels[filter as BiasCategory] || "Selected"} Issues
+                        </h3>
+                        <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                          This category passed screening with zero flagged phrases.
+                        </p>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full gap-2 text-xs"
-                        onClick={() => setFairnessModalOpen(true)}
+                        className="mt-2 text-xs"
+                        onClick={() => setFilter("all")}
                       >
-                        <Scale className="size-3.5 text-primary" />
-                        <span>Run Counterfactual Audit</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs text-muted-foreground"
-                        onClick={loadSample}
-                      >
-                        <RotateCcw className="size-3 mr-1.5" />
-                        Reload Sample Demo
+                        Show All Issues ({report.spans.length})
                       </Button>
                     </div>
                   </div>
-                </div>
+                )
               ) : (
-                <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
-                  <div className="max-w-xs space-y-3">
-                    <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <CheckCircle2 className="size-6" />
+                /* SIDEBAR TAB: SENTENCES (CONTEXT-AWARE XAI BREAKDOWN) */
+                <div className="space-y-4 p-5 animate-in fade-in duration-200">
+                  {/* Context Summary Cards */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg border bg-rose-500/5 border-rose-500/20 p-2.5">
+                      <span className="text-muted-foreground text-[10px] uppercase font-bold block">
+                        Flagged Sentences
+                      </span>
+                      <span className="text-xl font-bold text-rose-600 dark:text-rose-400">
+                        {report.context_summary?.flagged_sentences ?? 0}
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="font-display text-base font-bold text-foreground">
-                        No {categoryLabels[filter as BiasCategory] || "Selected"} Issues
-                      </h3>
-                      <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                        This category passed screening with zero flagged phrases.
-                      </p>
+                    <div className="rounded-lg border bg-emerald-500/5 border-emerald-500/20 p-2.5">
+                      <span className="text-muted-foreground text-[10px] uppercase font-bold block">
+                        Fine / Exonerated
+                      </span>
+                      <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {report.context_summary?.fine_sentences ?? 0}
+                      </span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 text-xs"
-                      onClick={() => setFilter("all")}
-                    >
-                      Show All Issues ({report.spans.length})
-                    </Button>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex gap-1.5">
+                    {(["all", "flagged", "fine"] as const).map((mode) => (
+                      <Button
+                        key={mode}
+                        size="sm"
+                        variant={sentenceFilter === mode ? "default" : "outline"}
+                        className="h-7 text-xs capitalize rounded-md"
+                        onClick={() => setSentenceFilter(mode)}
+                      >
+                        {mode === "all" ? "All" : mode === "flagged" ? "Flagged Only" : "Fine (Safe)"}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Sentence List */}
+                  <div className="space-y-3">
+                    {(report.classified_sentences || [])
+                      .filter((s) => {
+                        if (sentenceFilter === "flagged") return s.classification === "Flagged";
+                        if (sentenceFilter === "fine") return s.classification === "Fine";
+                        return true;
+                      })
+                      .map((s, idx) => {
+                        const isFlagged = s.classification === "Flagged";
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "rounded-lg border p-3.5 space-y-2 text-xs transition-colors",
+                              isFlagged
+                                ? "border-rose-500/30 bg-rose-500/5"
+                                : "border-emerald-500/30 bg-emerald-500/5",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span
+                                className={cn(
+                                  "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                  isFlagged
+                                    ? "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+                                )}
+                              >
+                                {s.classification}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground font-medium">
+                                {Math.round(s.confidence * 100)}% confidence
+                              </span>
+                            </div>
+
+                            <p className="text-foreground leading-relaxed font-medium">
+                              “{s.sentence}”
+                            </p>
+
+                            {s.keyword_match.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1 pt-1">
+                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                  Detected candidates:
+                                </span>
+                                {s.keyword_match.map((kw, ki) => (
+                                  <span
+                                    key={ki}
+                                    className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono text-foreground"
+                                  >
+                                    {kw}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="rounded bg-background/80 p-2.5 border text-muted-foreground leading-relaxed text-[11px]">
+                              <span className="font-semibold text-foreground block mb-0.5">XAI Grounding:</span>
+                              {s.explanation}
+                            </div>
+
+                            {isFlagged && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full text-xs h-7 mt-1 text-primary"
+                                onClick={() => {
+                                  const matchingSpan = report.spans.find(
+                                    (sp) => sp.sentence === s.sentence || s.sentence.includes(sp.matched_text),
+                                  );
+                                  if (matchingSpan) {
+                                    setActiveId(matchingSpan.id);
+                                  }
+                                  setSidebarTab("issues");
+                                }}
+                              >
+                                Review Issue & Rewrite →
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}

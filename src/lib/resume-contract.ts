@@ -1,5 +1,10 @@
 export type BiasCategory =
-  "gender_coded" | "age_indicative" | "prestige_proxy" | "gap_framing" | "disability_coded";
+  | "gender_coded"
+  | "age_indicative"
+  | "prestige_proxy"
+  | "gap_framing"
+  | "disability_coded"
+  | "personality_behavioral";
 
 export type SeverityLevel = "low" | "medium" | "high";
 
@@ -14,6 +19,31 @@ export interface BiasSpan {
   confidence: number;
   explanation: string;
   research_citation?: string;
+  classification?: "Fine" | "Flagged";
+  sentence?: string;
+  sentence_start?: number;
+  sentence_end?: number;
+  context_type?: string;
+  is_candidate_only?: boolean;
+}
+
+export interface ClassifiedSentence {
+  sentence: string;
+  keyword_match: string[];
+  classification: "Fine" | "Flagged";
+  confidence: number;
+  explanation: string;
+  contextType: string;
+  start?: number;
+  end?: number;
+}
+
+export interface ContextSummary {
+  total_sentences: number;
+  flagged_sentences: number;
+  fine_sentences: number;
+  candidate_keywords_detected: number;
+  exonerated_keywords: number;
 }
 
 export interface RewriteSuggestion {
@@ -112,6 +142,8 @@ export interface ResumeBiasReport {
   evaluation_benchmarks?: EvaluationBenchmark[];
   target_job?: JobDescriptionProfile;
   ats_match?: AtsMatchResult;
+  classified_sentences?: ClassifiedSentence[];
+  context_summary?: ContextSummary;
 }
 
 export const sampleReport: ResumeBiasReport = {

@@ -1,0 +1,242 @@
+[
+  {
+    "id": "sample-01-example-a",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "She aggressively optimized the machine learning pipeline, reducing processing time by 40%.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "The word 'aggressively' describes a technical optimization achievement rather than interpersonal conduct or gender stereotyping."
+  },
+  {
+    "id": "sample-02-example-b",
+    "group": "Explicit unfair assumptions",
+    "sentence": "The company prefers young and energetic candidates for this entry-level role.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "The sentence explicitly expresses an age-related hiring preference, introducing an unlawful criterion under ADEA."
+  },
+  {
+    "id": "sample-03-example-c",
+    "group": "Harmless mentions of disability",
+    "sentence": "He developed an application that improves accessibility for people with disabilities.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "The sentence describes an engineering contribution building digital accessibility features for disabled users."
+  },
+  {
+    "id": "sample-04-example-d",
+    "group": "Explicit unfair assumptions",
+    "sentence": "The candidate took a two-year career break and is therefore less committed to the company.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "The sentence explicitly uses a career break to negatively infer reduced professional commitment."
+  },
+  {
+    "id": "sample-05-example-e",
+    "group": "Contextually ambiguous",
+    "sentence": "The candidate has an aggressive leadership style.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "The phrase represents a subjective personality judgment relevant to hiring; context is insufficient to prove bias but creates an unstandardized screening risk."
+  },
+  {
+    "id": "sample-06-conduct-teammates",
+    "group": "Clearly Flagged",
+    "sentence": "He used aggressive language when criticizing his teammates during code reviews.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Describes negative interpersonal conduct targeting coworkers rather than a technical deliverable."
+  },
+  {
+    "id": "sample-07-operational-strategy",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "The team adopted an aggressive optimization strategy to reduce processing time.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Modifies an inanimate operational noun (optimization strategy); conveys engineering intensity without personal bias."
+  },
+  {
+    "id": "sample-08-caching-tiers",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Reduced database query latency by 60% through aggressive caching tiers and Redis cluster optimization.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Modifies caching tiers and Redis cluster optimization with measurable quantitative outcomes."
+  },
+  {
+    "id": "sample-09-competitive-analysis",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Conducted comprehensive competitive analysis against top five market competitors to guide product pricing.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Standard business intelligence terminology (market competitive analysis) qualifying inanimate market research."
+  },
+  {
+    "id": "sample-10-strong-python",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Strong background in Python and distributed databases with proven problem-solving skills.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "The term 'strong' specifies depth of technical proficiency in programming languages and systems architecture."
+  },
+  {
+    "id": "sample-11-flexible-architecture",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Architected a flexible microservices framework for high-throughput streaming.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Denotes software modularity and adaptability of an engineering system, not a personal submissiveness trait."
+  },
+  {
+    "id": "sample-12-young-engineer-achievement",
+    "group": "Harmless mentions of age",
+    "sentence": "She is a young engineer who developed a distributed system.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Descriptive age adjective qualifying the candidate within an engineering accomplishment; does not establish an employer screening barrier."
+  },
+  {
+    "id": "sample-13-experienced-engineer",
+    "group": "Harmless mentions of age",
+    "sentence": "The candidate is an experienced engineer with strong technical skills in cloud systems.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Describes legitimate professional background and domain capability without ageist restrictions."
+  },
+  {
+    "id": "sample-14-accessibility-needs-wcag",
+    "group": "Harmless mentions of disability",
+    "sentence": "Implemented accessibility needs and screen-reader accommodations compliant with WCAG 2.1 AA.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Engineered digital accessibility accommodations to support WCAG compliance; valuable technical achievement."
+  },
+  {
+    "id": "sample-15-constructive-career-gap",
+    "group": "Harmless mentions of career gaps",
+    "sentence": "Took a 1-year career break for professional upskilling and completed AWS Cloud certification.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Constructive career pause contextualized with active technical certification and professional development."
+  },
+  {
+    "id": "sample-16-digital-native-proxy",
+    "group": "Clearly Flagged",
+    "sentence": "Proven digital native with innate mastery of TikTok and social media trends.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Direct generational age proxy implying that older applicants lack innate technological fluency."
+  },
+  {
+    "id": "sample-17-seasoned-veteran-age",
+    "group": "Clearly Flagged",
+    "sentence": "Seasoned veteran offering over 25 years of experience in enterprise data architecture.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Explicit chronology exceeding 20-25 years functions as an age proxy triggering automated ATS age-filtering."
+  },
+  {
+    "id": "sample-18-clean-bill-health",
+    "group": "Clearly Flagged",
+    "sentence": "Possesses a clean bill of health with tireless 24/7 availability for emergency on-call rotations.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Inappropriate medical and physical endurance disclosure carrying ADA disability and health screening implications."
+  },
+  {
+    "id": "sample-19-disability-excessive-supervision",
+    "group": "Explicit unfair assumptions",
+    "sentence": "The candidate has a disability and may require excessive supervision.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Directly infers professional incompetence and excessive employer burden from a candidate's disclosed disability."
+  },
+  {
+    "id": "sample-20-difficult-personality",
+    "group": "Clearly Flagged",
+    "sentence": "Colleagues noted the candidate has a difficult personality and is hard to work with, often not a team player.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Negative subjective behavioral assertions lacking documented objective deliverables, creating interpersonal conflict bias."
+  },
+  {
+    "id": "sample-21-culture-fit-affinity",
+    "group": "Contextually ambiguous",
+    "sentence": "The hiring committee evaluated whether the engineer was a good culture fit.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Evaluating candidates on 'culture fit' introduces an unstandardized affinity proxy that frequently reproduces demographic homogeneity."
+  },
+  {
+    "id": "sample-22-stanford-pedigree-filter",
+    "group": "Clearly Flagged",
+    "sentence": "Seeking candidates exclusively from Stanford or Ivy League computer science programs.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Exclusionary pedigree proxy filtering that correlates with socioeconomic privilege rather than job competency."
+  },
+  {
+    "id": "sample-23-rockstar-ninja-jargon",
+    "group": "Clearly Flagged",
+    "sentence": "Recruited as a 10x engineer and rockstar ninja coder to rebuild the core transaction engine.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Hyper-masculine tech monoculture jargon correlated with exclusionary candidate pool filtering."
+  },
+  {
+    "id": "sample-24-graduation-year-proxy",
+    "group": "Clearly Flagged",
+    "sentence": "Graduated from State University with a Bachelor of Science in Computer Science in 1997.",
+    "expectedClassification": "Flagged",
+    "keywordPresent": true,
+    "rationale": "Graduation year over 15-20 years ago acts as a mathematical proxy for candidate age in automated parsers."
+  },
+  {
+    "id": "sample-25-neutral-resume-bullet",
+    "group": "Clearly Fine",
+    "sentence": "Managed customer relationship databases and maintained 99.9% uptime across production clusters.",
+    "expectedClassification": "Fine",
+    "keywordPresent": false,
+    "rationale": "Standard professional accomplishment with objective uptime metrics; contains no sensitive keywords."
+  },
+  {
+    "id": "sample-26-neutral-paraphrase",
+    "group": "Clearly Fine",
+    "sentence": "She proactively modernized the machine learning pipeline, reducing inference latency by 40%.",
+    "expectedClassification": "Fine",
+    "keywordPresent": false,
+    "rationale": "Neutral, objective engineering deliverable without any sensitive or biased language."
+  },
+  {
+    "id": "sample-27-neutral-cloud-systems",
+    "group": "Clearly Fine",
+    "sentence": "Developed event-driven data streaming pipelines using Apache Kafka and deployed them on Kubernetes.",
+    "expectedClassification": "Fine",
+    "keywordPresent": false,
+    "rationale": "Purely technical engineering project description with specific tools and zero bias indicators."
+  },
+  {
+    "id": "sample-28-substring-safety-control",
+    "group": "Clearly Fine",
+    "sentence": "Managed cloud storage and database packages, generating significant profit and employee benefit coverage without damage.",
+    "expectedClassification": "Fine",
+    "keywordPresent": false,
+    "rationale": "Contains substrings 'manage', 'storage', 'package', 'profit', 'benefit' which must not falsely trigger 'age' or 'fit'."
+  },
+  {
+    "id": "sample-29-collaborative-account-nurturing",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Nurturing enterprise client accounts generated a 35% increase in annual contract renewals.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Professional relationship management in sales leadership accompanied by quantitative business metrics."
+  },
+  {
+    "id": "sample-30-supportive-infrastructure",
+    "group": "Technical achievements containing sensitive keywords",
+    "sentence": "Architected a supportive infrastructure platform that automated CI/CD pipeline deployments.",
+    "expectedClassification": "Fine",
+    "keywordPresent": true,
+    "rationale": "Modifies internal developer platform infrastructure, not a gendered communal interpersonal stereotype."
+  }
+]
