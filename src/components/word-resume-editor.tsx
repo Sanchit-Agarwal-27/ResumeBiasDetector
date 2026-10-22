@@ -4,6 +4,8 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  lazy,
+  Suspense,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import {
@@ -54,7 +56,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { FontUploadModal } from "./font-upload-modal";
+const FontUploadModal = lazy(() =>
+  import("./font-upload-modal").then((m) => ({ default: m.FontUploadModal })),
+);
 import { initializeCustomFonts, type CustomFontRecord } from "@/lib/custom-font-service";
 import type {
   CanvasTextBlock,
@@ -3402,16 +3406,20 @@ export function WordResumeEditor({
         })}
       </div>
 
-      {/* Custom Font Studio Modal */}
-      <FontUploadModal
-        open={fontUploadModalOpen}
-        onOpenChange={setFontUploadModalOpen}
-        customFonts={customFonts}
-        onFontsChanged={(newFonts) => setCustomFonts(newFonts)}
-        onSelectFont={(fontFamily) => {
-          updateSelectedBlock((b) => ({ ...b, fontFamily }));
-        }}
-      />
+      {/* Custom Font Studio Modal (Lazy loaded on demand) */}
+      {fontUploadModalOpen && (
+        <Suspense fallback={null}>
+          <FontUploadModal
+            open={fontUploadModalOpen}
+            onOpenChange={setFontUploadModalOpen}
+            customFonts={customFonts}
+            onFontsChanged={(newFonts) => setCustomFonts(newFonts)}
+            onSelectFont={(fontFamily) => {
+              updateSelectedBlock((b) => ({ ...b, fontFamily }));
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

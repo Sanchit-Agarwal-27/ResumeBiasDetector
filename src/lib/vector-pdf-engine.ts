@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import type { jsPDF as JsPdfType } from "jspdf";
 import type { CanvasTextBlock, CanvasPage } from "./pdf-cluster-engine";
 
 export type PaperFormat = "a4" | "letter";
@@ -13,7 +13,7 @@ export interface VectorPdfOptions {
 }
 
 export interface VectorPdfBuildResult {
-  pdf: jsPDF;
+  pdf: JsPdfType;
   blob: Blob;
   blobUrl: string;
   fileName: string;
@@ -100,6 +100,7 @@ export async function generateVectorPdf(
   const scaleX = targetPaper.width / (firstPage.width || targetPaper.width);
   const scaleY = targetPaper.height / (firstPage.height || targetPaper.height);
 
+  const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({
     unit: "pt",
     format: [targetPaper.width, targetPaper.height],

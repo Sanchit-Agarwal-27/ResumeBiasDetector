@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CanvasTextBlock, CanvasPage } from "@/lib/pdf-cluster-engine";
-import { generateVectorPdf, PAPER_SIZES, type PaperFormat } from "@/lib/vector-pdf-engine";
+import { PAPER_SIZES, type PaperFormat } from "@/lib/vector-pdf-engine";
 import { verifyAtsTextStream } from "@/lib/ats-text-verifier";
 
 interface VectorPdfExportModalProps {
@@ -73,6 +73,7 @@ export function VectorPdfExportModal({
   async function handleDownload() {
     setIsExporting(true);
     try {
+      const { generateVectorPdf } = await import("@/lib/vector-pdf-engine");
       const result = await generateVectorPdf(pages, blocks, {
         fileName: customFileName.trim() || "Resume_ATS_Certified.pdf",
         documentTitle: `${nameInput} — ${roleInput}`,

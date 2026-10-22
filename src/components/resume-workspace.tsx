@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, lazy, Suspense, type DragEvent } from "react";
 import {
   ArrowDownToLine,
   BarChart3,
@@ -35,7 +35,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { jsPDF } from "jspdf";
 
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
@@ -70,21 +69,37 @@ import {
   type CanvasPage,
   type ColumnLayoutPreset,
 } from "@/lib/pdf-cluster-engine";
-import { FairnessAuditModal } from "./fairness-audit-modal";
-import { EvaluationBenchmarkModal } from "./evaluation-benchmark-modal";
-import { EthicsModal } from "./ethics-modal";
-import { CounterfactualJobMatchingModal } from "./counterfactual-job-matching-modal";
-import { CloudVaultModal } from "./cloud-vault-modal";
-import { ResumeDiffModal } from "./resume-diff-modal";
-import { VectorPdfExportModal } from "./vector-pdf-export-modal";
-import { generateVectorPdf } from "@/lib/vector-pdf-engine";
-import { downloadDocxFile } from "@/lib/docx-export-engine";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
-import { AuthModal } from "./auth-modal";
-import { AccountSettingsModal } from "./account-settings-modal";
+
+// Lazy-loaded modal dialogs for dynamic chunk splitting & optimal initial bundle size
+const FairnessAuditModal = lazy(() =>
+  import("./fairness-audit-modal").then((m) => ({ default: m.FairnessAuditModal })),
+);
+const EvaluationBenchmarkModal = lazy(() =>
+  import("./evaluation-benchmark-modal").then((m) => ({ default: m.EvaluationBenchmarkModal })),
+);
+const EthicsModal = lazy(() => import("./ethics-modal").then((m) => ({ default: m.EthicsModal })));
+const CounterfactualJobMatchingModal = lazy(() =>
+  import("./counterfactual-job-matching-modal").then((m) => ({
+    default: m.CounterfactualJobMatchingModal,
+  })),
+);
+const CloudVaultModal = lazy(() =>
+  import("./cloud-vault-modal").then((m) => ({ default: m.CloudVaultModal })),
+);
+const ResumeDiffModal = lazy(() =>
+  import("./resume-diff-modal").then((m) => ({ default: m.ResumeDiffModal })),
+);
+const VectorPdfExportModal = lazy(() =>
+  import("./vector-pdf-export-modal").then((m) => ({ default: m.VectorPdfExportModal })),
+);
+const AuthModal = lazy(() => import("./auth-modal").then((m) => ({ default: m.AuthModal })));
+const AccountSettingsModal = lazy(() =>
+  import("./account-settings-modal").then((m) => ({ default: m.AccountSettingsModal })),
+);
 import {
   saveResumeBundleToCloud,
   listUserResumes,
@@ -852,6 +867,7 @@ export function ResumeWorkspace() {
     setStatus("Generating high-resolution vector PDF…");
     toast.info("Preparing PDF export...", { description: "Compiling vector layout." });
     try {
+      const { generateVectorPdf } = await import("@/lib/vector-pdf-engine");
       const result = await generateVectorPdf(canvasPages, canvasBlocks, {
         fileName: report.file_name.replace(/\.[^.]+$/, "-edited.pdf"),
         documentTitle: report.file_name.replace(/\.[^.]+$/, ""),
@@ -878,6 +894,7 @@ export function ResumeWorkspace() {
       description: "Compiling native Word styles, fonts, and formatting.",
     });
     try {
+      const { downloadDocxFile } = await import("@/lib/docx-export-engine");
       const cleanFileName = report.file_name.replace(/\.[^.]+$/, "-edited.docx");
       await downloadDocxFile(canvasPages, canvasBlocks, {
         fileName: cleanFileName,
@@ -2303,84 +2320,117 @@ export function ResumeWorkspace() {
         </div>
       </footer>
 
-      {/* MODALS */}
+      {/* MODALS (Dynamically Code-Split & Lazy Loaded on Demand) */}
       <ProcessingDialog
         open={isProcessing}
         fileName={processingFileName}
         currentStepIndex={processingStep}
       />
-      <FairnessAuditModal
-        open={fairnessModalOpen}
-        onOpenChange={setFairnessModalOpen}
-        report={report}
-        onAuditUpdated={(updated) => setReport((curr) => ({ ...curr, fairness_audit: updated }))}
-      />
 
-      <CounterfactualJobMatchingModal
-        open={jobMatchingModalOpen}
-        onOpenChange={setJobMatchingModalOpen}
-        resumeText={report.raw_text}
-        neutralityScore={report.neutrality_score}
-        currentMatchResult={report.ats_match || null}
-        onApplyJobMatch={(result) => {
-          setReport((curr) => ({
-            ...curr,
-            target_job: result.job_profile,
-            ats_match: result,
-          }));
-        }}
-        onInsertKeywordIntoCanvas={handleInsertKeywordIntoCanvas}
-      />
+      <Suspense fallback={null}>
+        {fairnessModalOpen && (
+          <FairnessAuditModal
+            open={fairnessModalOpen}
+            onOpenChange={setFairnessModalOpen}
+            report={report}
+            onAuditUpdated={(updated) =>
+              setReport((curr) => ({ ...curr, fairness_audit: updated }))
+            }
+          />
+        )}
 
-      <CloudVaultModal
-        open={vaultModalOpen}
-        onOpenChange={setVaultModalOpen}
-        activeResumeId={cloudResumeId}
-        activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
-        currentNeutralityScore={report.neutrality_score}
-        currentBlocks={canvasBlocks}
-        currentPages={canvasPages}
-        currentReport={report}
-        onLoadResume={handleLoadResumeBundle}
-        onRestoreVersion={handleRestoreVersion}
-        onLaunchDiffModal={handleLaunchDiffModal}
-      />
+        {jobMatchingModalOpen && (
+          <CounterfactualJobMatchingModal
+            open={jobMatchingModalOpen}
+            onOpenChange={setJobMatchingModalOpen}
+            resumeText={report.raw_text}
+            neutralityScore={report.neutrality_score}
+            currentMatchResult={report.ats_match || null}
+            onApplyJobMatch={(result) => {
+              setReport((curr) => ({
+                ...curr,
+                target_job: result.job_profile,
+                ats_match: result,
+              }));
+            }}
+            onInsertKeywordIntoCanvas={handleInsertKeywordIntoCanvas}
+          />
+        )}
 
-      <ResumeDiffModal
-        open={diffModalOpen}
-        onOpenChange={setDiffModalOpen}
-        versions={diffVersionsList}
-        activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
-        onRestoreVersion={handleRestoreVersion}
-      />
+        {vaultModalOpen && (
+          <CloudVaultModal
+            open={vaultModalOpen}
+            onOpenChange={setVaultModalOpen}
+            activeResumeId={cloudResumeId}
+            activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
+            currentNeutralityScore={report.neutrality_score}
+            currentBlocks={canvasBlocks}
+            currentPages={canvasPages}
+            currentReport={report}
+            onLoadResume={handleLoadResumeBundle}
+            onRestoreVersion={handleRestoreVersion}
+            onLaunchDiffModal={handleLaunchDiffModal}
+          />
+        )}
 
-      <VectorPdfExportModal
-        open={vectorPdfModalOpen}
-        onOpenChange={setVectorPdfModalOpen}
-        pages={canvasPages}
-        blocks={canvasBlocks}
-        defaultFileName={report.file_name}
-        candidateName={user?.name || "Candidate"}
-        targetRole={report.target_job?.title || "Professional Profile"}
-      />
+        {diffModalOpen && (
+          <ResumeDiffModal
+            open={diffModalOpen}
+            onOpenChange={setDiffModalOpen}
+            versions={diffVersionsList}
+            activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
+            onRestoreVersion={handleRestoreVersion}
+          />
+        )}
 
-      <EvaluationBenchmarkModal open={benchmarksModalOpen} onOpenChange={setBenchmarksModalOpen} />
-      <EthicsModal open={ethicsModalOpen} onOpenChange={setEthicsModalOpen} />
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} defaultView={authModalView} />
-      <AccountSettingsModal
-        open={accountModalOpen}
-        onOpenChange={setAccountModalOpen}
-        defaultTab={accountModalTab}
-        engineMode={engineMode}
-        onEngineModeChange={(newMode) => {
-          setEngineMode(newMode);
-          setStatus(
-            newMode === "local"
-              ? "Running in-browser Local Engine"
-              : "Targeting FastAPI (localhost:8000)",
-          );
-        }}
-      />
+        {vectorPdfModalOpen && (
+          <VectorPdfExportModal
+            open={vectorPdfModalOpen}
+            onOpenChange={setVectorPdfModalOpen}
+            pages={canvasPages}
+            blocks={canvasBlocks}
+            defaultFileName={report.file_name}
+            candidateName={user?.name || "Candidate"}
+            targetRole={report.target_job?.title || "Professional Profile"}
+          />
+        )}
+
+        {benchmarksModalOpen && (
+          <EvaluationBenchmarkModal
+            open={benchmarksModalOpen}
+            onOpenChange={setBenchmarksModalOpen}
+          />
+        )}
+
+        {ethicsModalOpen && (
+          <EthicsModal open={ethicsModalOpen} onOpenChange={setEthicsModalOpen} />
+        )}
+
+        {authModalOpen && (
+          <AuthModal
+            open={authModalOpen}
+            onOpenChange={setAuthModalOpen}
+            defaultView={authModalView}
+          />
+        )}
+
+        {accountModalOpen && (
+          <AccountSettingsModal
+            open={accountModalOpen}
+            onOpenChange={setAccountModalOpen}
+            defaultTab={accountModalTab}
+            engineMode={engineMode}
+            onEngineModeChange={(newMode) => {
+              setEngineMode(newMode);
+              setStatus(
+                newMode === "local"
+                  ? "Running in-browser Local Engine"
+                  : "Targeting FastAPI (localhost:8000)",
+              );
+            }}
+          />
+        )}
+      </Suspense>
     </main>
   );
 }
