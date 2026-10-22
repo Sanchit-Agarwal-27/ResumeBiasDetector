@@ -17,7 +17,7 @@ export interface SentenceSpan {
 export function extractSentences(text: string): SentenceSpan[] {
   if (!text) return [];
   // Split on sentence-ending punctuation or newlines while preserving offsets
-  const regex = /[^.!?\n]+(?:[.!?]+|$)/g;
+  const regex = /[^.!?\n]+(?:[.!?]+|$)/gm;
   const sentences: SentenceSpan[] = [];
   let match: RegExpExecArray | null;
 

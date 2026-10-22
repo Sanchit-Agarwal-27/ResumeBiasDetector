@@ -46,11 +46,52 @@ export interface ContextSummary {
   exonerated_keywords: number;
 }
 
+export type ResumeErrorType =
+  | "passive_voice"
+  | "weak_verb"
+  | "unquantified_impact"
+  | "buzzword_cliche"
+  | "punctuation_inconsistency"
+  | "profanity"
+  | "slang"
+  | "first_person"
+  | "spelling"
+  | "personal_info"
+  | "cliche";
+
+export interface ResumeErrorFlag {
+  id: string;
+  error_type: ResumeErrorType;
+  sentence: string;
+  start: number;
+  end: number;
+  matched_text: string;
+  suggestion: string;
+  explanation: string;
+  severity?: SeverityLevel;
+}
+
+export interface QualityMetrics {
+  action_verb_score: number; // 0 - 100
+  quantification_score: number; // 0 - 100
+  passive_voice_count: number;
+  weak_verb_count: number;
+  unquantified_bullet_count: number;
+  total_bullet_count: number;
+  ats_readability_score: number; // 0 - 100
+  profanity_count?: number;
+  slang_count?: number;
+  first_person_count?: number;
+  spelling_error_count?: number;
+}
+
 export interface RewriteSuggestion {
   span_id: string;
   original_text: string;
   suggested_text: string;
   rationale: string;
+  full_sentence_rewrite?: string;
+  impact_formula_applied?: string;
 }
 
 export interface FairnessMetric {
@@ -144,6 +185,8 @@ export interface ResumeBiasReport {
   ats_match?: AtsMatchResult;
   classified_sentences?: ClassifiedSentence[];
   context_summary?: ContextSummary;
+  error_flags?: ResumeErrorFlag[];
+  quality_metrics?: QualityMetrics;
 }
 
 export const sampleReport: ResumeBiasReport = {

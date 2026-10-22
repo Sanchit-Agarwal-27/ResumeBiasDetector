@@ -53,3 +53,14 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Python & Backend virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+backend/.venv/
+.venv/
+venv/
+*.egg-info/
+

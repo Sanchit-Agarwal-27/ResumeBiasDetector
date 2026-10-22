@@ -54,7 +54,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, matchesWordBoundary } from "@/lib/utils";
 const FontUploadModal = lazy(() =>
   import("./font-upload-modal").then((m) => ({ default: m.FontUploadModal })),
 );
@@ -66,7 +66,7 @@ import type {
   ColumnSlot,
   DividerStyle,
 } from "@/lib/pdf-cluster-engine";
-import type { BiasSpan } from "@/lib/resume-contract";
+import type { BiasSpan, ResumeErrorFlag } from "@/lib/resume-contract";
 
 export const FONT_FAMILIES = [
   { label: "Calibri (Default Word)", value: "Calibri, sans-serif" },
@@ -421,6 +421,7 @@ interface ParagraphBlockItemProps {
   block: CanvasTextBlock;
   zoom: number;
   biasSpans: BiasSpan[];
+  errorFlags?: ResumeErrorFlag[];
   isSelected: boolean;
   onSelect: () => void;
   onTextChange: (newText: string) => void;
@@ -447,6 +448,7 @@ function ParagraphBlockItem({
   block,
   zoom,
   biasSpans,
+  errorFlags = [],
   isSelected,
   onSelect,
   onTextChange,
@@ -578,7 +580,10 @@ function ParagraphBlockItem({
   }
 
   const matchingBias = biasSpans.filter((s) =>
-    block.text.toLowerCase().includes(s.matched_text.toLowerCase()),
+    matchesWordBoundary(block.text, s.matched_text),
+  );
+  const matchingErrors = (errorFlags || []).filter((e) =>
+    matchesWordBoundary(block.text, e.matched_text),
   );
 
   return (
@@ -658,12 +663,28 @@ function ParagraphBlockItem({
         className="outline-hidden min-h-[1.25em] whitespace-pre-wrap break-words"
       />
 
-      {/* Subtle Inline Bias Marker Tag */}
-      {matchingBias.length > 0 && (
-        <div className="absolute right-0 top-0 select-none pointer-events-none opacity-40 hover:opacity-100 transition-opacity">
-          <span className="bg-amber-100 text-amber-800 text-[8px] font-bold px-1 py-0.5 rounded border border-amber-300">
-            {matchingBias[0]?.category.replace("_", " ")}
-          </span>
+      {/* Subtle Inline Bias / Error Marker Tag */}
+      {(matchingBias.length > 0 || matchingErrors.length > 0) && (
+        <div className="absolute right-0 top-0 select-none pointer-events-none opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1 z-10">
+          {matchingErrors.length > 0 && (
+            <span
+              className={cn(
+                "text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shadow-xs",
+                matchingErrors[0].error_type === "profanity"
+                  ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800"
+                  : matchingErrors[0].error_type === "spelling"
+                    ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800"
+                    : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800"
+              )}
+            >
+              {matchingErrors[0].error_type.replace(/_/g, " ")}
+            </span>
+          )}
+          {matchingBias.length > 0 && (
+            <span className="bg-amber-100 text-amber-800 text-[8px] font-bold px-1 py-0.5 rounded border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+              {matchingBias[0]?.category.replace("_", " ")}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -675,6 +696,7 @@ interface WordResumeEditorProps {
   blocks: CanvasTextBlock[];
   activeBiasSpan?: BiasSpan;
   biasSpans?: BiasSpan[];
+  errorFlags?: ResumeErrorFlag[];
   columnLayout?: ColumnLayoutPreset;
   onColumnLayoutChange?: (layout: ColumnLayoutPreset) => void;
   onChange: (updatedBlocks: CanvasTextBlock[], updatedPages: CanvasPage[]) => void;
@@ -686,6 +708,7 @@ export function WordResumeEditor({
   blocks: initialBlocks,
   activeBiasSpan,
   biasSpans = [],
+  errorFlags = [],
   columnLayout: initialColumnLayout = "single",
   onColumnLayoutChange,
   onChange,
@@ -822,7 +845,7 @@ export function WordResumeEditor({
   useEffect(() => {
     if (activeBiasSpan) {
       const match = blocks.find((b) =>
-        b.text.toLowerCase().includes(activeBiasSpan.matched_text.toLowerCase()),
+        matchesWordBoundary(b.text, activeBiasSpan.matched_text),
       );
       if (match) {
         setSelectedBlockId(match.id);
@@ -3203,6 +3226,7 @@ export function WordResumeEditor({
                       block={block}
                       zoom={zoom}
                       biasSpans={biasSpans}
+                      errorFlags={errorFlags}
                       isSelected={selectedBlockId === block.id}
                       onSelect={() => {
                         setSelectedBlockId(block.id);
@@ -3299,7 +3323,8 @@ export function WordResumeEditor({
                         block={block}
                         zoom={zoom}
                         biasSpans={biasSpans}
-                        isSelected={selectedBlockId === block.id}
+                      errorFlags={errorFlags}
+                      isSelected={selectedBlockId === block.id}
                         onSelect={() => {
                           setSelectedBlockId(block.id);
                           setActivePageIndex(block.pageIndex);

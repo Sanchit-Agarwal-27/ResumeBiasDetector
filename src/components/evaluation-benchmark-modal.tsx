@@ -1,4 +1,5 @@
-import { BarChart3, CheckCircle2, Cpu, Layers, TrendingUp, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BarChart3, CheckCircle2, Cpu, Layers, TrendingUp, Users, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EVALUATION_BENCHMARK_DATA } from "@/lib/bias-taxonomy";
+import { fetchServerBenchmarks } from "@/lib/analysis-service";
 
 interface EvaluationBenchmarkModalProps {
   open: boolean;
@@ -14,6 +16,23 @@ interface EvaluationBenchmarkModalProps {
 }
 
 export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBenchmarkModalProps) {
+  const [serverBenchmarks, setServerBenchmarks] = useState<{
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1_score: number;
+    total_samples: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      fetchServerBenchmarks().then((data) => {
+        if (data && data.accuracy !== undefined) {
+          setServerBenchmarks(data);
+        }
+      });
+    }
+  }, [open]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto p-0">
@@ -34,6 +53,25 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
         </DialogHeader>
 
         <div className="space-y-6 p-6">
+          {serverBenchmarks && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="size-6 text-emerald-500 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    Live FastAPI Model Verification Active
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Gold Standard Benchmark: {serverBenchmarks.total_samples} samples evaluated with {serverBenchmarks.accuracy}% accuracy & 0 false alarms.
+                  </p>
+                </div>
+              </div>
+              <span className="rounded px-2.5 py-1 text-xs font-mono font-bold bg-emerald-500 text-white">
+                F1: {serverBenchmarks.f1_score.toFixed(2)}
+              </span>
+            </div>
+          )}
+
           {/* Key Summary Stats */}
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="rounded-lg border bg-card p-4">

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { ResumeBiasReport } from "@/lib/resume-contract";
 import { COUNTERFACTUAL_COHORTS, runCounterfactualFairnessAudit } from "@/lib/bias-taxonomy";
+import { fetchServerFairnessAudit } from "@/lib/analysis-service";
 
 interface FairnessAuditModalProps {
   open: boolean;
@@ -41,15 +42,26 @@ export function FairnessAuditModal({
   const parity = audit?.demographic_parity;
   const permutations = audit?.counterfactual_permutations_tested ?? 48;
 
-  function handleRerunSimulation() {
+  async function handleRerunSimulation() {
     setRunningSim(true);
-    setTimeout(() => {
+    try {
+      const serverAudit = await fetchServerFairnessAudit(report.raw_text);
+      if (serverAudit && onAuditUpdated) {
+        onAuditUpdated(serverAudit);
+      } else {
+        const recomputed = runCounterfactualFairnessAudit(report.raw_text, report.spans);
+        if (onAuditUpdated) {
+          onAuditUpdated(recomputed);
+        }
+      }
+    } catch {
       const recomputed = runCounterfactualFairnessAudit(report.raw_text, report.spans);
       if (onAuditUpdated) {
         onAuditUpdated(recomputed);
       }
+    } finally {
       setRunningSim(false);
-    }, 450);
+    }
   }
 
   return (

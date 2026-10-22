@@ -46,6 +46,7 @@ import type {
   KeywordMatchEntry,
 } from "@/lib/resume-contract";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
+import { fetchServerAtsMatch } from "@/lib/analysis-service";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
 
 interface CounterfactualJobMatchingModalProps {
@@ -103,7 +104,7 @@ export function CounterfactualJobMatchingModal({
     }
   }
 
-  function handleRunSimulation() {
+  async function handleRunSimulation() {
     if (!jobText.trim() || jobText.trim().length < 40) {
       toast.error("Please provide a Job Description", {
         description: "Paste at least a few sentences of requirements or select a preset.",
@@ -113,7 +114,7 @@ export function CounterfactualJobMatchingModal({
 
     setIsSimulating(true);
 
-    setTimeout(() => {
+    try {
       const profile: JobDescriptionProfile = {
         id: selectedBenchmarkId === "custom" ? `job-${Date.now()}` : selectedBenchmarkId,
         title: jobTitle.trim() || "Target Job Position",
@@ -121,14 +122,30 @@ export function CounterfactualJobMatchingModal({
         raw_text: jobText,
       };
 
-      const result = calculateAtsMatch(resumeText, profile);
+      // Attempt FastAPI server-side job matching first with fallback to local engine
+      const serverResult = await fetchServerAtsMatch(resumeText, jobText, profile.title);
+      const result = serverResult
+        ? { ...serverResult, job_profile: profile }
+        : calculateAtsMatch(resumeText, profile);
+
       setMatchData(result);
       onApplyJobMatch(result);
-      setIsSimulating(false);
       toast.success("Simulation Complete!", {
         description: `ATS Match computed: ${result.overall_match_score}% alongside Neutrality Index: ${neutralityScore}%.`,
       });
-    }, 300);
+    } catch {
+      const profile: JobDescriptionProfile = {
+        id: selectedBenchmarkId === "custom" ? `job-${Date.now()}` : selectedBenchmarkId,
+        title: jobTitle.trim() || "Target Job Position",
+        company: companyName.trim() || "Enterprise Recruiter",
+        raw_text: jobText,
+      };
+      const result = calculateAtsMatch(resumeText, profile);
+      setMatchData(result);
+      onApplyJobMatch(result);
+    } finally {
+      setIsSimulating(false);
+    }
   }
 
   function handleCopySuggestion(keyword: KeywordMatchEntry) {

@@ -1,0 +1,1213 @@
+[
+  {
+    "id": "age_young",
+    "category": "age_indicative",
+    "subcategory": "youth_proxy",
+    "canonical": "young",
+    "defaultSeverity": "medium",
+    "confidence": 0.9,
+    "explanation": "Explicit reference to youth or chronological age in screening contexts, triggering age-discriminatory preferences under EEOC ADEA guidelines.",
+    "researchCitation": "EEOC ADEA Enforcement Guidance (2020); Neumark et al. (2019)",
+    "replacement": "Specify demonstrated competencies or career stage without age markers",
+    "variants": [
+      {
+        "form": "young",
+        "type": "base_form"
+      },
+      {
+        "form": "younger",
+        "type": "comparative_form"
+      },
+      {
+        "form": "youngest",
+        "type": "superlative_form"
+      },
+      {
+        "form": "youthful",
+        "type": "base_form"
+      },
+      {
+        "form": "youth",
+        "type": "noun_form"
+      },
+      {
+        "form": "young age",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "age_old",
+    "category": "age_indicative",
+    "subcategory": "seniority_age_proxy",
+    "canonical": "old",
+    "defaultSeverity": "medium",
+    "confidence": 0.88,
+    "explanation": "Chronological age cue that can trigger implicit bias regarding technological adaptability or overqualification.",
+    "researchCitation": "Neumark, Burn, & Button (2019) Age Discrimination in Hiring",
+    "replacement": "Focus on domain depth and recent project impact",
+    "variants": [
+      {
+        "form": "old",
+        "type": "base_form"
+      },
+      {
+        "form": "older",
+        "type": "comparative_form"
+      },
+      {
+        "form": "oldest",
+        "type": "superlative_form"
+      },
+      {
+        "form": "elderly",
+        "type": "base_form"
+      },
+      {
+        "form": "senior",
+        "type": "noun_form"
+      },
+      {
+        "form": "advanced age",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "age_mature",
+    "category": "age_indicative",
+    "subcategory": "maturity_proxy",
+    "canonical": "mature",
+    "defaultSeverity": "medium",
+    "confidence": 0.86,
+    "explanation": "Coded age proxy or subjective maturity label that invites implicit generational stereotyping.",
+    "researchCitation": "AARP / EEOC Hiring Audit (2021)",
+    "replacement": "Focus on demonstrated technical leadership and verified competencies",
+    "variants": [
+      {
+        "form": "mature",
+        "type": "base_form"
+      },
+      {
+        "form": "maturity",
+        "type": "noun_form"
+      },
+      {
+        "form": "immature",
+        "type": "antonym_variant"
+      },
+      {
+        "form": "immaturity",
+        "type": "antonym_variant"
+      }
+    ]
+  },
+  {
+    "id": "age_experience_tenure",
+    "category": "age_indicative",
+    "subcategory": "tenure_proxy",
+    "canonical": "experienced",
+    "defaultSeverity": "low",
+    "confidence": 0.82,
+    "explanation": "Tenure modifier that can serve as a proxy for candidate age when emphasizing chronological duration rather than specific skill mastery.",
+    "researchCitation": "EEOC Guidelines",
+    "replacement": "Highlight specialized technical capabilities and programmatic deliverables",
+    "variants": [
+      {
+        "form": "experienced",
+        "type": "base_form"
+      },
+      {
+        "form": "inexperienced",
+        "type": "antonym_variant"
+      },
+      {
+        "form": "less experienced",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "highly experienced",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "over 25 years of experience",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "over 20 years of experience",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "seasoned veteran",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "age_graduate_entry",
+    "category": "age_indicative",
+    "subcategory": "entry_cohort_proxy",
+    "canonical": "recent graduate",
+    "defaultSeverity": "medium",
+    "confidence": 0.87,
+    "explanation": "Generational entry cohort label that can operate as an indirect age proxy when used to filter applicant pools.",
+    "researchCitation": "EEOC Age Guidance",
+    "replacement": "Early-career professional or entry-level candidate",
+    "variants": [
+      {
+        "form": "recent graduate",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "fresh graduate",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "fresher",
+        "type": "noun_form"
+      },
+      {
+        "form": "freshers",
+        "type": "plural_form"
+      },
+      {
+        "form": "entry-level",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "entry level",
+        "type": "spelling_variant"
+      }
+    ]
+  },
+  {
+    "id": "age_energy_activity",
+    "category": "age_indicative",
+    "subcategory": "energy_youth_proxy",
+    "canonical": "energetic",
+    "defaultSeverity": "medium",
+    "confidence": 0.89,
+    "explanation": "High-energy and youth vitality descriptors often operate as coded proxies for younger candidates.",
+    "researchCitation": "EEOC ADEA Guidance",
+    "replacement": "Results-driven contributor with disciplined execution",
+    "variants": [
+      {
+        "form": "energetic",
+        "type": "base_form"
+      },
+      {
+        "form": "high-energy",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "high energy",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "dynamic",
+        "type": "base_form"
+      },
+      {
+        "form": "active",
+        "type": "base_form"
+      },
+      {
+        "form": "lively",
+        "type": "base_form"
+      },
+      {
+        "form": "energy",
+        "type": "noun_form"
+      },
+      {
+        "form": "young and energetic",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "energetic youth",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "age_digital_native",
+    "category": "age_indicative",
+    "subcategory": "generational_tech_proxy",
+    "canonical": "digital native",
+    "defaultSeverity": "high",
+    "confidence": 0.95,
+    "explanation": "Direct generational age proxy implying that older professionals lack innate technical proficiency.",
+    "researchCitation": "EEOC ADEA Enforcement Guidance (2020)",
+    "replacement": "Proficient across modern software, cloud, and collaborative tools",
+    "variants": [
+      {
+        "form": "digital native",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "digital natives",
+        "type": "plural_form"
+      },
+      {
+        "form": "tech-savvy",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "tech savvy",
+        "type": "spelling_variant"
+      }
+    ]
+  },
+  {
+    "id": "gender_masculine_stereotypes",
+    "category": "gender_coded",
+    "subcategory": "overt_masculine_coding",
+    "canonical": "masculine",
+    "defaultSeverity": "high",
+    "confidence": 0.94,
+    "explanation": "Overt gender-stereotyped descriptor that invokes traditional masculine gender role expectations.",
+    "researchCitation": "Gaucher, Friesen, & Kay (2011)",
+    "replacement": "Objective, role-relevant competency descriptor",
+    "variants": [
+      {
+        "form": "masculine",
+        "type": "base_form"
+      },
+      {
+        "form": "manly",
+        "type": "base_form"
+      },
+      {
+        "form": "macho",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_feminine_stereotypes",
+    "category": "gender_coded",
+    "subcategory": "overt_feminine_coding",
+    "canonical": "feminine",
+    "defaultSeverity": "high",
+    "confidence": 0.94,
+    "explanation": "Overt feminine descriptor that introduces gendered stereotypes into candidate evaluation.",
+    "researchCitation": "Heilman (2012) Gender Stereotypes and Workplace Bias",
+    "replacement": "Professional role-relevant competency descriptor",
+    "variants": [
+      {
+        "form": "feminine",
+        "type": "base_form"
+      },
+      {
+        "form": "girly",
+        "type": "base_form"
+      },
+      {
+        "form": "ladylike",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_parental_roles",
+    "category": "gender_coded",
+    "subcategory": "parental_status_proxy",
+    "canonical": "motherhood",
+    "defaultSeverity": "high",
+    "confidence": 0.95,
+    "explanation": "Parental status indicators expose candidates to unlawful maternal or caregiver bias.",
+    "researchCitation": "Correll, Benard, & Paik (2007) Getting a Job: Is There a Motherhood Penalty?",
+    "replacement": "Omit personal familial disclosures from professional resume text",
+    "variants": [
+      {
+        "form": "motherhood",
+        "type": "noun_form"
+      },
+      {
+        "form": "fatherhood",
+        "type": "noun_form"
+      },
+      {
+        "form": "maternal",
+        "type": "base_form"
+      },
+      {
+        "form": "paternal",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_agentic_leadership",
+    "category": "gender_coded",
+    "subcategory": "masculine_leadership",
+    "canonical": "aggressive",
+    "defaultSeverity": "high",
+    "confidence": 0.92,
+    "explanation": "Masculine-coded leadership adjective associated with dominant agency; frequently triggers disparate screening in collaborative culture filters.",
+    "researchCitation": "Gaucher et al. (2011); Eagly & Karau (2002)",
+    "replacement": "Ambitious and outcome-oriented / results-driven",
+    "variants": [
+      {
+        "form": "aggressive",
+        "type": "base_form"
+      },
+      {
+        "form": "aggressively",
+        "type": "adverb_form"
+      },
+      {
+        "form": "aggression",
+        "type": "noun_form"
+      },
+      {
+        "form": "assertive",
+        "type": "base_form"
+      },
+      {
+        "form": "forceful",
+        "type": "base_form"
+      },
+      {
+        "form": "dominant",
+        "type": "base_form"
+      },
+      {
+        "form": "confrontational",
+        "type": "base_form"
+      },
+      {
+        "form": "commanding",
+        "type": "base_form"
+      },
+      {
+        "form": "authoritative",
+        "type": "base_form"
+      },
+      {
+        "form": "leadership",
+        "type": "noun_form"
+      },
+      {
+        "form": "leader",
+        "type": "noun_form"
+      },
+      {
+        "form": "leaders",
+        "type": "plural_form"
+      },
+      {
+        "form": "competitive",
+        "type": "base_form"
+      },
+      {
+        "form": "competitively",
+        "type": "adverb_form"
+      },
+      {
+        "form": "competitiveness",
+        "type": "noun_form"
+      },
+      {
+        "form": "aggressive leadership style",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "gender_tech_jargon",
+    "category": "gender_coded",
+    "subcategory": "informal_masculine_jargon",
+    "canonical": "rockstar",
+    "defaultSeverity": "high",
+    "confidence": 0.95,
+    "explanation": "Hyper-masculine tech monoculture jargon correlated with exclusionary candidate pool filtering.",
+    "researchCitation": "Broussard (2020); Margolis & Fisher (2002)",
+    "replacement": "High-impact engineering contributor / subject matter expert",
+    "variants": [
+      {
+        "form": "rockstar",
+        "type": "base_form"
+      },
+      {
+        "form": "ninja",
+        "type": "base_form"
+      },
+      {
+        "form": "10x engineer",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "guru",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_communal_traits",
+    "category": "gender_coded",
+    "subcategory": "communal_trait",
+    "canonical": "nurturing",
+    "defaultSeverity": "medium",
+    "confidence": 0.88,
+    "explanation": "Communal and emotional phrasing that can trigger subconscious competence penalties in technical screening.",
+    "researchCitation": "Heilman (2012); Gaucher et al. (2011)",
+    "replacement": "Mentoring, collaborative enablement, and technical coaching",
+    "variants": [
+      {
+        "form": "emotional",
+        "type": "base_form"
+      },
+      {
+        "form": "sensitive",
+        "type": "base_form"
+      },
+      {
+        "form": "overly sensitive",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "sentimental",
+        "type": "base_form"
+      },
+      {
+        "form": "caring",
+        "type": "base_form"
+      },
+      {
+        "form": "nurturing",
+        "type": "base_form"
+      },
+      {
+        "form": "compassionate",
+        "type": "base_form"
+      },
+      {
+        "form": "supportive",
+        "type": "base_form"
+      },
+      {
+        "form": "empathetic",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_dominance_control",
+    "category": "personality_behavioral",
+    "subcategory": "dominance_control",
+    "canonical": "dominant",
+    "defaultSeverity": "medium",
+    "confidence": 0.9,
+    "explanation": "Combative dominance or controlling behaviors in workplace interaction descriptions.",
+    "researchCitation": "Gaucher et al. (2011)",
+    "replacement": "Leading cross-functional alignment and decisive execution",
+    "variants": [
+      {
+        "form": "dominant",
+        "type": "base_form"
+      },
+      {
+        "form": "dominance",
+        "type": "noun_form"
+      },
+      {
+        "form": "dominating",
+        "type": "verb_form"
+      },
+      {
+        "form": "controlling",
+        "type": "base_form"
+      },
+      {
+        "form": "combative",
+        "type": "base_form"
+      },
+      {
+        "form": "forceful",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_strength",
+    "category": "personality_behavioral",
+    "subcategory": "strength_descriptor",
+    "canonical": "strong",
+    "defaultSeverity": "low",
+    "confidence": 0.8,
+    "explanation": "Descriptor of capability or personal assertion; frequently polysemous between technical capability depth and interpersonal force.",
+    "researchCitation": "Empirical Lexicon Analysis",
+    "replacement": "Proficient, verified, or technically rigorous",
+    "variants": [
+      {
+        "form": "strong",
+        "type": "base_form"
+      },
+      {
+        "form": "stronger",
+        "type": "comparative_form"
+      },
+      {
+        "form": "strongest",
+        "type": "superlative_form"
+      },
+      {
+        "form": "strength",
+        "type": "noun_form"
+      },
+      {
+        "form": "strengths",
+        "type": "plural_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_weakness_passivity",
+    "category": "personality_behavioral",
+    "subcategory": "passivity_descriptor",
+    "canonical": "weak",
+    "defaultSeverity": "medium",
+    "confidence": 0.85,
+    "explanation": "Deficit-oriented trait phrasing that often signals submissiveness or subjective negative characterization.",
+    "researchCitation": "Heilman (2012)",
+    "replacement": "Opportunity for development or focus on core deliverables",
+    "variants": [
+      {
+        "form": "weak",
+        "type": "base_form"
+      },
+      {
+        "form": "weaker",
+        "type": "comparative_form"
+      },
+      {
+        "form": "weakest",
+        "type": "superlative_form"
+      },
+      {
+        "form": "weakness",
+        "type": "noun_form"
+      },
+      {
+        "form": "weaknesses",
+        "type": "plural_form"
+      },
+      {
+        "form": "passive",
+        "type": "base_form"
+      },
+      {
+        "form": "passivity",
+        "type": "noun_form"
+      },
+      {
+        "form": "submissive",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_confidence_assertion",
+    "category": "personality_behavioral",
+    "subcategory": "confidence_descriptor",
+    "canonical": "confident",
+    "defaultSeverity": "low",
+    "confidence": 0.82,
+    "explanation": "Self-assurance descriptor that can be subjectively interpreted along gendered lines under role congruity theory.",
+    "researchCitation": "Eagly & Karau (2002)",
+    "replacement": "Decisive and evidence-based contributor",
+    "variants": [
+      {
+        "form": "confident",
+        "type": "base_form"
+      },
+      {
+        "form": "confidence",
+        "type": "noun_form"
+      },
+      {
+        "form": "self-assured",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "self assured",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "assertive",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_flexibility_adaptability",
+    "category": "personality_behavioral",
+    "subcategory": "adaptability_descriptor",
+    "canonical": "flexible",
+    "defaultSeverity": "low",
+    "confidence": 0.8,
+    "explanation": "Behavioral adaptability trait; highly polysemous between technical system architecture and personal behavioral compliance.",
+    "researchCitation": "Workplace Competency Frameworks",
+    "replacement": "Agile, adaptable, or modular architecture",
+    "variants": [
+      {
+        "form": "flexible",
+        "type": "base_form"
+      },
+      {
+        "form": "flexibility",
+        "type": "noun_form"
+      },
+      {
+        "form": "adaptable",
+        "type": "base_form"
+      },
+      {
+        "form": "accommodating",
+        "type": "base_form"
+      },
+      {
+        "form": "enthusiastic",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "behav_interpersonal_conflict",
+    "category": "personality_behavioral",
+    "subcategory": "interpersonal_conflict",
+    "canonical": "difficult personality",
+    "defaultSeverity": "high",
+    "confidence": 0.93,
+    "explanation": "Subjective interpersonal negative characterization lacking objective behavioral documentation.",
+    "researchCitation": "EEOC Workplace Assessment Guidelines",
+    "replacement": "Cite objective, documented collaboration deliverables and measurable outcomes",
+    "variants": [
+      {
+        "form": "difficult",
+        "type": "base_form"
+      },
+      {
+        "form": "challenging",
+        "type": "base_form"
+      },
+      {
+        "form": "problematic",
+        "type": "base_form"
+      },
+      {
+        "form": "troublesome",
+        "type": "base_form"
+      },
+      {
+        "form": "childish",
+        "type": "base_form"
+      },
+      {
+        "form": "difficult personality",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "hard to work with",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "not a team player",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "behav_culture_fit_proxy",
+    "category": "personality_behavioral",
+    "subcategory": "culture_fit_proxy",
+    "canonical": "culture fit",
+    "defaultSeverity": "medium",
+    "confidence": 0.91,
+    "explanation": "'Culture fit' frequently operates as an unstandardized, subjective filter that perpetuates demographic affinity bias and exclusionary hiring.",
+    "researchCitation": "Rivera (2012) Hiring as Cultural Matching",
+    "replacement": "Values alignment evaluated against objective, structured rubric criteria",
+    "variants": [
+      {
+        "form": "cultural fit",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "culture fit",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "personality fit",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "team fit",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "behav_communication_style",
+    "category": "personality_behavioral",
+    "subcategory": "communication_proxy",
+    "canonical": "articulate",
+    "defaultSeverity": "low",
+    "confidence": 0.85,
+    "explanation": "Communication trait descriptors can act as racial or affinity microaggressions when subjectively applied to minority candidates.",
+    "researchCitation": "Alim & Smitherman (2012) Articulate While Black",
+    "replacement": "Effective stakeholder presentation and technical documentation skills",
+    "variants": [
+      {
+        "form": "communication",
+        "type": "noun_form"
+      },
+      {
+        "form": "articulate",
+        "type": "base_form"
+      },
+      {
+        "form": "well-spoken",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "well spoken",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "eloquent",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "disability_general",
+    "category": "disability_coded",
+    "subcategory": "disability_status",
+    "canonical": "disabled",
+    "defaultSeverity": "high",
+    "confidence": 0.96,
+    "explanation": "Disability status disclosure or inquiry having no bearing on bona fide occupational qualifications for knowledge work.",
+    "researchCitation": "EEOC ADA Enforcement Guidance (2020); Ameri et al. (2018)",
+    "replacement": "Focus strictly on technical role qualifications and deliverables",
+    "variants": [
+      {
+        "form": "disabled",
+        "type": "base_form"
+      },
+      {
+        "form": "disability",
+        "type": "noun_form"
+      },
+      {
+        "form": "disabilities",
+        "type": "plural_form"
+      },
+      {
+        "form": "differently abled",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "differently-abled",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "physical limitation",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "physical disability",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "mobility impairment",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "special needs",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "accessibility needs",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "accessibility",
+        "type": "noun_form"
+      },
+      {
+        "form": "accommodation",
+        "type": "noun_form"
+      },
+      {
+        "form": "accommodations",
+        "type": "plural_form"
+      }
+    ]
+  },
+  {
+    "id": "disability_medical_illness",
+    "category": "disability_coded",
+    "subcategory": "health_medical_status",
+    "canonical": "medical condition",
+    "defaultSeverity": "high",
+    "confidence": 0.95,
+    "explanation": "Medical disclosures on resumes invite unlawful health discrimination under the ADA and EEOC guidelines.",
+    "researchCitation": "EEOC ADA Compliance Guidelines",
+    "replacement": "Omit private health disclosures entirely from resume text",
+    "variants": [
+      {
+        "form": "medical condition",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "health condition",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "illness",
+        "type": "noun_form"
+      },
+      {
+        "form": "chronic condition",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "clean bill of health",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "able-bodied",
+        "type": "spelling_variant"
+      }
+    ]
+  },
+  {
+    "id": "disability_mental_neurodivergent",
+    "category": "disability_coded",
+    "subcategory": "neurodiversity_status",
+    "canonical": "mental health",
+    "defaultSeverity": "high",
+    "confidence": 0.95,
+    "explanation": "Mental health or neurodivergence disclosure introduces protected-class medical information into screening.",
+    "researchCitation": "EEOC Mental Health and ADA Guidance",
+    "replacement": "Omit medical and neurodivergent self-disclosures from initial screening resumes",
+    "variants": [
+      {
+        "form": "mental health",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "psychological health",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "mental illness",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "neurodivergent",
+        "type": "base_form"
+      },
+      {
+        "form": "neurodiversity",
+        "type": "noun_form"
+      },
+      {
+        "form": "autism",
+        "type": "noun_form"
+      },
+      {
+        "form": "ADHD",
+        "type": "noun_form"
+      }
+    ]
+  },
+  {
+    "id": "disability_fitness_criteria",
+    "category": "disability_coded",
+    "subcategory": "physical_endurance_proxy",
+    "canonical": "physically fit",
+    "defaultSeverity": "medium",
+    "confidence": 0.9,
+    "explanation": "Physical fitness criteria unrelated to bona fide occupational qualifications can unlawfully exclude candidates with disabilities.",
+    "researchCitation": "Ameri et al. (2018) The Disability Employment Penalty",
+    "replacement": "Specify core technical duties unless physical endurance is an essential job function",
+    "variants": [
+      {
+        "form": "physically fit",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "medically fit",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "fit",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gap_employment_hiatus",
+    "category": "gap_framing",
+    "subcategory": "employment_hiatus",
+    "canonical": "career gap",
+    "defaultSeverity": "medium",
+    "confidence": 0.88,
+    "explanation": "Employment gap and hiatus phrasing that triggers automated ATS penalties or negative recruiter speculation.",
+    "researchCitation": "Weisshaar (2018) From Opt Out to Blocked Out; Pedulla (2016)",
+    "replacement": "Frame gap with constructive upskilling, self-directed engineering, or consulting deliverables",
+    "variants": [
+      {
+        "form": "career gap",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "employment gap",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "work gap",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "career break",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "sabbatical",
+        "type": "noun_form"
+      },
+      {
+        "form": "gap year",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "gap_unemployment",
+    "category": "gap_framing",
+    "subcategory": "unemployment_deficit",
+    "canonical": "unemployed",
+    "defaultSeverity": "medium",
+    "confidence": 0.9,
+    "explanation": "Deficit-based unemployment phrasing that triggers negative heuristics in ATS screening.",
+    "researchCitation": "Pedulla (2016) Penalties for Employment Gaps",
+    "replacement": "Focus on independent technical consulting, research projects, or open-source contributions",
+    "variants": [
+      {
+        "form": "unemployed",
+        "type": "base_form"
+      },
+      {
+        "form": "unemployment",
+        "type": "noun_form"
+      },
+      {
+        "form": "unemployed period",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "gap_caregiver_homemaker",
+    "category": "gap_framing",
+    "subcategory": "caregiver_status",
+    "canonical": "stay-at-home parent",
+    "defaultSeverity": "medium",
+    "confidence": 0.91,
+    "explanation": "Caregiver or homemaker framing that invites family-responsibility discrimination.",
+    "researchCitation": "Weisshaar (2018)",
+    "replacement": "Planned professional hiatus / personal leave period with active skill maintenance",
+    "variants": [
+      {
+        "form": "stay-at-home",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "stay at home",
+        "type": "spelling_variant"
+      },
+      {
+        "form": "stay-at-home parent",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "homemaker",
+        "type": "noun_form"
+      }
+    ]
+  },
+  {
+    "id": "gap_reentry_continuity",
+    "category": "gap_framing",
+    "subcategory": "career_continuity",
+    "canonical": "returning to work",
+    "defaultSeverity": "low",
+    "confidence": 0.85,
+    "explanation": "Career re-entry or continuity descriptors that highlight non-linear employment trajectories.",
+    "researchCitation": "Pedulla (2016)",
+    "replacement": "Emphasize current technical competencies and recent project execution",
+    "variants": [
+      {
+        "form": "returning to work",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "career restart",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "continuous employment",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "uninterrupted career",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "recently employed",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "recent experience",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "prestige_elite_institutions",
+    "category": "prestige_proxy",
+    "subcategory": "institution_pedigree",
+    "canonical": "Ivy League",
+    "defaultSeverity": "low",
+    "confidence": 0.85,
+    "explanation": "Institutional brand prestige creates algorithmic pedigree bias in screening models.",
+    "researchCitation": "Rivera (2012) Pedigree: How Elite Students Get Elite Jobs",
+    "replacement": "Accredited University / Technical Program",
+    "variants": [
+      {
+        "form": "Stanford University",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "Stanford",
+        "type": "base_form"
+      },
+      {
+        "form": "Harvard",
+        "type": "base_form"
+      },
+      {
+        "form": "Ivy League",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "Oxford",
+        "type": "base_form"
+      },
+      {
+        "form": "Cambridge",
+        "type": "base_form"
+      },
+      {
+        "form": "MIT",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_fearless",
+    "category": "gender_coded",
+    "subcategory": "masculine_trait",
+    "canonical": "fearless",
+    "defaultSeverity": "medium",
+    "confidence": 0.86,
+    "explanation": "Masculine-coded adjective in technical job matching.",
+    "researchCitation": "Gaucher et al. (2011)",
+    "replacement": "calculated, bold, and risk-aware",
+    "variants": [
+      {
+        "form": "fearless",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_headstrong",
+    "category": "gender_coded",
+    "subcategory": "masculine_trait",
+    "canonical": "headstrong",
+    "defaultSeverity": "high",
+    "confidence": 0.9,
+    "explanation": "Carries combative masculine undertones in leadership appraisals.",
+    "researchCitation": "Gaucher et al. (2011)",
+    "replacement": "determined and persistent",
+    "variants": [
+      {
+        "form": "headstrong",
+        "type": "base_form"
+      }
+    ]
+  },
+  {
+    "id": "gender_soft_spoken",
+    "category": "gender_coded",
+    "subcategory": "feminine_stereotype",
+    "canonical": "soft-spoken",
+    "defaultSeverity": "medium",
+    "confidence": 0.87,
+    "explanation": "Feminine-stereotyped behavioral marker that risks leadership capability discounting.",
+    "researchCitation": "Heilman (2012) Gender Stereotypes in Evaluation",
+    "replacement": "thoughtful and measured communicator",
+    "variants": [
+      {
+        "form": "soft-spoken",
+        "type": "base_form"
+      },
+      {
+        "form": "soft spoken",
+        "type": "spelling_variant"
+      }
+    ]
+  },
+  {
+    "id": "age_mature_professional",
+    "category": "age_indicative",
+    "subcategory": "age_bracket_proxy",
+    "canonical": "mature professional",
+    "defaultSeverity": "medium",
+    "confidence": 0.9,
+    "explanation": "Explicit age-bracket signal triggering age-based filtering in ATS heuristics.",
+    "researchCitation": "Neumark, Burn, & Button (2019)",
+    "replacement": "established industry professional",
+    "variants": [
+      {
+        "form": "mature professional",
+        "type": "multiword_expression"
+      }
+    ]
+  },
+  {
+    "id": "health_tireless_availability",
+    "category": "disability_coded",
+    "subcategory": "health_and_burnout_proxy",
+    "canonical": "tireless 24/7 availability",
+    "defaultSeverity": "medium",
+    "confidence": 0.86,
+    "explanation": "Physical endurance requirement operating as a proxy that disadvantages candidates with chronic health conditions or disabilities.",
+    "researchCitation": "EEOC ADA Enforcement Guidance (2021)",
+    "replacement": "reliable and dedicated delivery",
+    "variants": [
+      {
+        "form": "tireless 24/7 availability",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "24/7 availability",
+        "type": "multiword_expression"
+      }
+    ]
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "cf-pair-01-age-achievement",
+    "name": "Age Demographics in Technical Qualification",
+    "description": "Changing age descriptor in an achievement sentence should retain 'Fine' classification.",
+    "sentenceA": {
+      "text": "The candidate is a young engineer with strong technical skills in Python and cloud systems.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "The candidate is an experienced engineer with strong technical skills in Python and cloud systems.",
+      "expected": "Fine"
+    },
+    "expectedBehavior": "Consistent (Both Fine) - Technical competency dominates without introducing hiring barriers."
+  },
+  {
+    "id": "cf-pair-02-gender-achievement",
+    "name": "Gender Pronouns in Technical Optimization",
+    "description": "Changing gender pronouns in an engineering optimization should retain 'Fine' classification.",
+    "sentenceA": {
+      "text": "She aggressively optimized the machine learning pipeline, reducing processing time by 40%.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "He aggressively optimized the machine learning pipeline, reducing processing time by 40%.",
+      "expected": "Fine"
+    },
+    "expectedBehavior": "Consistent (Both Fine) - Technical action does not vary by gender."
+  },
+  {
+    "id": "cf-pair-03-age-hiring-preference",
+    "name": "Age Discrimination in Hiring Preference",
+    "description": "Age-based hiring preferences in either direction should both be 'Flagged'.",
+    "sentenceA": {
+      "text": "The company prefers young and energetic candidates for this entry-level role.",
+      "expected": "Flagged"
+    },
+    "sentenceB": {
+      "text": "The company prefers mature and seasoned candidates for this entry-level role.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Consistent (Both Flagged) - Age preferences violate ADEA regardless of targeted cohort."
+  },
+  {
+    "id": "cf-pair-04-context-shift-aggressive",
+    "name": "Context Shift: Technical Achievement vs Interpersonal Conduct",
+    "description": "Identical keyword 'aggressive' must shift from Fine (technical) to Flagged (interpersonal conduct).",
+    "sentenceA": {
+      "text": "She aggressively optimized the machine learning pipeline, reducing processing time by 40%.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "He used aggressive language when criticizing his teammates during code reviews.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Differentiated (A: Fine, B: Flagged) - Contextual discriminator resolves polysemy."
+  },
+  {
+    "id": "cf-pair-05-gender-subjective-leadership",
+    "name": "Gender Demographics in Subjective Leadership Style",
+    "description": "Subjective leadership evaluation without metrics should be Flagged for review regardless of gender.",
+    "sentenceA": {
+      "text": "The candidate has an aggressive leadership style.",
+      "expected": "Flagged"
+    },
+    "sentenceB": {
+      "text": "He displays an aggressive leadership style across project teams.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Consistent (Both Flagged) - Subjective personality labels pose screening risks."
+  },
+  {
+    "id": "cf-pair-06-disability-contribution-vs-assumption",
+    "name": "Disability: Technical Accessibility vs Deficit Assumption",
+    "description": "Building accessibility features should be Fine, while assuming disability implies excessive supervision must be Flagged.",
+    "sentenceA": {
+      "text": "He developed an application that improves accessibility for people with disabilities.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "The candidate has a disability and may require excessive supervision.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Differentiated (A: Fine, B: Flagged) - Separates technical deliverable from discriminatory bias."
+  },
+  {
+    "id": "cf-pair-07-career-gap-upskilling-vs-deficit",
+    "name": "Career Gap: Upskilling vs Negative Commitment Inference",
+    "description": "Career break with upskilling is Fine; using career break to infer lack of commitment is Flagged.",
+    "sentenceA": {
+      "text": "Took a two-year career break for family care and completed AWS cloud certification.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "The candidate took a two-year career break and is therefore less committed to the company.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Differentiated (A: Fine, B: Flagged) - Penalizes unfair commitment assumptions, not the gap itself."
+  },
+  {
+    "id": "cf-pair-08-health-wellness-vs-screening-proxy",
+    "name": "Health: Technical Health App vs Health Screening Requirement",
+    "description": "Developing wellness software is Fine; requiring a clean bill of health is Flagged.",
+    "sentenceA": {
+      "text": "Engineered a health-tracking application promoting daily cardiovascular fitness and user wellness.",
+      "expected": "Fine"
+    },
+    "sentenceB": {
+      "text": "Candidate possesses a clean bill of health with tireless 24/7 availability for emergency on-call rotations.",
+      "expected": "Flagged"
+    },
+    "expectedBehavior": "Differentiated (A: Fine, B: Flagged) - Technical software deliverable vs prohibited health proxy."
+  },
+  {
+    "id": "cf-pair-09-culture-fit-vs-objective-skills",
+    "name": "Hiring Criteria: Subjective Culture Fit vs Objective Technical Rubrics",
+    "description": "Subjective culture fit screening is Flagged; structured competency evaluation is Fine.",
+    "sentenceA": {
+      "text": "The hiring committee evaluated whether the engineer was a good culture fit.",
+      "expected": "Flagged"
+    },
+    "sentenceB": {
+      "text": "The hiring committee evaluated candidate's proficiency in distributed systems and algorithms.",
+      "expected": "Fine"
+    },
+    "expectedBehavior": "Differentiated (A: Flagged, B: Fine) - Flags unstructured affinity bias."
+  },
+  {
+    "id": "cf-pair-10-pedigree-vs-competency",
+    "name": "Pedigree Proxy vs Concrete Technical Fundamentals",
+    "description": "School pedigree filters are Flagged; technical qualification criteria are Fine.",
+    "sentenceA": {
+      "text": "Seeking candidates exclusively from Stanford or Ivy League computer science programs.",
+      "expected": "Flagged"
+    },
+    "sentenceB": {
+      "text": "Seeking candidates with strong computer science fundamentals and distributed database expertise.",
+      "expected": "Fine"
+    },
+    "expectedBehavior": "Differentiated (A: Flagged, B: Fine) - Flags elitist proxy while validating skill requirements."
+  }
+]

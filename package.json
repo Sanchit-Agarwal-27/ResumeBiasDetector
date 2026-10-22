@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vite-node scripts/test-context-model.ts"
+    "test": "vite-node scripts/test-context-model.ts",
+    "backend:test": "pytest backend/tests/ -v"
   },
   "overrides": {
     "rolldown": "1.2.1"
