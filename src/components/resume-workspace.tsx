@@ -2024,13 +2024,14 @@ export function ResumeWorkspace() {
         {/* RIGHT COLUMN: REVIEW QUEUE (BIAS ISSUES & NEUTRAL REWRITES) */}
         <aside
           id="review-queue-panel"
-          className="min-w-0 bg-card lg:max-h-[calc(100vh-66px)] lg:overflow-y-auto"
+          className="min-w-0 h-full flex flex-col bg-card overflow-hidden"
         >
           {isTransitioning ? (
             <SidebarSkeleton />
           ) : (
             <>
-              <div className="border-b px-5 py-4">
+              {/* STICKY HEADER */}
+              <div className="border-b px-5 py-3.5 shrink-0 bg-card z-10">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <div>
                     <p className="text-[10px] font-bold uppercase text-muted-foreground">
@@ -2106,9 +2107,11 @@ export function ResumeWorkspace() {
                 )}
               </div>
 
-              {sidebarTab === "issues" ? (
-                activeSpan && activeSuggestion ? (
-                  <div className="space-y-6 p-5 animate-in fade-in duration-200">
+              {/* SCROLLABLE QUEUE CONTENT */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {sidebarTab === "issues" ? (
+                  activeSpan && activeSuggestion ? (
+                    <div className="space-y-6 p-5 pb-20 animate-in fade-in duration-200">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-sm bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase text-rose-600 dark:text-rose-400">
                         Flagged
@@ -2180,7 +2183,7 @@ export function ResumeWorkspace() {
                             onChange={(e) => setCustomRewrite(e.target.value)}
                             placeholder="Type or customize neutral rewrite..."
                             rows={2}
-                            className="mt-2 w-full flex-1 resize-none rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
+                            className="mt-2 w-full flex-1 min-h-[58px] resize-y rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
                           />
                         </div>
                       </div>
@@ -2482,13 +2485,14 @@ export function ResumeWorkspace() {
                   </div>
                 </div>
               )}
+              </div>
             </>
           )}
         </aside>
       </div>
 
       {/* FOOTER */}
-      <footer className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t bg-card px-4 py-2.5 text-xs text-muted-foreground">
+      <footer className="shrink-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t bg-card px-4 py-2 text-xs text-muted-foreground z-20">
         <div className="flex min-w-0 items-center gap-2">
           <LockKeyhole className="size-3.5 shrink-0 text-success" />
           <span className="truncate">
