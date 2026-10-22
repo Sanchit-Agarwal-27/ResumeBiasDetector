@@ -62,7 +62,8 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
                     Live FastAPI Model Verification Active
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Gold Standard Benchmark: {serverBenchmarks.total_samples} samples evaluated with {serverBenchmarks.accuracy}% accuracy & 0 false alarms.
+                    Gold Standard Benchmark: {serverBenchmarks.total_samples} samples evaluated with{" "}
+                    {serverBenchmarks.accuracy}% accuracy & 0 false alarms.
                   </p>
                 </div>
               </div>

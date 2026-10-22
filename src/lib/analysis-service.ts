@@ -34,7 +34,7 @@ export interface HealthResponse {
 
 export const DEFAULT_CONFIG: AnalysisServiceConfig = {
   mode: "local",
-  fastApiUrl: (import.meta as any).env?.VITE_FASTAPI_URL || "http://localhost:8000",
+  fastApiUrl: (import.meta.env["VITE_FASTAPI_URL"] as string) || "http://localhost:8000",
 };
 
 /**
@@ -147,11 +147,11 @@ export async function fetchServerFairnessAudit(
  */
 export async function fetchServerBenchmarks(
   fastApiUrl: string = DEFAULT_CONFIG.fastApiUrl,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   try {
     const res = await fetch(`${fastApiUrl}/api/benchmarks`);
     if (res.ok) {
-      return await res.json();
+      return (await res.json()) as Record<string, unknown>;
     }
     return null;
   } catch {
@@ -174,10 +174,12 @@ export async function processResumeAnalysis(
   if (config.mode === "fastapi") {
     const rateCheck = checkRateLimit("api:analyze", config.fastApiUrl);
     if (!rateCheck.allowed) {
-      console.warn("[AnalysisService] Rate limit hit for FastAPI endpoint. Falling back to local NLP.");
+      console.warn(
+        "[AnalysisService] Rate limit hit for FastAPI endpoint. Falling back to local NLP.",
+      );
     } else {
       try {
-        const payload: Record<string, any> = {
+        const payload: Record<string, unknown> = {
           raw_text: rawText,
           file_name: fileName,
         };
@@ -229,11 +231,14 @@ export async function processResumeAnalysis(
   // Compute baseline local quality metrics
   const lines = rawText.split("\n").filter((l) => l.trim().length > 0);
   const bulletCount = lines.filter((l) => /^[\s•\-*0-9.]+/.test(l) || l.length > 25).length;
-  const quantifiedBullets = lines.filter((l) => /\b\d+(?:\.\d+)?%?|\$\d+|\b\d+\s*(?:ms|sec|hours|days|x|k|m|users)\b/i.test(l)).length;
+  const quantifiedBullets = lines.filter((l) =>
+    /\b\d+(?:\.\d+)?%?|\$\d+|\b\d+\s*(?:ms|sec|hours|days|x|k|m|users)\b/i.test(l),
+  ).length;
 
   const defaultQuality: QualityMetrics = {
     action_verb_score: Math.min(100, Math.max(70, 100 - analysis.spans.length * 5)),
-    quantification_score: bulletCount > 0 ? Math.round((quantifiedBullets / bulletCount) * 100) : 75,
+    quantification_score:
+      bulletCount > 0 ? Math.round((quantifiedBullets / bulletCount) * 100) : 75,
     passive_voice_count: 0,
     weak_verb_count: 0,
     unquantified_bullet_count: Math.max(0, bulletCount - quantifiedBullets),

@@ -860,9 +860,9 @@ export function AccountSettingsModal({
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Your resume documents, contact details, and career history are processed entirely
-                  client-side in your local browser sandbox. BiasLens does not scrape, sell, or index
-                  your personal data. Cloud Vault synchronization is completely optional, user-initiated,
-                  and secured with encrypted Row-Level Security (RLS).
+                  client-side in your local browser sandbox. BiasLens does not scrape, sell, or
+                  index your personal data. Cloud Vault synchronization is completely optional,
+                  user-initiated, and secured with encrypted Row-Level Security (RLS).
                 </p>
               </div>
 

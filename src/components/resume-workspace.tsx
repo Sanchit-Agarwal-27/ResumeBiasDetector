@@ -513,8 +513,8 @@ export function ResumeWorkspace() {
           return {
             ...current,
             ...enrichedReport,
-          target_job: current.target_job,
-          ats_match: enrichedReport.ats_match || current.ats_match,
+            target_job: current.target_job,
+            ats_match: enrichedReport.ats_match || current.ats_match,
           };
         });
         setStatus(engineMode === "fastapi" ? "Live FastAPI AI synced" : "Live local engine synced");
@@ -532,8 +532,7 @@ export function ResumeWorkspace() {
       fixText = fixText.split(" / ")[0].trim();
     }
     const isRemoval =
-      fixText.toLowerCase().startsWith("remove") ||
-      fixText.toLowerCase().includes("delete line");
+      fixText.toLowerCase().startsWith("remove") || fixText.toLowerCase().includes("delete line");
 
     let replaced = false;
     const updatedBlocks = canvasBlocks.map((block) => {
@@ -2038,9 +2037,7 @@ export function ResumeWorkspace() {
                       Review queue {filter !== "all" && `• ${categoryLabels[filter] ?? filter}`}
                     </p>
                     <h2 className="font-display text-lg font-semibold">
-                      {sidebarTab === "issues"
-                        ? "Bias & Inclusivity"
-                        : "Writing Quality & Errors"}
+                      {sidebarTab === "issues" ? "Bias & Inclusivity" : "Writing Quality & Errors"}
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2112,379 +2109,404 @@ export function ResumeWorkspace() {
                 {sidebarTab === "issues" ? (
                   activeSpan && activeSuggestion ? (
                     <div className="space-y-6 p-5 pb-20 animate-in fade-in duration-200">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-sm bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase text-rose-600 dark:text-rose-400">
-                        Flagged
-                      </span>
-                      <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
-                        {categoryLabels[activeSpan.category]}
-                      </span>
-                      <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
-                        {activeSpan.severity} severity
-                      </span>
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {Math.round(activeSpan.confidence * 100)}% confidence
-                      </span>
-                    </div>
-
-                    {activeSpan.sentence && (
-                      <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed">
-                        <span className="font-semibold text-muted-foreground block mb-1">
-                          Full Sentence Context:
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-sm bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase text-rose-600 dark:text-rose-400">
+                          Flagged
                         </span>
-                        <p className="italic text-foreground">“{activeSpan.sentence}”</p>
+                        <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
+                          {categoryLabels[activeSpan.category]}
+                        </span>
+                        <span className="rounded-sm bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase text-secondary-foreground">
+                          {activeSpan.severity} severity
+                        </span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {Math.round(activeSpan.confidence * 100)}% confidence
+                        </span>
                       </div>
-                    )}
 
-                    <div>
-                      <h3 className="font-display text-2xl font-bold tracking-tight">
-                        “{activeSpan.matched_text}”
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {activeSpan.explanation}
-                      </p>
-                      {activeSpan.research_citation && (
-                        <p className="mt-2 text-[11px] text-muted-foreground/80 italic">
-                          Citation: {activeSpan.research_citation}
+                      {activeSpan.sentence && (
+                        <div className="rounded-lg border bg-muted/30 p-3 text-xs leading-relaxed">
+                          <span className="font-semibold text-muted-foreground block mb-1">
+                            Full Sentence Context:
+                          </span>
+                          <p className="italic text-foreground">“{activeSpan.sentence}”</p>
+                        </div>
+                      )}
+
+                      <div>
+                        <h3 className="font-display text-2xl font-bold tracking-tight">
+                          “{activeSpan.matched_text}”
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {activeSpan.explanation}
                         </p>
+                        {activeSpan.research_citation && (
+                          <p className="mt-2 text-[11px] text-muted-foreground/80 italic">
+                            Citation: {activeSpan.research_citation}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="rounded-md border p-4 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                            Suggested revision
+                          </p>
+                          {customRewrite !== (activeSuggestion.suggested_text || "") && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCustomRewrite(activeSuggestion.suggested_text || "")
+                              }
+                              className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                            >
+                              Reset to suggestion
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                            <span className="text-[10px] font-bold uppercase text-destructive">
+                              Before
+                            </span>
+                            <p className="mt-2 text-sm font-semibold text-destructive break-words">
+                              {activeSuggestion.original_text}
+                            </p>
+                          </div>
+                          <div className="rounded-md border border-success/30 bg-success/5 p-3 flex flex-col">
+                            <span className="text-[10px] font-bold uppercase text-success">
+                              After (Editable)
+                            </span>
+                            <textarea
+                              value={customRewrite}
+                              onChange={(e) => setCustomRewrite(e.target.value)}
+                              placeholder="Type or customize neutral rewrite..."
+                              rows={2}
+                              className="mt-2 w-full flex-1 min-h-[58px] resize-y rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
+                            />
+                          </div>
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                          {activeSuggestion.rationale}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                        <Button size="lg" onClick={() => resolveIssue("accept", customRewrite)}>
+                          <CheckCircle2 className="size-4 mr-1.5" /> Accept rewrite
+                        </Button>
+                        <Button variant="outline" size="lg" onClick={() => resolveIssue("dismiss")}>
+                          <X className="size-4 mr-1.5" /> Dismiss
+                        </Button>
+                      </div>
+
+                      {activeSuggestion.full_sentence_rewrite && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (activeSuggestion.full_sentence_rewrite) {
+                              setCustomRewrite(activeSuggestion.full_sentence_rewrite);
+                              resolveIssue("accept", activeSuggestion.full_sentence_rewrite);
+                            }
+                          }}
+                          className="w-full text-xs border-primary/30 text-primary hover:bg-primary/5 mt-1"
+                        >
+                          <Sparkles className="size-3.5 mr-1.5 text-primary" />
+                          Apply Google XYZ Full-Sentence Rewrite
+                        </Button>
                       )}
                     </div>
-
-                    <div className="rounded-md border p-4 bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                          Suggested revision
-                        </p>
-                        {customRewrite !== (activeSuggestion.suggested_text || "") && (
-                          <button
-                            type="button"
-                            onClick={() => setCustomRewrite(activeSuggestion.suggested_text || "")}
-                            className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
-                          >
-                            Reset to suggestion
-                          </button>
-                        )}
-                      </div>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                          <span className="text-[10px] font-bold uppercase text-destructive">
-                            Before
+                  ) : report.spans.length === 0 ? (
+                    <div className="grid min-h-[420px] place-items-center p-8 pb-20 text-center animate-in fade-in duration-300">
+                      <div className="max-w-xs space-y-4">
+                        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-8 ring-emerald-500/5">
+                          <ShieldCheck className="size-8" />
+                        </div>
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3" />
+                            100% Bias-Free
                           </span>
-                          <p className="mt-2 text-sm font-semibold text-destructive break-words">
-                            {activeSuggestion.original_text}
+                          <h3 className="mt-2.5 font-display text-xl font-bold tracking-tight text-foreground">
+                            Screening-Optimized
+                          </h3>
+                          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                            Zero bias markers detected across gender, age, prestige, gap, and
+                            disability taxonomy. Your resume is ready for fair applicant tracking.
+                          </p>
+                          {(report.error_flags || []).length > 0 && (
+                            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3.5 text-left space-y-2 mt-3">
+                              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-xs">
+                                <AlertTriangle className="size-4 shrink-0" />
+                                <span>
+                                  {(report.error_flags || []).length} Writing Issues / Profanities
+                                  Detected!
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Your resume passed bias screening, but has writing errors,
+                                profanity, or clichés that recruiters penalize.
+                              </p>
+                              <Button
+                                size="sm"
+                                className="w-full text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer mt-1"
+                                onClick={() => setSidebarTab("quality")}
+                              >
+                                Review & Fix {(report.error_flags || []).length} Issues Now →
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2">
+                          <Button
+                            className="w-full gap-2 shadow-xs"
+                            onClick={exportPdf}
+                            disabled={isExporting}
+                          >
+                            {isExporting ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Download className="size-4" />
+                            )}
+                            <span>Download Clean PDF</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => setSidebarTab("quality")}
+                          >
+                            View Writing Quality & Scores ({(report.error_flags || []).length})
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2 text-xs"
+                            onClick={() => setFairnessModalOpen(true)}
+                          >
+                            <Scale className="size-3.5 text-primary" />
+                            <span>Run Counterfactual Audit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-muted-foreground"
+                            onClick={loadSample}
+                          >
+                            <RotateCcw className="size-3 mr-1.5" />
+                            Reload Sample Demo
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
+                      <div className="max-w-xs space-y-3">
+                        <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <CheckCircle2 className="size-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-base font-bold text-foreground">
+                            No {categoryLabels[filter as BiasCategory] || "Selected"} Issues
+                          </h3>
+                          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                            This category passed screening with zero flagged phrases.
                           </p>
                         </div>
-                        <div className="rounded-md border border-success/30 bg-success/5 p-3 flex flex-col">
-                          <span className="text-[10px] font-bold uppercase text-success">
-                            After (Editable)
-                          </span>
-                          <textarea
-                            value={customRewrite}
-                            onChange={(e) => setCustomRewrite(e.target.value)}
-                            placeholder="Type or customize neutral rewrite..."
-                            rows={2}
-                            className="mt-2 w-full flex-1 min-h-[58px] resize-y rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
-                          />
-                        </div>
-                      </div>
-                      <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                        {activeSuggestion.rationale}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                      <Button size="lg" onClick={() => resolveIssue("accept", customRewrite)}>
-                        <CheckCircle2 className="size-4 mr-1.5" /> Accept rewrite
-                      </Button>
-                      <Button variant="outline" size="lg" onClick={() => resolveIssue("dismiss")}>
-                        <X className="size-4 mr-1.5" /> Dismiss
-                      </Button>
-                    </div>
-
-                    {activeSuggestion.full_sentence_rewrite && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (activeSuggestion.full_sentence_rewrite) {
-                            setCustomRewrite(activeSuggestion.full_sentence_rewrite);
-                            resolveIssue("accept", activeSuggestion.full_sentence_rewrite);
-                          }
-                        }}
-                        className="w-full text-xs border-primary/30 text-primary hover:bg-primary/5 mt-1"
-                      >
-                        <Sparkles className="size-3.5 mr-1.5 text-primary" />
-                        Apply Google XYZ Full-Sentence Rewrite
-                      </Button>
-                    )}
-                  </div>
-                ) : report.spans.length === 0 ? (
-                  <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
-                    <div className="max-w-xs space-y-4">
-                      <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-8 ring-emerald-500/5">
-                        <ShieldCheck className="size-8" />
-                      </div>
-                      <div>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="size-3" />
-                          100% Bias-Free
-                        </span>
-                        <h3 className="mt-2.5 font-display text-xl font-bold tracking-tight text-foreground">
-                          Screening-Optimized
-                        </h3>
-                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                          Zero bias markers detected across gender, age, prestige, gap, and
-                          disability taxonomy. Your resume is ready for fair applicant tracking.
-                        </p>
-                        {(report.error_flags || []).length > 0 && (
-                          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3.5 text-left space-y-2 mt-3">
-                            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-xs">
-                              <AlertTriangle className="size-4 shrink-0" />
-                              <span>{(report.error_flags || []).length} Writing Issues / Profanities Detected!</span>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                              Your resume passed bias screening, but has writing errors, profanity, or clichés that recruiters penalize.
-                            </p>
-                            <Button
-                              size="sm"
-                              className="w-full text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer mt-1"
-                              onClick={() => setSidebarTab("quality")}
-                            >
-                              Review & Fix {(report.error_flags || []).length} Issues Now →
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 pt-2">
-                        <Button
-                          className="w-full gap-2 shadow-xs"
-                          onClick={exportPdf}
-                          disabled={isExporting}
-                        >
-                          {isExporting ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Download className="size-4" />
-                          )}
-                          <span>Download Clean PDF</span>
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full text-xs"
-                          onClick={() => setSidebarTab("quality")}
+                          className="mt-2 text-xs"
+                          onClick={() => setFilter("all")}
                         >
-                          View Writing Quality & Scores ({(report.error_flags || []).length})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full gap-2 text-xs"
-                          onClick={() => setFairnessModalOpen(true)}
-                        >
-                          <Scale className="size-3.5 text-primary" />
-                          <span>Run Counterfactual Audit</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-xs text-muted-foreground"
-                          onClick={loadSample}
-                        >
-                          <RotateCcw className="size-3 mr-1.5" />
-                          Reload Sample Demo
+                          Show All Issues ({report.spans.length})
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  )
                 ) : (
-                  <div className="grid min-h-[420px] place-items-center p-8 text-center animate-in fade-in duration-300">
-                    <div className="max-w-xs space-y-3">
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CheckCircle2 className="size-6" />
+                  /* SIDEBAR TAB: QUALITY & WRITING ERRORS */
+                  <div className="space-y-5 p-5 pb-20 animate-in fade-in duration-200">
+                    {/* 3 Metric Scorecards */}
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="rounded-lg border bg-card p-3 text-center">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                          Action Verbs
+                        </span>
+                        <span
+                          className={cn(
+                            "text-2xl font-display font-bold mt-1 block",
+                            (report.quality_metrics?.action_verb_score ?? 85) >= 80
+                              ? "text-emerald-500"
+                              : "text-amber-500",
+                          )}
+                        >
+                          {report.quality_metrics?.action_verb_score ?? 85}%
+                        </span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                          Power Verbs
+                        </span>
                       </div>
-                      <div>
-                        <h3 className="font-display text-base font-bold text-foreground">
-                          No {categoryLabels[filter as BiasCategory] || "Selected"} Issues
-                        </h3>
-                        <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                          This category passed screening with zero flagged phrases.
-                        </p>
+
+                      <div className="rounded-lg border bg-card p-3 text-center">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                          Quantified
+                        </span>
+                        <span
+                          className={cn(
+                            "text-2xl font-display font-bold mt-1 block",
+                            (report.quality_metrics?.quantification_score ?? 70) >= 75
+                              ? "text-emerald-500"
+                              : "text-amber-500",
+                          )}
+                        >
+                          {report.quality_metrics?.quantification_score ?? 70}%
+                        </span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                          Measurable
+                        </span>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 text-xs"
-                        onClick={() => setFilter("all")}
-                      >
-                        Show All Issues ({report.spans.length})
-                      </Button>
-                    </div>
-                  </div>
-                )
-              ) : (
-                /* SIDEBAR TAB: QUALITY & WRITING ERRORS */
-                <div className="space-y-5 p-5 animate-in fade-in duration-200">
-                  {/* 3 Metric Scorecards */}
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="rounded-lg border bg-card p-3 text-center">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Action Verbs
-                      </span>
-                      <span
-                        className={cn(
-                          "text-2xl font-display font-bold mt-1 block",
-                          (report.quality_metrics?.action_verb_score ?? 85) >= 80
-                            ? "text-emerald-500"
-                            : "text-amber-500",
-                        )}
-                      >
-                        {report.quality_metrics?.action_verb_score ?? 85}%
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 block">Power Verbs</span>
-                    </div>
 
-                    <div className="rounded-lg border bg-card p-3 text-center">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Quantified
-                      </span>
-                      <span
-                        className={cn(
-                          "text-2xl font-display font-bold mt-1 block",
-                          (report.quality_metrics?.quantification_score ?? 70) >= 75
-                            ? "text-emerald-500"
-                            : "text-amber-500",
-                        )}
-                      >
-                        {report.quality_metrics?.quantification_score ?? 70}%
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 block">Measurable</span>
-                    </div>
-
-                    <div className="rounded-lg border bg-card p-3 text-center">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-                        Readability
-                      </span>
-                      <span
-                        className={cn(
-                          "text-2xl font-display font-bold mt-1 block",
-                          (report.quality_metrics?.ats_readability_score ?? 92) >= 80
-                            ? "text-primary"
-                            : "text-rose-500",
-                        )}
-                      >
-                        {report.quality_metrics?.ats_readability_score ?? 92}%
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 block">ATS Format</span>
-                    </div>
-                  </div>
-
-                  {/* Writing Errors List */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Detected Writing Improvements ({(report.error_flags || []).length})
-                      </h4>
-                    </div>
-
-                    {(!report.error_flags || report.error_flags.length === 0) ? (
-                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-                        <CheckCircle2 className="size-6 text-emerald-500 mx-auto mb-2" />
-                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          Clean Writing Hygiene!
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          Zero profanity, slang, first-person pronouns, typos, or weak action verbs detected.
-                        </p>
+                      <div className="rounded-lg border bg-card p-3 text-center">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                          Readability
+                        </span>
+                        <span
+                          className={cn(
+                            "text-2xl font-display font-bold mt-1 block",
+                            (report.quality_metrics?.ats_readability_score ?? 92) >= 80
+                              ? "text-primary"
+                              : "text-rose-500",
+                          )}
+                        >
+                          {report.quality_metrics?.ats_readability_score ?? 92}%
+                        </span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                          ATS Format
+                        </span>
                       </div>
-                    ) : (
-                      (report.error_flags || []).map((err, idx) => {
-                        const isProfanity = err.error_type === "profanity";
-                        const isSpelling = err.error_type === "spelling";
-                        const isFirstPerson = err.error_type === "first_person";
-                        const isSlang = err.error_type === "slang";
-                        const isPersonalInfo = err.error_type === "personal_info";
+                    </div>
 
-                        const borderColor = isProfanity
-                          ? "border-rose-500/40 bg-rose-500/5"
-                          : isSpelling
-                            ? "border-rose-400/40 bg-rose-400/5"
-                            : isPersonalInfo
-                              ? "border-orange-500/40 bg-orange-500/5"
-                              : isFirstPerson || isSlang
-                                ? "border-amber-500/40 bg-amber-500/5"
-                                : "border-blue-500/30 bg-blue-500/5";
+                    {/* Writing Errors List */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Detected Writing Improvements ({(report.error_flags || []).length})
+                        </h4>
+                      </div>
 
-                        const badgeColor = isProfanity
-                          ? "bg-rose-500/20 text-rose-700 dark:text-rose-300"
-                          : isSpelling
-                            ? "bg-rose-400/20 text-rose-700 dark:text-rose-300"
-                            : isPersonalInfo
-                              ? "bg-orange-500/20 text-orange-700 dark:text-orange-300"
-                              : isFirstPerson || isSlang
-                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                                : "bg-blue-500/20 text-blue-700 dark:text-blue-300";
+                      {!report.error_flags || report.error_flags.length === 0 ? (
+                        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+                          <CheckCircle2 className="size-6 text-emerald-500 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            Clean Writing Hygiene!
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Zero profanity, slang, first-person pronouns, typos, or weak action
+                            verbs detected.
+                          </p>
+                        </div>
+                      ) : (
+                        (report.error_flags || []).map((err, idx) => {
+                          const isProfanity = err.error_type === "profanity";
+                          const isSpelling = err.error_type === "spelling";
+                          const isFirstPerson = err.error_type === "first_person";
+                          const isSlang = err.error_type === "slang";
+                          const isPersonalInfo = err.error_type === "personal_info";
 
-                        const buttonLabel = isSpelling
-                          ? "Fix Spelling"
-                          : isProfanity
-                            ? "Replace / Cleanse"
-                            : isFirstPerson
-                              ? "Use Action Verb"
-                              : isSlang
-                                ? "Professionalize"
-                                : isPersonalInfo || err.error_type === "cliche"
-                                  ? "Remove Line"
-                                  : err.error_type === "passive_voice" || err.error_type === "weak_verb"
-                                    ? "Apply Power Verb"
-                                    : "Apply Fix";
+                          const borderColor = isProfanity
+                            ? "border-rose-500/40 bg-rose-500/5"
+                            : isSpelling
+                              ? "border-rose-400/40 bg-rose-400/5"
+                              : isPersonalInfo
+                                ? "border-orange-500/40 bg-orange-500/5"
+                                : isFirstPerson || isSlang
+                                  ? "border-amber-500/40 bg-amber-500/5"
+                                  : "border-blue-500/30 bg-blue-500/5";
 
-                        return (
-                          <div
-                            key={err.id || idx}
-                            className={cn("rounded-lg border p-3.5 space-y-2 text-xs transition-colors", borderColor)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className={cn("rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide", badgeColor)}>
-                                {err.error_type.replace(/_/g, " ")}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground capitalize font-medium">
-                                {err.severity || "medium"} severity
-                              </span>
-                            </div>
+                          const badgeColor = isProfanity
+                            ? "bg-rose-500/20 text-rose-700 dark:text-rose-300"
+                            : isSpelling
+                              ? "bg-rose-400/20 text-rose-700 dark:text-rose-300"
+                              : isPersonalInfo
+                                ? "bg-orange-500/20 text-orange-700 dark:text-orange-300"
+                                : isFirstPerson || isSlang
+                                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                  : "bg-blue-500/20 text-blue-700 dark:text-blue-300";
 
-                            <p className="font-semibold text-foreground">
-                              Matched: <span className="underline decoration-current font-mono">"{err.matched_text}"</span>
-                            </p>
+                          const buttonLabel = isSpelling
+                            ? "Fix Spelling"
+                            : isProfanity
+                              ? "Replace / Cleanse"
+                              : isFirstPerson
+                                ? "Use Action Verb"
+                                : isSlang
+                                  ? "Professionalize"
+                                  : isPersonalInfo || err.error_type === "cliche"
+                                    ? "Remove Line"
+                                    : err.error_type === "passive_voice" ||
+                                        err.error_type === "weak_verb"
+                                      ? "Apply Power Verb"
+                                      : "Apply Fix";
 
-                            <p className="text-muted-foreground text-[11px] leading-relaxed">
-                              {err.explanation}
-                            </p>
-
-                            {err.suggestion && (
-                              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 mt-1">
-                                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                                  Fix: {err.suggestion}
+                          return (
+                            <div
+                              key={err.id || idx}
+                              className={cn(
+                                "rounded-lg border p-3.5 space-y-2 text-xs transition-colors",
+                                borderColor,
+                              )}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span
+                                  className={cn(
+                                    "rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                                    badgeColor,
+                                  )}
+                                >
+                                  {err.error_type.replace(/_/g, " ")}
                                 </span>
-                                {!err.suggestion.startsWith("Add quantifiable") && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 text-[10px] px-2.5 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 cursor-pointer"
-                                    onClick={() => applyErrorFix(err)}
-                                  >
-                                    <Sparkles className="size-3 mr-1" /> {buttonLabel}
-                                  </Button>
-                                )}
+                                <span className="text-[10px] text-muted-foreground capitalize font-medium">
+                                  {err.severity || "medium"} severity
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
+
+                              <p className="font-semibold text-foreground">
+                                Matched:{" "}
+                                <span className="underline decoration-current font-mono">
+                                  "{err.matched_text}"
+                                </span>
+                              </p>
+
+                              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                                {err.explanation}
+                              </p>
+
+                              {err.suggestion && (
+                                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 mt-1">
+                                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                    Fix: {err.suggestion}
+                                  </span>
+                                  {!err.suggestion.startsWith("Add quantifiable") && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 text-[10px] px-2.5 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 cursor-pointer"
+                                      onClick={() => applyErrorFix(err)}
+                                    >
+                                      <Sparkles className="size-3 mr-1" /> {buttonLabel}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
             </>
           )}

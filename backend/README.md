@@ -1,9 +1,10 @@
 # 🐍 BiasLens AI Backend & Fairness Microservice
 
 An AI-driven backend service for **BiasLens**, providing:
+
 1. **Context-Aware Bias Detection** (5-stage classification with polysemy resolution and Explainable AI).
 2. **Resume Error Detection & Quality Scoring** (Passive voice, weak verbs, unquantified impact claims, and buzzwords).
-3. **Dynamic Sentence Rewriter** (Google XYZ impact formula rewriter: *"Accomplished [X] as measured by [Y], by doing [Z]"*).
+3. **Dynamic Sentence Rewriter** (Google XYZ impact formula rewriter: _"Accomplished [X] as measured by [Y], by doing [Z]"_).
 4. **ATS & Counterfactual Job Matching Simulator** (150+ hard/soft skill extraction, section hygiene, and automated parser projection).
 5. **Counterfactual Fairness Auditing** (EEOC 80% Four-Fifths Disparate Impact Ratio evaluation across 10 demographic perturbations).
 6. **Empirical Benchmarks API** (Serving live accuracy, precision, recall, and F1 metrics on the 30-sample gold dataset).
@@ -48,6 +49,7 @@ backend/
 ## 🚀 Quickstart & Setup
 
 ### 1. Create a Python Virtual Environment
+
 In your terminal, navigate into the `backend/` directory:
 
 ```bash
@@ -56,6 +58,7 @@ python -m venv .venv
 ```
 
 Activate the environment:
+
 - **Windows (PowerShell)**:
   ```powershell
   .\.venv\Scripts\Activate.ps1
@@ -66,16 +69,19 @@ Activate the environment:
   ```
 
 ### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 3. Run the AI Backend Server
+
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
 The server will start on `http://localhost:8000`.
+
 - **Interactive Swagger Docs**: `http://localhost:8000/docs`
 - **ReDoc API Reference**: `http://localhost:8000/redoc`
 
@@ -95,19 +101,20 @@ All 18 unit and integration tests pass with 100% precision, 100% recall, and zer
 
 ## 🔌 API Endpoints Reference
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Health check endpoint returning uptime, model version, and active features |
-| `POST` | `/api/analyze` | Full resume bias analysis returning `ResumeBiasReport` (with error flags & quality metrics) |
-| `POST` | `/api/rewrite` | Context-aware neutral sentence rewrite suggestion with Google XYZ formula |
-| `POST` | `/api/job-match` | ATS keyword gap analysis, section hygiene, and counterfactual score simulation |
-| `POST` | `/api/audit/counterfactual` | Counterfactual demographic perturbation testing (EEOC 80% rule) |
-| `GET` | `/api/benchmarks` | Empirical precision/recall/F1 metrics on 30-sample gold dataset |
+| Method | Endpoint                    | Description                                                                                 |
+| :----- | :-------------------------- | :------------------------------------------------------------------------------------------ |
+| `GET`  | `/api/health`               | Health check endpoint returning uptime, model version, and active features                  |
+| `POST` | `/api/analyze`              | Full resume bias analysis returning `ResumeBiasReport` (with error flags & quality metrics) |
+| `POST` | `/api/rewrite`              | Context-aware neutral sentence rewrite suggestion with Google XYZ formula                   |
+| `POST` | `/api/job-match`            | ATS keyword gap analysis, section hygiene, and counterfactual score simulation              |
+| `POST` | `/api/audit/counterfactual` | Counterfactual demographic perturbation testing (EEOC 80% rule)                             |
+| `GET`  | `/api/benchmarks`           | Empirical precision/recall/F1 metrics on 30-sample gold dataset                             |
 
 ---
 
 ## 🤝 Frontend Integration
 
 The BiasLens frontend (`src/lib/analysis-service.ts`) includes a dual-engine adapter:
+
 - When the FastAPI server is running on `http://localhost:8000`, the frontend automatically sends requests to the Python microservice.
 - If the server is offline, the frontend seamlessly falls back to the in-browser local engine with zero disruption.

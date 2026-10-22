@@ -579,9 +579,7 @@ function ParagraphBlockItem({
     );
   }
 
-  const matchingBias = biasSpans.filter((s) =>
-    matchesWordBoundary(block.text, s.matched_text),
-  );
+  const matchingBias = biasSpans.filter((s) => matchesWordBoundary(block.text, s.matched_text));
   const matchingErrors = (errorFlags || []).filter((e) =>
     matchesWordBoundary(block.text, e.matched_text),
   );
@@ -674,7 +672,7 @@ function ParagraphBlockItem({
                   ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800"
                   : matchingErrors[0].error_type === "spelling"
                     ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800"
-                    : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800"
+                    : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800",
               )}
             >
               {matchingErrors[0].error_type.replace(/_/g, " ")}
@@ -844,9 +842,7 @@ export function WordResumeEditor({
   // Focus matching block when active bias span changes from review queue
   useEffect(() => {
     if (activeBiasSpan) {
-      const match = blocks.find((b) =>
-        matchesWordBoundary(b.text, activeBiasSpan.matched_text),
-      );
+      const match = blocks.find((b) => matchesWordBoundary(b.text, activeBiasSpan.matched_text));
       if (match) {
         setSelectedBlockId(match.id);
         setActivePageIndex(match.pageIndex);
@@ -3323,8 +3319,8 @@ export function WordResumeEditor({
                         block={block}
                         zoom={zoom}
                         biasSpans={biasSpans}
-                      errorFlags={errorFlags}
-                      isSelected={selectedBlockId === block.id}
+                        errorFlags={errorFlags}
+                        isSelected={selectedBlockId === block.id}
                         onSelect={() => {
                           setSelectedBlockId(block.id);
                           setActivePageIndex(block.pageIndex);
