@@ -1,4 +1,4 @@
-import { BarChart3, CheckCircle2, Cpu, Layers, Sparkles, Users } from "lucide-react";
+import { BarChart3, CheckCircle2, Cpu, Layers, TrendingUp, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +56,7 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
 
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="size-4 text-primary" />
+                <TrendingUp className="size-4 text-primary" />
                 <span className="text-[11px] font-semibold uppercase">Hybrid F1 Score</span>
               </div>
               <p className="mt-2 font-display text-3xl font-bold text-primary">0.88</p>
@@ -149,9 +149,7 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
             </div>
 
             <div className="rounded-lg border bg-card p-4">
-              <h4 className="font-display text-sm font-semibold flex items-center gap-1.5">
-                <Sparkles className="size-4 text-primary" /> Key Empirical Finding
-              </h4>
+              <h4 className="font-display text-sm font-semibold">Key Empirical Finding</h4>
               <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
                 Lexicon-only matching suffers from high false-positive rates on multi-meaning words
                 (e.g., "aggressive timeline"), whereas the contextual dual-pass achieves 91%

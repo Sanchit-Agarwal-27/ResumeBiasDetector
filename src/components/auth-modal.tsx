@@ -23,7 +23,6 @@ import {
   ScanSearch,
   Send,
   ShieldCheck,
-  Sparkles,
   User,
 } from "lucide-react";
 

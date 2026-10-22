@@ -72,14 +72,53 @@ export async function registerFontFace(font: CustomFontRecord): Promise<boolean>
  */
 export async function initializeCustomFonts(): Promise<CustomFontRecord[]> {
   const localFonts = getLocalCustomFonts();
-  const loadedList: CustomFontRecord[] = [];
+  const mergedFonts: CustomFontRecord[] = [...localFonts];
 
-  for (const font of localFonts) {
-    const ok = await registerFontFace(font);
-    if (ok) loadedList.push(font);
+  // If user is authenticated with Supabase, sync cloud fonts
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: cloudFonts, error } = await supabase
+          .from("user_fonts")
+          .select("id, name, family, format, data_url, file_size, created_at")
+          .eq("user_id", session.user.id);
+
+        if (!error && Array.isArray(cloudFonts)) {
+          const cloudRecords: CustomFontRecord[] = cloudFonts.map((row) => ({
+            id: row.id,
+            name: row.name,
+            family: row.family,
+            format: row.format as CustomFontRecord["format"],
+            dataUrl: row.data_url,
+            fileSize: row.file_size || undefined,
+            createdAt: row.created_at,
+          }));
+
+          // Merge cloud records without duplicating existing ids or names
+          const existingIds = new Set(mergedFonts.map((f) => f.id));
+          const existingNames = new Set(mergedFonts.map((f) => f.name.toLowerCase()));
+
+          for (const cf of cloudRecords) {
+            if (!existingIds.has(cf.id) && !existingNames.has(cf.name.toLowerCase())) {
+              mergedFonts.push(cf);
+            }
+          }
+          saveLocalCustomFonts(mergedFonts);
+        }
+      }
+    } catch (err) {
+      console.warn("[CustomFonts] Cloud fonts sync skipped:", err);
+    }
   }
 
-  return localFonts;
+  for (const font of mergedFonts) {
+    await registerFontFace(font);
+  }
+
+  return mergedFonts;
 }
 
 /**
@@ -142,13 +181,35 @@ export async function uploadCustomFontFile(
   ];
   saveLocalCustomFonts(updated);
 
+  // Persist to Supabase if authenticated
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.from("user_fonts").insert({
+          id: record.id,
+          user_id: session.user.id,
+          name: record.name,
+          family: record.family,
+          format: record.format,
+          data_url: record.dataUrl,
+          file_size: record.fileSize || 0,
+        });
+      }
+    } catch (err) {
+      console.warn("[CustomFonts] Could not persist font to Supabase:", err);
+    }
+  }
+
   return record;
 }
 
 /**
  * Delete a custom font by ID
  */
-export function deleteCustomFont(fontId: string): void {
+export async function deleteCustomFont(fontId: string): Promise<void> {
   const current = getLocalCustomFonts();
   const target = current.find((f) => f.id === fontId);
   if (!target) return;
@@ -156,6 +217,17 @@ export function deleteCustomFont(fontId: string): void {
   const updated = current.filter((f) => f.id !== fontId);
   saveLocalCustomFonts(updated);
 
-  // Note: document.fonts.delete doesn't cleanly remove already rendered nodes,
-  // but removing from active state prevents future selection.
+  // Delete from Supabase if authenticated
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.from("user_fonts").delete().eq("id", fontId).eq("user_id", session.user.id);
+      }
+    } catch (err) {
+      console.warn("[CustomFonts] Could not delete font from Supabase:", err);
+    }
+  }
 }

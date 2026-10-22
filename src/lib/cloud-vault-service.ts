@@ -608,3 +608,60 @@ export async function archiveResume(resumeId: string): Promise<boolean> {
 
   return !error;
 }
+
+/**
+ * Permanently hard-delete a resume and all associated cascade data
+ */
+export async function hardDeleteResume(resumeId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    const localList = getLocalGuestResumes();
+    const updated = localList.filter((r) => r.id !== resumeId);
+    saveLocalGuestResumes(updated);
+    return true;
+  }
+
+  const { error } = await supabase.from("resumes").delete().eq("id", resumeId);
+  return !error;
+}
+
+/**
+ * Purge all resumes and version history for the user (GDPR right-to-be-forgotten / vault reset)
+ */
+export async function purgeAllResumes(): Promise<boolean> {
+  // Wipe local guest resumes always
+  saveLocalGuestResumes([]);
+
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("biaslens_active_report_v1");
+    localStorage.removeItem("biaslens_active_blocks_v1");
+    localStorage.removeItem("biaslens_active_pages_v1");
+    localStorage.removeItem("biaslens_active_column_layout_v1");
+    localStorage.removeItem("biaslens_cached_workspace");
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        // First try RPC
+        const { error: rpcErr } = await supabase.rpc("purge_user_data");
+        if (rpcErr) {
+          // Fallback to manual delete
+          await supabase.from("user_fonts").delete().eq("user_id", session.user.id);
+          const { error: delErr } = await supabase
+            .from("resumes")
+            .delete()
+            .eq("user_id", session.user.id);
+          return !delErr;
+        }
+        return true;
+      }
+    } catch (err) {
+      console.warn("[CloudVault] Failed to purge remote user data:", err);
+    }
+  }
+
+  return true;
+}

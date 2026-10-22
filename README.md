@@ -9,7 +9,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 
-**An AI-driven resume bias detection, fairness auditing, and layout-preserving Canva/Figma canvas editor.**
+**An AI-driven resume bias detection, fairness auditing, and layout-preserving MS Word-style document editor.**
 
 [Key Features](#-key-features) • [Engine Architecture](#-analysis-engine-architecture) • [Getting Started](#-getting-started) • [Canvas Shortcuts](#-canvas-shortcuts) • [Project Structure](#-project-structure) • [Research & Methodology](#-research--methodology)
 
@@ -25,7 +25,7 @@ Modern recruitment algorithms and automated Applicant Tracking Systems (ATS) fre
 
 1. **Linguistic & Structural Bias Auditing:** Identifies gender-coded language, age indicators, prestige proxies, disability framing, and career gap markers grounded in peer-reviewed psycholinguistic research.
 2. **Counterfactual Fairness Simulation:** Calibrates demographic parity and evaluates disparate impact ratios against the EEOC $80\%$ (Four-Fifths) rule across simulated candidate variations.
-3. **Interactive Design Editor:** Converts imported PDFs and DOCX files into full-fidelity Canva/Figma-style vector textboxes with magnetic auto-docking, alignment guidelines, rich typography, and layout preservation.
+3. **Interactive Document Editor:** Converts imported PDFs and DOCX files into a structured MS Word-style document editor with typography, paragraph styling, alignment controls, and layout preservation.
 4. **Dual Engine Flexibility:** Run privately 100% in-browser via client-side NLP or connect to a remote Python FastAPI backend for high-throughput multi-model inference.
 5. **Zero-Retention Privacy by Default:** All text parsing, NLP heuristics, and document modifications run in-memory with customizable local storage retention.
 
@@ -33,13 +33,12 @@ Modern recruitment algorithms and automated Applicant Tracking Systems (ATS) fre
 
 ## ✨ Key Features
 
-### 🎨 Canva / Figma Style Resume Canvas
+### 📝 MS Word-Style Document Editor
 
-- **High-Fidelity PDF Clustering:** Automatically detects two-column splits, extracts exact $(x, y)$ coordinates, preserves font baselines, and recovers true RGB text colors from the PDF operator stream.
-- **Auto-Docking & Magnetic Snapping:** Text frames snap to page margins, horizontal/vertical page centers, and sibling blocks with visible pink alignment guidelines.
-- **Marquee & Multi-Select:** Left-click and drag on the canvas sheet to marquee-select multiple frames. Move, style, or delete them collectively with a unified bounding box.
-- **Typography & Font Choices:** Supports curated typefaces (`Poppins`, `Inter`, `Montserrat`, `Roboto`, `Lato`, `EB Garamond`, `Merriweather`, `Calibri`) with direct point-size typing and alignment controls.
-- **History Stack & Navigation:** Complete Undo/Redo (`Ctrl+Z`, `Ctrl+Y`), Arrow key nudging, and Spacebar pan navigation.
+- **High-Fidelity PDF & DOCX Ingestion:** Automatically detects document sections, paragraphs, bullet hierarchies, and preserves font styling and colors.
+- **Word-Processor Formatting Toolbar:** Text formatting with bold, italic, underline, paragraph alignment (Left, Center, Right, Justify), and custom margins.
+- **Typography & Font Choices:** Supports curated professional typefaces (`Poppins`, `Inter`, `Montserrat`, `Roboto`, `Lato`, `EB Garamond`, `Merriweather`, `Calibri`) with direct point-size controls and line spacing.
+- **History Stack & Navigation:** Complete Undo/Redo (`Ctrl+Z`, `Ctrl+Y`), page jump navigation, and responsive document view.
 
 ### ⚖️ BiasLens Intelligence Engine
 
@@ -100,7 +99,7 @@ flowchart TD
     Router -->|"FastAPI Mode"| RemoteServer["🐍 Python FastAPI Backend\n• Endpoint: http://localhost:8000/api/analyze\n• Multi-Model Ensemble\n• Automatic Local Fallback if Offline"]
     ClientNLP --> Report["📊 Standardized ResumeBiasReport"]
     RemoteServer --> Report
-    Report --> Canvas["🎨 Interactive Vector Editor & Audit Dashboard"]
+    Report --> Editor["📝 Interactive Document Editor & Audit Dashboard"]
 ```
 
 ---
@@ -140,7 +139,7 @@ biaslens/
 │   │   ├── ethics-modal.tsx            # Ethics guidelines and methodology modal
 │   │   ├── evaluation-benchmark-modal.tsx # Precision/Recall & ablation benchmarks
 │   │   ├── fairness-audit-modal.tsx    # Counterfactual disparate impact simulation
-│   │   ├── figma-resume-editor.tsx     # Canvas workspace with snapping & bounding box
+│   │   ├── word-resume-editor.tsx      # MS Word-style document editor with typography & styling controls
 │   │   ├── resume-workspace.tsx        # Main application layout, header & sidebars
 │   │   └── ui/                         # shadcn/ui components (Sonner, Dialog, Button, etc.)
 │   ├── lib/

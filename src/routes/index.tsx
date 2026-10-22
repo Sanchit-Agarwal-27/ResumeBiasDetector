@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ResumeWorkspace } from "@/components/resume-workspace";
 import { PageSkeleton } from "@/components/loading/page-skeleton";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,5 +27,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return <ResumeWorkspace />;
+  return (
+    <ErrorBoundary>
+      <ResumeWorkspace />
+    </ErrorBoundary>
+  );
 }

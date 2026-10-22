@@ -3,7 +3,7 @@ import {
   Scale,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
+  SlidersHorizontal,
   Users,
   Building,
   Calendar,
@@ -134,8 +134,8 @@ export function FairnessAuditModal({
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Counterfactuals
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                  <Sparkles className="size-3.5" /> TESTED
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                  TESTED
                 </span>
               </div>
               <p className="mt-3 font-display text-4xl font-bold">{permutations}</p>
@@ -213,7 +213,7 @@ export function FairnessAuditModal({
               </div>
 
               <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-3">
-                <Sparkles className="mt-0.5 size-5 shrink-0 text-primary" />
+                <SlidersHorizontal className="mt-0.5 size-5 shrink-0 text-primary" />
                 <div className="text-xs">
                   <p className="font-semibold text-foreground">Tone & Agentic Phrasing</p>
                   <p className="mt-1 text-muted-foreground">

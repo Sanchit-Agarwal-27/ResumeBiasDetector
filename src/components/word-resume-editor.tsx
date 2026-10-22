@@ -36,7 +36,6 @@ import {
   Space,
   SplitSquareVertical,
   Minus,
-  Sparkles,
   Highlighter,
   Indent,
   Outdent,
@@ -3112,8 +3111,8 @@ export function WordResumeEditor({
 
         <div className="flex items-center gap-3">
           {biasSpans.length > 0 && (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
-              <Sparkles className="size-3" />
+            <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+              <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
               <span>{biasSpans.length} bias highlights tracked</span>
             </span>
           )}

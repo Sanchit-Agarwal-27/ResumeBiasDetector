@@ -17,6 +17,7 @@ import {
   Compass,
   Cpu,
   Database,
+  Download,
   FileText,
   HelpCircle,
   KeyRound,
@@ -32,7 +33,6 @@ import {
   Server,
   Shield,
   ShieldCheck,
-  Sparkles,
   Sun,
   Target,
   Trash2,
@@ -111,13 +111,27 @@ export function AccountSettingsModal({
   engineMode = "local",
   onEngineModeChange,
 }: AccountSettingsModalProps) {
-  const { user, updateProfile, resetPassword, logout, deleteAccount, clearWorkspaceCache } =
-    useAuth();
+  const {
+    user,
+    updateProfile,
+    resetPassword,
+    logout,
+    deleteAccount,
+    purgeAllUserData,
+    exportPersonalDataJson,
+    clearWorkspaceCache,
+  } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<
     "profile" | "security" | "privacy" | "engine" | "appearance" | "feedback"
   >(defaultTab);
+
+  // Privacy & GDPR States
+  const [isPurgingVault, setIsPurgingVault] = useState(false);
+  const [isExportingData, setIsExportingData] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteInputText, setDeleteInputText] = useState("");
 
   // Engine Backend States
   const [selectedEngine, setSelectedEngine] = useState<"local" | "fastapi">(engineMode);
@@ -808,18 +822,12 @@ export function AccountSettingsModal({
                     variant="destructive"
                     className="text-xs"
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          "Are you certain you want to permanently delete your account and erase local data?",
-                        )
-                      ) {
-                        deleteAccount();
-                        onOpenChange(false);
-                      }
+                      setActiveTab("privacy");
+                      setDeleteConfirmOpen(true);
                     }}
                   >
                     <Trash2 className="size-3.5 mr-1.5" />
-                    Delete Account
+                    Review & Erase Account Data (GDPR Art. 17)
                   </Button>
                 </div>
               </div>
@@ -833,7 +841,28 @@ export function AccountSettingsModal({
                 <h3 className="text-base font-bold text-foreground">Privacy & Data Governance</h3>
                 <p className="text-xs text-muted-foreground">
                   BiasLens is engineered with privacy-first principles. Customize how your resume
-                  document data is preserved.
+                  document data is preserved and exercise your GDPR/CCPA data rights.
+                </p>
+              </div>
+
+              {/* 100% Private Client-Side Guarantee Card */}
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+                    <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      100% Private (Client-Side Processing)
+                    </h4>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                    Active Guarantee
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Your resume documents, contact details, and career history are processed entirely
+                  client-side in your local browser sandbox. BiasLens does not scrape, sell, or index
+                  your personal data. Cloud Vault synchronization is completely optional, user-initiated,
+                  and secured with encrypted Row-Level Security (RLS).
                 </p>
               </div>
 
@@ -964,6 +993,155 @@ export function AccountSettingsModal({
                   <Button size="sm" onClick={handleSavePrivacy} className="text-xs font-semibold">
                     Save Privacy Settings
                   </Button>
+                </div>
+
+                {/* GDPR & CCPA USER DATA RIGHTS */}
+                <div className="mt-6 pt-6 border-t border-border space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Compliance & Data Rights (GDPR & CCPA)
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Exercise your statutory rights under GDPR Articles 17 & 20 and CCPA.
+                    </p>
+                  </div>
+
+                  {/* GDPR Article 20: Data Portability */}
+                  <div className="p-4 rounded-xl border border-border bg-card flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Download className="size-4 text-sky-500" />
+                        <span className="text-xs font-bold text-foreground">
+                          Export Personal Data (GDPR Art. 20)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Download a machine-readable JSON archive containing your profile, resumes,
+                        versions, and audits.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isExportingData}
+                      onClick={async () => {
+                        setIsExportingData(true);
+                        try {
+                          await exportPersonalDataJson();
+                        } finally {
+                          setIsExportingData(false);
+                        }
+                      }}
+                      className="text-xs gap-1.5 shrink-0"
+                    >
+                      <Download className="size-3.5" />
+                      {isExportingData ? "Exporting..." : "Download JSON"}
+                    </Button>
+                  </div>
+
+                  {/* GDPR Article 17: Purge Document Vault */}
+                  <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Trash2 className="size-4 text-amber-600 dark:text-amber-400" />
+                        <span className="text-xs font-bold text-foreground">
+                          Purge Document Vault (GDPR Art. 17)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Erase all cloud resumes, version snapshots, and custom fonts while keeping
+                        your user login active.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isPurgingVault}
+                      onClick={async () => {
+                        if (
+                          window.confirm(
+                            "Are you sure you want to purge all stored resumes and version history? Your profile login will remain, but all document records will be erased.",
+                          )
+                        ) {
+                          setIsPurgingVault(true);
+                          try {
+                            await purgeAllUserData();
+                          } finally {
+                            setIsPurgingVault(false);
+                          }
+                        }
+                      }}
+                      className="text-xs border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 shrink-0"
+                    >
+                      {isPurgingVault ? "Purging..." : "Purge All Documents"}
+                    </Button>
+                  </div>
+
+                  {/* Complete Account Erasure (Right to be Forgotten) */}
+                  <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="size-4 text-destructive" />
+                      <h4 className="text-xs font-bold text-destructive">
+                        Right to be Forgotten (Account Deletion)
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Permanently wipes your authentication account, public profile, all resume
+                      records, custom fonts, and local cache. This action is irreversible.
+                    </p>
+
+                    {deleteConfirmOpen ? (
+                      <div className="space-y-2 p-3 rounded-lg border border-destructive/30 bg-background/80">
+                        <p className="text-xs font-medium text-foreground">
+                          Type <span className="font-mono font-bold text-destructive">DELETE</span>{" "}
+                          to confirm permanent erasure:
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            size={1}
+                            value={deleteInputText}
+                            onChange={(e) => setDeleteInputText(e.target.value)}
+                            placeholder="Type DELETE"
+                            className="h-8 text-xs font-mono max-w-[140px]"
+                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteInputText.trim() !== "DELETE"}
+                            onClick={async () => {
+                              await deleteAccount();
+                              onOpenChange(false);
+                            }}
+                            className="text-xs gap-1.5"
+                          >
+                            <Trash2 className="size-3.5" />
+                            Confirm Erasure
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDeleteConfirmOpen(false);
+                              setDeleteInputText("");
+                            }}
+                            className="text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                        className="text-xs gap-1.5"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Permanently Delete Account & Data
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

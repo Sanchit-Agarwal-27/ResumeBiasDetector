@@ -303,3 +303,117 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ==============================================================================
+-- 9. GDPR COMPLIANCE & PRIVACY RPC FUNCTIONS (RIGHT TO BE FORGOTTEN)
+-- ==============================================================================
+
+-- 9.1 Purge all resumes, version history, audits, and custom fonts for current user
+create or replace function public.purge_user_data()
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  curr_uid uuid;
+begin
+  curr_uid := auth.uid();
+  if curr_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  -- Delete user's custom fonts
+  delete from public.user_fonts where user_id = curr_uid;
+
+  -- Delete user's resumes (cascades to resume_pages, canvas_blocks, bias_audits, resume_versions)
+  delete from public.resumes where user_id = curr_uid;
+end;
+$$;
+
+-- 9.2 Complete account deletion (GDPR Article 17 Right to Erasure)
+create or replace function public.delete_user_account()
+returns void
+language plpgsql
+security definer set search_path = public, auth
+as $$
+declare
+  curr_uid uuid;
+begin
+  curr_uid := auth.uid();
+  if curr_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  -- 1. Purge all user documents and custom fonts
+  delete from public.user_fonts where user_id = curr_uid;
+  delete from public.resumes where user_id = curr_uid;
+
+  -- 2. Delete public profile
+  delete from public.profiles where id = curr_uid;
+
+  -- 3. Delete from auth.users (security definer permits authenticated caller to erase own row)
+  delete from auth.users where id = curr_uid;
+end;
+$$;
+
+grant execute on function public.purge_user_data() to authenticated;
+grant execute on function public.delete_user_account() to authenticated;
+
+-- ==============================================================================
+-- 10. SUPABASE STORAGE BUCKETS & STORAGE ROW-LEVEL SECURITY
+-- ==============================================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values 
+  ('resumes-archive', 'resumes-archive', false, 52428800, array['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/json']),
+  ('user-fonts', 'user-fonts', true, 10485760, array['font/woff2', 'font/woff', 'font/ttf', 'font/otf', 'application/font-woff2', 'application/x-font-ttf'])
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Storage RLS: Resumes Archive (Private to authenticated user)
+drop policy if exists "Users can upload their own resume archives" on storage.objects;
+create policy "Users can upload their own resume archives"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'resumes-archive' 
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Users can view their own resume archives" on storage.objects;
+create policy "Users can view their own resume archives"
+  on storage.objects for select
+  using (
+    bucket_id = 'resumes-archive' 
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Users can delete their own resume archives" on storage.objects;
+create policy "Users can delete their own resume archives"
+  on storage.objects for delete
+  using (
+    bucket_id = 'resumes-archive' 
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Storage RLS: User Fonts (Public read, private write/delete)
+drop policy if exists "Anyone can read user fonts" on storage.objects;
+create policy "Anyone can read user fonts"
+  on storage.objects for select
+  using (bucket_id = 'user-fonts');
+
+drop policy if exists "Users can upload their own custom fonts" on storage.objects;
+create policy "Users can upload their own custom fonts"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'user-fonts' 
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Users can delete their own custom fonts" on storage.objects;
+create policy "Users can delete their own custom fonts"
+  on storage.objects for delete
+  using (
+    bucket_id = 'user-fonts' 
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+

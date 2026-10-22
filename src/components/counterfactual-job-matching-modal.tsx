@@ -1,14 +1,14 @@
 import { useState, useMemo } from "react";
 import {
   Target,
-  Sparkles,
+  Loader2,
   CheckCircle2,
   AlertTriangle,
   TrendingUp,
   Copy,
   Plus,
   FileText,
-  BrainCircuit,
+  GitCompare,
   ArrowUpRight,
   ShieldCheck,
   Check,
@@ -246,7 +246,7 @@ export function CounterfactualJobMatchingModal({
               className="text-xs font-medium"
               disabled={!activeResult}
             >
-              <BrainCircuit className="h-3.5 w-3.5 mr-1.5" />
+              <GitCompare className="h-3.5 w-3.5 mr-1.5" />
               Counterfactual Projection
             </TabsTrigger>
           </TabsList>
@@ -330,14 +330,11 @@ export function CounterfactualJobMatchingModal({
                 >
                   {isSimulating ? (
                     <>
-                      <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       Simulating ATS Ranking...
                     </>
                   ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Run Match Simulation
-                    </>
+                    "Run Match Simulation"
                   )}
                 </Button>
               </div>

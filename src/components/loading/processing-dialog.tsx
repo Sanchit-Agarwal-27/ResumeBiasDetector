@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, Sparkles, FileText, Layers, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Scale, FileText, Layers, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,7 @@ export const PROCESSING_STEPS: ProcessingStep[] = [
     id: "analyze",
     label: "Auditing Bias Taxonomy",
     description: "Screening gender, age, prestige, disability, and gap phrasing",
-    icon: Sparkles,
+    icon: Scale,
   },
   {
     id: "fairness",

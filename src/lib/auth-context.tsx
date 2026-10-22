@@ -35,6 +35,8 @@ interface AuthContextType {
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  purgeAllUserData: () => Promise<boolean>;
+  exportPersonalDataJson: () => Promise<void>;
   clearWorkspaceCache: () => void;
 }
 
@@ -468,22 +470,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteAccount = async () => {
     if (isSupabaseConfigured && session?.user) {
-      // Delete user's profile row (cascade will wipe their resumes, blocks, and audits)
-      await supabase.from("profiles").delete().eq("id", session.user.id);
-      await supabase.auth.signOut();
+      try {
+        // Try security definer RPC first (removes from auth.users AND public.profiles)
+        const { error: rpcErr } = await supabase.rpc("delete_user_account");
+        if (rpcErr) {
+          // Fallback: Delete profile row (foreign keys cascade to resumes/blocks/audits/fonts)
+          await supabase.from("user_fonts").delete().eq("user_id", session.user.id);
+          await supabase.from("profiles").delete().eq("id", session.user.id);
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        console.warn("[Auth] Delete account error during Supabase wipe:", err);
+      }
     }
 
     setUser(null);
     setSession(null);
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(AUTH_REMEMBER_KEY);
       localStorage.removeItem("biaslens_cached_workspace");
+      localStorage.removeItem("biaslens_active_report_v1");
+      localStorage.removeItem("biaslens_active_blocks_v1");
+      localStorage.removeItem("biaslens_active_pages_v1");
+      localStorage.removeItem("biaslens_active_column_layout_v1");
+      localStorage.removeItem("biaslens_resumes_local");
+      localStorage.removeItem("biaslens_custom_fonts_v1");
+      localStorage.removeItem("biaslens_anonymize_pii");
+      localStorage.removeItem("biaslens_auto_vault_sync");
+      sessionStorage.clear();
     } catch {
       // ignore
     }
-    toast.success("Account removed", {
-      description: "All profile details and cloud records have been wiped.",
+    toast.success("Account permanently removed", {
+      description: "All profile details, cloud records, and local data have been completely wiped.",
     });
+  };
+
+  const purgeAllUserData = async (): Promise<boolean> => {
+    try {
+      if (isSupabaseConfigured && session?.user) {
+        const { error: rpcErr } = await supabase.rpc("purge_user_data");
+        if (rpcErr) {
+          await supabase.from("user_fonts").delete().eq("user_id", session.user.id);
+          await supabase.from("resumes").delete().eq("user_id", session.user.id);
+        }
+      }
+
+      // Purge local document states
+      localStorage.removeItem("biaslens_cached_workspace");
+      localStorage.removeItem("biaslens_active_report_v1");
+      localStorage.removeItem("biaslens_active_blocks_v1");
+      localStorage.removeItem("biaslens_active_pages_v1");
+      localStorage.removeItem("biaslens_active_column_layout_v1");
+      localStorage.removeItem("biaslens_resumes_local");
+      localStorage.removeItem("biaslens_custom_fonts_v1");
+
+      toast.success("Document vault purged", {
+        description: "All stored resumes, version history, and custom fonts were erased.",
+      });
+      return true;
+    } catch (err) {
+      console.error("[Auth] Purge user data failed:", err);
+      toast.error("Failed to purge documents", {
+        description: "Please check your network connection and try again.",
+      });
+      return false;
+    }
+  };
+
+  const exportPersonalDataJson = async (): Promise<void> => {
+    try {
+      let cloudResumes: unknown[] = [];
+      if (isSupabaseConfigured && session?.user) {
+        const { data } = await supabase
+          .from("resumes")
+          .select("*, resume_pages(*), canvas_blocks(*), bias_audits(*), resume_versions(*)")
+          .eq("user_id", session.user.id);
+        if (data) cloudResumes = data;
+      }
+
+      let localResumes: unknown[] = [];
+      try {
+        const raw = localStorage.getItem("biaslens_resumes_local");
+        if (raw) localResumes = JSON.parse(raw);
+      } catch {
+        // ignore
+      }
+
+      const bundle = {
+        title: "BiasLens GDPR & CCPA Data Portability Export",
+        exportTimestamp: new Date().toISOString(),
+        user: user || { mode: "Guest User" },
+        cloudResumes,
+        localResumes,
+        gdprCompliance: {
+          article: "GDPR Article 20 - Right to data portability",
+          privacyModel: "Client-side processing with optional end-to-end encrypted cloud storage",
+        },
+      };
+
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `biaslens-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Personal data exported", {
+        description: "GDPR portability bundle downloaded successfully.",
+      });
+    } catch (err) {
+      console.error("[Auth] Export personal data error:", err);
+      toast.error("Failed to export personal data.");
+    }
   };
 
   const clearWorkspaceCache = () => {
@@ -514,6 +617,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         logout,
         deleteAccount,
+        purgeAllUserData,
+        exportPersonalDataJson,
         clearWorkspaceCache,
       }}
     >

@@ -4,8 +4,7 @@ import {
   FileText,
   CheckCircle2,
   ShieldCheck,
-  Sparkles,
-  Bot,
+  Loader2,
   Copy,
   Check,
   Layers,
@@ -246,8 +245,8 @@ export function VectorPdfExportModal({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-1">
           <TabsList className="grid grid-cols-2 w-full mb-3">
             <TabsTrigger value="ats-stream" className="text-xs font-medium">
-              <Bot className="h-3.5 w-3.5 mr-1.5" />
-              ATS Parser Bot Preview
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              ATS Parser Preview
             </TabsTrigger>
             <TabsTrigger value="checklist" className="text-xs font-medium">
               <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
@@ -319,18 +318,15 @@ export function VectorPdfExportModal({
               size="sm"
               onClick={handleDownload}
               disabled={isExporting}
-              className="h-8 text-xs font-medium gap-1.5 shadow-sm"
+              className="h-8 text-xs font-medium shadow-sm"
             >
               {isExporting ? (
                 <>
-                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
                   Compiling Vector PDF...
                 </>
               ) : (
-                <>
-                  <Download className="h-3.5 w-3.5" />
-                  Download Certified PDF
-                </>
+                "Download Certified PDF"
               )}
             </Button>
           </div>

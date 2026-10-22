@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Type, Upload, Trash2, Check, Sparkles, FileText, Loader2 } from "lucide-react";
+import { Type, Upload, Trash2, Check, FileText, Loader2 } from "lucide-react";
 import {
   uploadCustomFontFile,
   deleteCustomFont,

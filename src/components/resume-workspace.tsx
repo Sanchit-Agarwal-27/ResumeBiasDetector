@@ -20,7 +20,7 @@ import {
   ScanSearch,
   Server,
   ShieldCheck,
-  Sparkles,
+  HelpCircle,
   Sun,
   Moon,
   Target,
@@ -1075,7 +1075,7 @@ export function ResumeWorkspace() {
                     }}
                     className="cursor-pointer text-xs"
                   >
-                    <Sparkles className="size-3.5 mr-2 text-emerald-500" />
+                    <HelpCircle className="size-3.5 mr-2 text-primary" />
                     <span>Help & Feedback</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -1140,9 +1140,8 @@ export function ResumeWorkspace() {
             </div>
 
             <div className="mt-6">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Sparkles className="size-3.5" />
-                <span>AI-Powered Resume Bias Detection & Document Editor</span>
+              <div className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <span>Resume Bias Detection & Document Editor</span>
               </div>
               <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                 Welcome to BiasLens
@@ -1177,10 +1176,9 @@ export function ResumeWorkspace() {
                     const bundle = await loadResumeBundle(recentCloudResume.id);
                     if (bundle) handleLoadResumeBundle(bundle);
                   }}
-                  className="shrink-0 h-8 text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer"
+                  className="shrink-0 h-8 text-xs font-semibold shadow-2xs cursor-pointer"
                 >
-                  <span>Resume Project</span>
-                  <Sparkles className="size-3" />
+                  Resume Project
                 </Button>
               </div>
             )}
@@ -1218,7 +1216,7 @@ export function ResumeWorkspace() {
                 className="flex flex-col items-center justify-center rounded-xl border border-border bg-background/50 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 hover:shadow-xs group cursor-pointer"
               >
                 <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <Sparkles className="size-5" />
+                  <FileText className="size-5" />
                 </div>
                 <span className="mt-3 text-xs font-bold text-foreground">Explore Sample</span>
                 <span className="mt-1 text-[11px] text-muted-foreground">Preloaded bias demo</span>
@@ -1403,7 +1401,7 @@ export function ResumeWorkspace() {
           >
             {report.spans.length === 0 ? (
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-                <Sparkles className="size-3.5" />
+                <CheckCircle2 className="size-3.5" />
                 <span>Zero bias signals</span>
               </div>
             ) : (
@@ -1591,6 +1589,14 @@ export function ResumeWorkspace() {
                 <DropdownMenuItem onSelect={() => setEthicsModalOpen(true)}>
                   <ShieldCheck className="size-4 text-emerald-600" /> Ethics & Methodology
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setAccountModalTab("privacy");
+                    setAccountModalOpen(true);
+                  }}
+                >
+                  <LockKeyhole className="size-4 text-amber-500" /> Privacy & Client-Side Guarantee
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1678,7 +1684,7 @@ export function ResumeWorkspace() {
                       className="cursor-pointer text-xs"
                     >
                       <LockKeyhole className="size-3.5 mr-2 text-amber-500" />
-                      <span>Privacy & Data</span>
+                      <span>Privacy & Data Guarantee</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
@@ -1710,7 +1716,7 @@ export function ResumeWorkspace() {
                       }}
                       className="cursor-pointer text-xs"
                     >
-                      <Sparkles className="size-3.5 mr-2 text-emerald-500" />
+                      <HelpCircle className="size-3.5 mr-2 text-primary" />
                       <span>Help & Feedback</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -1747,6 +1753,16 @@ export function ResumeWorkspace() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
+                        setAccountModalTab("privacy");
+                        setAccountModalOpen(true);
+                      }}
+                      className="cursor-pointer text-xs"
+                    >
+                      <LockKeyhole className="size-3.5 mr-2 text-amber-500" />
+                      <span>Privacy & Data Guarantee</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
                         setAccountModalTab("engine");
                         setAccountModalOpen(true);
                       }}
@@ -1775,7 +1791,7 @@ export function ResumeWorkspace() {
                       }}
                       className="cursor-pointer text-xs"
                     >
-                      <Sparkles className="size-3.5 mr-2 text-amber-500" />
+                      <HelpCircle className="size-3.5 mr-2 text-primary" />
                       <span>Help & Feedback</span>
                     </DropdownMenuItem>
                   </>
@@ -1916,7 +1932,6 @@ export function ResumeWorkspace() {
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <Sparkles className="size-3 text-emerald-500" />
                     <span>Sentence XAI ({report.classified_sentences?.length || 0})</span>
                   </button>
                 </div>
@@ -2039,7 +2054,7 @@ export function ResumeWorkspace() {
                       </div>
                       <div>
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          <Sparkles className="size-3" />
+                          <CheckCircle2 className="size-3" />
                           100% Bias-Free
                         </span>
                         <h3 className="mt-2.5 font-display text-xl font-bold tracking-tight text-foreground">
@@ -2066,11 +2081,10 @@ export function ResumeWorkspace() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full gap-2 text-xs"
+                          className="w-full text-xs"
                           onClick={() => setSidebarTab("sentences")}
                         >
-                          <Sparkles className="size-3.5 text-emerald-500" />
-                          <span>View Sentence Breakdown</span>
+                          View Sentence Breakdown
                         </Button>
                         <Button
                           variant="outline"

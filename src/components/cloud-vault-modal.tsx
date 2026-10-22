@@ -12,7 +12,6 @@ import {
   Check,
   ShieldCheck,
   Target,
-  Sparkles,
   Calendar,
   Cloud,
   Layers,
@@ -251,8 +250,7 @@ export function CloudVaultModal({
             <div className="p-4 rounded-xl border bg-muted/20 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Save Snapshot Checkpoint
                   </h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
