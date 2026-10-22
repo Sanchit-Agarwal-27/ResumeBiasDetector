@@ -49,4 +49,3 @@ export function tokenize(sentence: string): string[] {
     .split(/\s+/)
     .filter(Boolean);
 }
-

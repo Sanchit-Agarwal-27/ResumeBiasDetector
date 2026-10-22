@@ -108,7 +108,10 @@ console.log(`    False Positive Rate:  ${(benchmarkFpr * 100).toFixed(2)}%`);
 console.log(`    F1 Score:             ${(benchmarkF1 * 100).toFixed(2)}%\n`);
 
 assert(benchmarkAccuracy === 1.0, "Benchmark achieves 100% accuracy on all 30 samples");
-assert(benchmarkFpr === 0.0, "Benchmark achieves 0% False Positive Rate (zero false alarms on technical sentences)");
+assert(
+  benchmarkFpr === 0.0,
+  "Benchmark achieves 0% False Positive Rate (zero false alarms on technical sentences)",
+);
 assert(benchmarkRecall === 1.0, "Benchmark achieves 100% Recall (zero missed biases)");
 
 // ============================================================================
@@ -157,10 +160,7 @@ assert(
   "Neutral resume receives 100% neutrality score",
   `Got score ${neutralResult.neutrality_score}, spans: ${neutralResult.spans.length}`,
 );
-assert(
-  neutralResult.spans.length === 0,
-  "Neutral resume generates 0 flagged spans",
-);
+assert(neutralResult.spans.length === 0, "Neutral resume generates 0 flagged spans");
 
 // Test 3.2: Technical achievements with polysemous keywords (aggressively, caching tiers, accessibility)
 const technicalAchievementsResume = `
@@ -209,10 +209,7 @@ assert(
 const allHaveExplanations = biasedResult.spans.every(
   (s) => s.explanation && s.explanation.length > 20 && s.classification === "Flagged",
 );
-assert(
-  allHaveExplanations,
-  "All flagged spans contain rich, grounded XAI explanations",
-);
+assert(allHaveExplanations, "All flagged spans contain rich, grounded XAI explanations");
 
 // Test 3.4: Counterfactual audit execution
 const audit = runCounterfactualFairnessAudit(technicalAchievementsResume, technicalResult.spans);
@@ -233,10 +230,7 @@ async function testServiceLayer() {
     technicalAchievementsResume,
     "Jane_Doe_Resume.pdf",
   );
-  assert(
-    serviceReport.file_name === "Jane_Doe_Resume.pdf",
-    "Service layer preserves file name",
-  );
+  assert(serviceReport.file_name === "Jane_Doe_Resume.pdf", "Service layer preserves file name");
   assert(
     serviceReport.neutrality_score === 100,
     "Service layer returns 100% neutrality score for technical resume",
@@ -257,7 +251,9 @@ await testServiceLayer();
 // FINAL SUMMARY
 // ============================================================================
 console.log("\n================================================================================");
-console.log(` Test Execution Completed: ${passedTests}/${totalTests} Passed (${failedTests} Failed)`);
+console.log(
+  ` Test Execution Completed: ${passedTests}/${totalTests} Passed (${failedTests} Failed)`,
+);
 console.log("================================================================================");
 
 if (failedTests > 0) {
@@ -266,4 +262,3 @@ if (failedTests > 0) {
   console.log(" All test suites passed successfully!\n");
   process.exit(0);
 }
-

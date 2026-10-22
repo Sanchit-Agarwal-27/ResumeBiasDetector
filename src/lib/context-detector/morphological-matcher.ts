@@ -5,7 +5,7 @@
  * and lemmas while avoiding substring false-positives (e.g. 'age' in 'manage' or 'fit' in 'benefit').
  */
 
-import { EXPANDED_TAXONOMY } from "./expanded-taxonomy";
+import { EXPANDED_TAXONOMY, type ExpandedTaxonomyItem } from "./expanded-taxonomy";
 import { VARIANT_TYPES, type CandidateMatch } from "./types";
 
 function escapeRegex(text: string): string {
@@ -17,7 +17,7 @@ interface CompiledVariant {
   type: string;
   regex: RegExp;
   wordCount: number;
-  entry: any;
+  entry: ExpandedTaxonomyItem;
 }
 
 /**
@@ -125,7 +125,8 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
           "Listing graduation dates older than 10-15 years operates as an age proxy in automated candidate screening.",
         researchCitation: "EEOC ADEA Guidance & Neumark et al. (2019)",
         replacement: "Remove graduation year",
-        rationale: "Omitting graduation dates neutralizes age proxies while keeping degree credentials intact.",
+        rationale:
+          "Omitting graduation dates neutralizes age proxies while keeping degree credentials intact.",
         entry: {
           canonicalTerm: "graduation_year",
           category: "age_indicative",
@@ -133,7 +134,8 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
           severity: "medium",
           confidence: 0.95,
           replacement: "Remove graduation year",
-          explanation: "Listing graduation dates older than 10-15 years operates as an age proxy in automated candidate screening.",
+          explanation:
+            "Listing graduation dates older than 10-15 years operates as an age proxy in automated candidate screening.",
           researchCitation: "EEOC ADEA Guidance & Neumark et al. (2019)",
           variants: [{ form: matchedText, type: VARIANT_TYPES.BASE_FORM }],
         },
@@ -149,4 +151,3 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
   spans.sort((a, b) => a.start - b.start);
   return spans;
 }
-

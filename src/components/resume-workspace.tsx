@@ -110,7 +110,12 @@ const categories: Array<{ key: "all" | BiasCategory; short: string; label: strin
     { key: "prestige_proxy", short: "Prestige", label: "Prestige proxy", dot: "bg-prestige" },
     { key: "gap_framing", short: "Career gap", label: "Career gap", dot: "bg-gap" },
     { key: "disability_coded", short: "Disability", label: "Disability-coded", dot: "bg-gap" },
-    { key: "personality_behavioral", short: "Personality", label: "Personality & Behavioral", dot: "bg-amber-500" },
+    {
+      key: "personality_behavioral",
+      short: "Personality",
+      label: "Personality & Behavioral",
+      dot: "bg-amber-500",
+    },
   ];
 
 const categoryLabels: Record<BiasCategory, string> = {
@@ -1940,9 +1945,7 @@ export function ResumeWorkspace() {
                         <span className="font-semibold text-muted-foreground block mb-1">
                           Full Sentence Context:
                         </span>
-                        <p className="italic text-foreground">
-                          “{activeSpan.sentence}”
-                        </p>
+                        <p className="italic text-foreground">“{activeSpan.sentence}”</p>
                       </div>
                     )}
 
@@ -2026,8 +2029,8 @@ export function ResumeWorkspace() {
                           Screening-Optimized
                         </h3>
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                          Zero bias markers detected across gender, age, prestige, gap, and disability
-                          taxonomy. Your resume is ready for fair applicant tracking.
+                          Zero bias markers detected across gender, age, prestige, gap, and
+                          disability taxonomy. Your resume is ready for fair applicant tracking.
                         </p>
                       </div>
                       <div className="flex flex-col gap-2 pt-2">
@@ -2131,7 +2134,11 @@ export function ResumeWorkspace() {
                         className="h-7 text-xs capitalize rounded-md"
                         onClick={() => setSentenceFilter(mode)}
                       >
-                        {mode === "all" ? "All" : mode === "flagged" ? "Flagged Only" : "Fine (Safe)"}
+                        {mode === "all"
+                          ? "All"
+                          : mode === "flagged"
+                            ? "Flagged Only"
+                            : "Fine (Safe)"}
                       </Button>
                     ))}
                   </div>
@@ -2193,7 +2200,9 @@ export function ResumeWorkspace() {
                             )}
 
                             <div className="rounded bg-background/80 p-2.5 border text-muted-foreground leading-relaxed text-[11px]">
-                              <span className="font-semibold text-foreground block mb-0.5">XAI Grounding:</span>
+                              <span className="font-semibold text-foreground block mb-0.5">
+                                XAI Grounding:
+                              </span>
                               {s.explanation}
                             </div>
 
@@ -2204,7 +2213,9 @@ export function ResumeWorkspace() {
                                 className="w-full text-xs h-7 mt-1 text-primary"
                                 onClick={() => {
                                   const matchingSpan = report.spans.find(
-                                    (sp) => sp.sentence === s.sentence || s.sentence.includes(sp.matched_text),
+                                    (sp) =>
+                                      sp.sentence === s.sentence ||
+                                      s.sentence.includes(sp.matched_text),
                                   );
                                   if (matchingSpan) {
                                     setActiveId(matchingSpan.id);

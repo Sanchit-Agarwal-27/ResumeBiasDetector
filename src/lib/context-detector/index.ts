@@ -9,4 +9,3 @@ export * from "./expanded-taxonomy";
 export * from "./morphological-matcher";
 export * from "./local-context-engine";
 export * from "./sentence-classifier";
-

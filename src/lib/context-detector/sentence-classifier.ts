@@ -28,10 +28,7 @@ import {
  * @param surroundingText Optional surrounding paragraph/document context.
  * @returns Stage 5 structured output: { sentence, keyword_match, classification, confidence, explanation, contextType }
  */
-export function classifySentence(
-  sentence: string,
-  surroundingText = "",
-): ClassifiedSentence {
+export function classifySentence(sentence: string, surroundingText = ""): ClassifiedSentence {
   if (!sentence || typeof sentence !== "string" || sentence.trim().length === 0) {
     return {
       sentence: sentence || "",
@@ -328,9 +325,7 @@ export function classifySentence(
   ) {
     // If 'young' is used descriptively in an achievement sentence:
     // e.g. "She is a young engineer who developed a distributed system."
-    const youngCandidate = candidates.find(
-      (c) => c.matchedText.toLowerCase() === "young",
-    );
+    const youngCandidate = candidates.find((c) => c.matchedText.toLowerCase() === "young");
     if (youngCandidate) {
       return {
         sentence: trimmedSentence,
@@ -361,7 +356,7 @@ export function classifySentence(
   // Rule 10: Technical Skills, Competencies, and Inanimate Architecture
   // e.g. "Strong background in Python and distributed databases with proven problem-solving skills."
   // e.g. "Designed a flexible, modular microservices architecture."
-  if (hasSkillNoun || (tokens.includes("architecture") || tokens.includes("framework"))) {
+  if (hasSkillNoun || tokens.includes("architecture") || tokens.includes("framework")) {
     const techSkillCandidate = candidates.find(
       (c) =>
         c.matchedText.toLowerCase() === "strong" ||
@@ -369,7 +364,8 @@ export function classifySentence(
         c.matchedText.toLowerCase() === "adaptable",
     );
     if (techSkillCandidate) {
-      const target = tokens.find((t) => SKILL_AND_COMPETENCY_NOUNS.has(t)) || "technical architecture";
+      const target =
+        tokens.find((t) => SKILL_AND_COMPETENCY_NOUNS.has(t)) || "technical architecture";
       return {
         sentence: trimmedSentence,
         keyword_match: matchedKeywords,
@@ -386,7 +382,8 @@ export function classifySentence(
   // e.g. "Conducted comprehensive competitive analysis against top five market competitors to guide product pricing."
   // e.g. "The team adopted an aggressive optimization strategy to reduce processing time."
   if (hasStrategyObject && !hasInterpersonalTarget) {
-    const stratObj = tokens.find((t) => STRATEGY_AND_BUSINESS_OBJECTS.has(t)) || "business strategy";
+    const stratObj =
+      tokens.find((t) => STRATEGY_AND_BUSINESS_OBJECTS.has(t)) || "business strategy";
     const stratCandidate = candidates[0];
     return {
       sentence: trimmedSentence,
@@ -493,10 +490,7 @@ export function classifySentence(
  * @param surroundingText Optional document context.
  * @returns Array of structured Stage 5 sentence results with offsets.
  */
-export function classifyDocument(
-  text: string,
-  surroundingText = "",
-): ClassifiedSentence[] {
+export function classifyDocument(text: string, surroundingText = ""): ClassifiedSentence[] {
   if (!text || typeof text !== "string") return [];
   const sentenceSpans = extractSentences(text);
   if (sentenceSpans.length === 0 && text.trim().length > 0) {
@@ -513,4 +507,3 @@ export function classifyDocument(
     return result;
   });
 }
-

@@ -8,11 +8,7 @@ import type {
   ClassifiedSentence as ContractClassifiedSentence,
   ContextSummary,
 } from "./resume-contract";
-import {
-  classifyDocument,
-  classifySentence,
-  CLASSIFICATION,
-} from "./context-detector";
+import { classifyDocument, classifySentence, CLASSIFICATION } from "./context-detector";
 
 export interface TaxonomyRule {
   term: string;
@@ -440,9 +436,7 @@ export function analyzeResumeText(rawText: string): {
         const spanId = `signal-context-${sentenceIndex + 1}-${candIndex + 1}-${spanStart}`;
 
         // Avoid duplicate overlapping spans
-        const overlaps = spans.some(
-          (s) => Math.max(s.start, spanStart) < Math.min(s.end, spanEnd),
-        );
+        const overlaps = spans.some((s) => Math.max(s.start, spanStart) < Math.min(s.end, spanEnd));
 
         if (!overlaps) {
           spans.push({
@@ -500,9 +494,8 @@ export function analyzeResumeText(rawText: string): {
     flagged_sentences: classifiedSentences.filter(
       (s) => s.classification === CLASSIFICATION.FLAGGED,
     ).length,
-    fine_sentences: classifiedSentences.filter(
-      (s) => s.classification === CLASSIFICATION.FINE,
-    ).length,
+    fine_sentences: classifiedSentences.filter((s) => s.classification === CLASSIFICATION.FINE)
+      .length,
     candidate_keywords_detected: totalCandidates,
     exonerated_keywords: exoneratedCandidates,
   };
@@ -641,7 +634,8 @@ export const EVALUATION_BENCHMARK_DATA = [
     recall: 1.0,
     f1_score: 0.61,
     latency_ms: 12,
-    notes: "High false positives (87.5% FPR) on benign technical sentences; flags 'aggressively optimized' and 'caching tiers'.",
+    notes:
+      "High false positives (87.5% FPR) on benign technical sentences; flags 'aggressively optimized' and 'caching tiers'.",
   },
   {
     model_name: "Baseline 2: Zero-Shot Transformer (DistilBERT Contextual)",
@@ -657,6 +651,7 @@ export const EVALUATION_BENCHMARK_DATA = [
     recall: 1.0,
     f1_score: 1.0,
     latency_ms: 8,
-    notes: "Deterministic contextual NLP with 100% precision, 100% recall, 0% FPR, and grounded XAI explanations.",
+    notes:
+      "Deterministic contextual NLP with 100% precision, 100% recall, 0% FPR, and grounded XAI explanations.",
   },
 ];

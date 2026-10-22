@@ -380,4 +380,3 @@ export const CAREER_CONTINUITY_TOKENS = new Set<string>([
   "portfolio",
   "independent",
 ]);
-

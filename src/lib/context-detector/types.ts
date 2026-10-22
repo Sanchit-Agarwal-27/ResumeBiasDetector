@@ -8,7 +8,7 @@ export const CLASSIFICATION = {
   FLAGGED: "Flagged",
 } as const;
 
-export type ClassificationVerdict = typeof CLASSIFICATION[keyof typeof CLASSIFICATION];
+export type ClassificationVerdict = (typeof CLASSIFICATION)[keyof typeof CLASSIFICATION];
 
 export const OUTCOME_CATEGORIES = {
   NO_CONCERN: "No sufficient evidence of a bias concern",
@@ -112,4 +112,3 @@ export interface ClassifiedSentence {
   end?: number;
   candidate_matches?: CandidateMatch[];
 }
-
