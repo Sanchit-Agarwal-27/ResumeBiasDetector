@@ -80,6 +80,7 @@ import {
   type CanvasPage,
   type ColumnLayoutPreset,
 } from "@/lib/pdf-cluster-engine";
+import { extractResumeDocument } from "@/lib/document-parser";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
 import { useAuth } from "@/lib/auth-context";
@@ -751,91 +752,35 @@ export function ResumeWorkspace() {
       let extractedPages: CanvasPage[] = [];
       let rawText = "";
 
-      // Step 1: Clustering & Extraction
+      // Step 1: Layout-Aware Clustering & Extraction
       setProcessingStep(1);
 
-      if (cleanFileName.toLowerCase().endsWith(".docx")) {
-        const mammoth = await import("mammoth");
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        rawText = result.value.trim();
-        extractedBlocks = parseRawTextToCanvasBlocks(rawText, 612, 792);
-        const maxPageIdx = Math.max(0, ...extractedBlocks.map((b) => b.pageIndex));
-        extractedPages = Array.from({ length: maxPageIdx + 1 }, (_, i) => ({
-          id: `page-${i + 1}`,
-          pageNumber: i + 1,
-          width: 612,
-          height: 792,
-        }));
-      } else {
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-        const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-        for (let index = 0; index < pdf.numPages; index++) {
-          const page = await pdf.getPage(index + 1);
-          const viewport = page.getViewport({ scale: 1 });
-          const opList = await page.getOperatorList();
-          const content = await page.getTextContent();
-          const pageBlocks = clusterPdfTextContent(
-            content.items,
-            content.styles,
-            viewport.width,
-            viewport.height,
-            index,
-            (page as unknown as { commonObjs?: unknown }).commonObjs,
-            opList,
-          );
+      const parsedDoc = await extractResumeDocument(arrayBuffer, cleanFileName, {
+        pdfWorkerUrl,
+        allowOcr: true,
+      });
 
-          // Standardize page dimensions to standard resume formats:
-          // US Letter: 612 x 792 pt, A4: 595 x 842 pt
-          let normWidth = 612;
-          let normHeight = 792;
-          if (viewport.width <= 600) {
-            normWidth = 595;
-            normHeight = 842;
-          } else {
-            normWidth = 612;
-            normHeight = 792;
-          }
+      extractedBlocks = parsedDoc.canvasBlocks;
+      extractedPages = parsedDoc.canvasPages;
+      rawText = parsedDoc.cleanedText || parsedDoc.rawText;
 
-          // If content on this viewport page exceeds standard page height,
-          // flow blocks cleanly across multiple standard pages without vertical stretching
-          const contentMaxY =
-            pageBlocks.length > 0 ? Math.max(...pageBlocks.map((b) => b.y + b.height)) : 0;
-          const usablePageHeight = normHeight - 60;
-          const subPagesNeeded = Math.max(1, Math.ceil(contentMaxY / usablePageHeight));
+      // Safe debug telemetry (zero PII logged)
+      console.debug("[ResumeParser Diagnostics]", {
+        fileType: parsedDoc.diagnostics.fileType,
+        pageCount: parsedDoc.diagnostics.pageCount,
+        characterCount: parsedDoc.diagnostics.characterCount,
+        method: parsedDoc.diagnostics.method,
+        ocrTriggered: parsedDoc.diagnostics.ocrTriggered,
+        layout: parsedDoc.diagnostics.columnLayout,
+        score: parsedDoc.diagnostics.validationScore,
+      });
 
-          const basePageIndex = extractedPages.length;
-          for (let sp = 0; sp < subPagesNeeded; sp++) {
-            extractedPages.push({
-              id: `page-${basePageIndex + sp + 1}`,
-              pageNumber: basePageIndex + sp + 1,
-              width: normWidth,
-              height: normHeight,
-            });
-          }
-
-          for (const b of pageBlocks) {
-            const pageOffset = Math.min(Math.floor(b.y / usablePageHeight), subPagesNeeded - 1);
-            const targetPageIndex = basePageIndex + pageOffset;
-            const remappedY =
-              pageOffset > 0
-                ? Math.round(b.y - pageOffset * usablePageHeight + 36)
-                : Math.round(b.y);
-            extractedBlocks.push({
-              ...b,
-              pageIndex: targetPageIndex,
-              y: remappedY,
-              width: Math.min(b.width, normWidth - 72),
-            });
-          }
-        }
-        rawText = extractedBlocks
-          .map((b) => b.text)
-          .join("\n\n")
-          .trim();
+      if (!rawText || !rawText.trim()) {
+        throw new Error(
+          parsedDoc.validation.fallbackReason ||
+            "No readable text found in document. Please upload a clear PDF or DOCX file.",
+        );
       }
-
-      if (!rawText) throw new Error("No selectable text found in file");
       const safeRawText = sanitizeInputText(rawText, 500000);
 
       // Step 2: Bias taxonomy analysis
@@ -871,6 +816,16 @@ export function ResumeWorkspace() {
       toast.success("Resume imported successfully", {
         description: `Detected ${analysis.spans.length} signals with ${analysis.neutrality_score}% neutrality index.`,
       });
+
+      if (parsedDoc.diagnostics.ocrTriggered) {
+        toast.info("Scanned document processed via OCR", {
+          description: `Extracted text using visual optical character recognition fallback.`,
+        });
+      } else if (parsedDoc.diagnostics.columnLayout !== "single") {
+        toast.info("Multi-column layout detected", {
+          description: `Processed ${parsedDoc.diagnostics.columnLayout.replace(/-/g, " ")} layout with preserved reading order.`,
+        });
+      }
 
       if (!isAuthenticated) {
         setTimeout(() => {

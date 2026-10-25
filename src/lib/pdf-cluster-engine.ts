@@ -1,3 +1,9 @@
+import {
+  deduplicateOverlappingFragments,
+  detectPageColumns,
+  orderRunsByLayout,
+} from "./document-parser";
+
 export interface CanvasTextBlock {
   id: string;
   pageIndex: number;
@@ -298,13 +304,16 @@ export function clusterPdfTextContent(
     return [];
   }
 
+  // Deduplicate overlapping shadow text and vector outline duplicates
+  const cleanedFragments = deduplicateOverlappingFragments(rawFragments);
+
   // 4. Baseline clustering into horizontal lines (3.0pt tolerance)
-  rawFragments.sort((a, b) =>
+  cleanedFragments.sort((a, b) =>
     Math.abs(a.baselineY - b.baselineY) > 2.5 ? a.baselineY - b.baselineY : a.x - b.x,
   );
 
   const lines: TextLine[] = [];
-  for (const frag of rawFragments) {
+  for (const frag of cleanedFragments) {
     const matchingLine = lines.find((l) => Math.abs(l.baselineY - frag.baselineY) <= 3.0);
     if (matchingLine) {
       matchingLine.fragments.push(frag);
@@ -411,67 +420,11 @@ export function clusterPdfTextContent(
     if (cur) lineRuns.push({ ...cur });
   }
 
-  // 6. Column architecture check
-  let isTrueTwoColumn = false;
-  let gutterX = viewportWidth * 0.5;
+  // 6. Layout-aware Column & Gutter Detection (supports asymmetric sidebars & equal 2-col)
+  const columns = detectPageColumns(lineRuns, viewportWidth, viewportHeight);
 
-  const fullWidthLineCount = lineRuns.filter((r) => r.width > viewportWidth * 0.55).length;
-  const totalLineCount = lineRuns.length;
-
-  if (totalLineCount > 8 && fullWidthLineCount / totalLineCount < 0.2) {
-    const leftTextLines = lineRuns.filter((r) => r.maxX < viewportWidth * 0.46 && r.y > 100);
-    const rightTextLines = lineRuns.filter((r) => r.x > viewportWidth * 0.54 && r.y > 100);
-
-    if (leftTextLines.length >= 6 && rightTextLines.length >= 6) {
-      const leftYMin = Math.min(...leftTextLines.map((r) => r.y));
-      const leftYMax = Math.max(...leftTextLines.map((r) => r.y));
-      const rightYMin = Math.min(...rightTextLines.map((r) => r.y));
-      const rightYMax = Math.max(...rightTextLines.map((r) => r.y));
-      const verticalOverlap = Math.min(leftYMax, rightYMax) - Math.max(leftYMin, rightYMin);
-
-      if (verticalOverlap > 200) {
-        isTrueTwoColumn = true;
-        const maxLeftX = Math.max(...leftTextLines.map((r) => r.maxX));
-        const minRightX = Math.min(...rightTextLines.map((r) => r.x));
-        gutterX = Math.round((maxLeftX + minRightX) / 2);
-      }
-    }
-  }
-
-  // 7. Order runs
-  let orderedRuns: LineRun[] = [];
-  if (!isTrueTwoColumn) {
-    orderedRuns = [...lineRuns].sort((a, b) => {
-      const diffY = a.baselineY - b.baselineY;
-      if (Math.abs(diffY) > 3) return diffY;
-      return a.x - b.x;
-    });
-  } else {
-    const headerRuns: LineRun[] = [];
-    const leftColRuns: LineRun[] = [];
-    const rightColRuns: LineRun[] = [];
-
-    const firstTwoColY = Math.min(
-      ...lineRuns
-        .filter((r) => (r.maxX < gutterX - 10 && r.y > 80) || (r.x > gutterX + 10 && r.y > 80))
-        .map((r) => r.y),
-    );
-
-    for (const run of lineRuns) {
-      if (run.y < firstTwoColY - 10 || run.width > viewportWidth * 0.6) {
-        headerRuns.push(run);
-      } else if (run.maxX <= gutterX) {
-        leftColRuns.push(run);
-      } else {
-        rightColRuns.push(run);
-      }
-    }
-
-    headerRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
-    leftColRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
-    rightColRuns.sort((a, b) => a.baselineY - b.baselineY || a.x - b.x);
-    orderedRuns = [...headerRuns, ...leftColRuns, ...rightColRuns];
-  }
+  // 7. Reconstruct natural reading order without interleaving columns
+  const orderedRuns = orderRunsByLayout(lineRuns, columns, viewportWidth);
 
   // 8. Natural Paragraph Clustering & Alignment Normalization
   // Detect dominant document body baseline margin

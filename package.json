@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vite-node scripts/test-context-model.ts",
+    "test": "vite-node scripts/test-context-model.ts && vite-node scripts/test-document-parser.ts",
+    "test:parser": "vite-node scripts/test-document-parser.ts",
     "backend:test": "pytest backend/tests/ -v"
   },
   "overrides": {
@@ -73,6 +74,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
+    "tesseract.js": "^7.0.0",
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
