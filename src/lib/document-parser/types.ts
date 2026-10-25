@@ -116,3 +116,4 @@ export interface ParserOptions {
   targetWidth?: number;
   targetHeight?: number;
 }
+

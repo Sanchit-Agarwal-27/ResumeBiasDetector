@@ -1,0 +1,406 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 2813
+>>
+stream
+0.200025 w
+0 G
+BT
+/F2 22 Tf
+25.2999999999999972 TL
+0.059 0.09 0.165 rg
+54. 737. Td
+(Marcus Sterling) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.278 0.333 0.412 rg
+54. 720. Td
+(marcus.sterling@example.com | \(555\) 234-5678 | San Francisco, CA | github.com/msterling) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.227 0.541 rg
+54. 682. Td
+(CORE SKILLS) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+54. 664. Td
+(• TypeScript / Node.js) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+54. 648. Td
+(• Python / FastAPI) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+54. 632. Td
+(• React / Vite / Tailwind) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+54. 616. Td
+(• PostgreSQL / Redis) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+54. 600. Td
+(• Docker / Kubernetes / AWS) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.227 0.541 rg
+54. 562. Td
+(EDUCATION) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+54. 544. Td
+(B.S. in Computer Science) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.059 0.09 0.165 rg
+54. 530. Td
+(University of Michigan, 2018) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 0.227 0.541 rg
+54. 494. Td
+(LANGUAGES) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 0.227 0.541 rg
+54. 478. Td
+(• English \(Native\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 0.227 0.541 rg
+54. 464. Td
+(• Spanish \(Fluent\)) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.118 0.227 0.541 rg
+230. 682. Td
+(PROFESSIONAL EXPERIENCE) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.059 0.09 0.165 rg
+230. 662. Td
+(Lead Backend Architect — CloudFin Systems) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0.392 0.455 0.545 rg
+480. 662. Td
+(2021 - Present) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+230. 646. Td
+(• Architected high-throughput transaction routing gateway supporting 45,000) Tj
+T* (requests/sec.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+230. 618. Td
+(• Reduced database query latency by 55% via multi-tier caching and distributed) Tj
+T* (Redis cluster.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+230. 590. Td
+(• Mentored junior engineers across four product teams, running weekly) Tj
+T* (architecture reviews.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.059 0.09 0.165 rg
+230. 552. Td
+(Senior Software Engineer — TechSphere Solutions) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0.392 0.455 0.545 rg
+480. 552. Td
+(2018 - 2021) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+230. 536. Td
+(• Developed event-driven microservices processing over $850M in annual) Tj
+T* (customer invoices.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.067 0.094 0.153 rg
+230. 508. Td
+(• Optimized CI/CD deployment pipelines, cutting build verification times from) Tj
+T* (35m to 4m.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R ]
+/Count 1
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+/F3 7 0 R
+/F4 8 0 R
+/F5 9 0 R
+/F6 10 0 R
+/F7 11 0 R
+/F8 12 0 R
+/F9 13 0 R
+/F10 14 0 R
+/F11 15 0 R
+/F12 16 0 R
+/F13 17 0 R
+/F14 18 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+19 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20261025213229+05'30')
+>>
+endobj
+20 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 21
+0000000000 65535 f 
+0000002985 00000 n 
+0000004802 00000 n 
+0000000015 00000 n 
+0000000120 00000 n 
+0000003042 00000 n 
+0000003167 00000 n 
+0000003297 00000 n 
+0000003430 00000 n 
+0000003567 00000 n 
+0000003690 00000 n 
+0000003819 00000 n 
+0000003951 00000 n 
+0000004087 00000 n 
+0000004215 00000 n 
+0000004342 00000 n 
+0000004471 00000 n 
+0000004604 00000 n 
+0000004706 00000 n 
+0000005050 00000 n 
+0000005136 00000 n 
+trailer
+<<
+/Size 21
+/Root 20 0 R
+/Info 19 0 R
+/ID [ <1BDC81A0EF43B842AEB9F73EC1B79942> <1BDC81A0EF43B842AEB9F73EC1B79942> ]
+>>
+startxref
+5240
+%%EOF

@@ -58,3 +58,4 @@ export function shouldTriggerOcrFallback(
   if (garbledCharRatio > 0.20 && extractedCharCount < 200) return true;
   return false;
 }
+
