@@ -10,7 +10,7 @@ import JSZip from "jszip";
 import type { CanvasTextBlock, CanvasPage, ParsedResumeDocument, ParserOptions } from "./types";
 import { normalizeResumeText } from "./normalizer";
 import { validateExtraction } from "./validator";
-import { isSectionHeader, isContactLine } from "./layout-analyzer";
+import { isSectionHeader, isContactLine, isDateOrMetadata } from "./layout-analyzer";
 
 /**
  * Decodes common XML entities
@@ -56,7 +56,8 @@ function extractParagraphText(pXml: string): { text: string; isBullet: boolean }
 }
 
 /**
- * Parses table XML into structured text blocks or rows
+ * Parses table XML into structured text blocks or rows.
+ * Preserves entry associations: dates/locations in adjacent cells stay aligned with their jobs/degrees.
  */
 function extractTableText(tblXml: string): string[] {
   const rowMatches = tblXml.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) || [];
@@ -65,9 +66,13 @@ function extractTableText(tblXml: string): string[] {
   // Inspect first row to see if this is a 2-column layout table (often used for sidebar resumes)
   const firstRowCells = rowMatches[0]!.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || [];
 
-  // Check if this table is being used as a 2-column layout container
-  // Symptom: 1 or 2 rows, each cell contains many paragraphs (> 3)
-  if (rowMatches.length <= 3 && firstRowCells.length === 2) {
+  // Check if this table is being used as a true 2-column full-page layout container.
+  // To qualify, it MUST meet ALL criteria:
+  // 1. Exactly 2 cells per row, and at most 2 rows.
+  // 2. Both columns contain >= 5 paragraphs.
+  // 3. Both columns contain distinct recognized section headers (e.g. SKILLS on left, EXPERIENCE on right).
+  // 4. Neither column is purely dates/metadata.
+  if (rowMatches.length <= 2 && firstRowCells.length === 2) {
     const col1Paragraphs: string[] = [];
     const col2Paragraphs: string[] = [];
 
@@ -89,29 +94,65 @@ function extractTableText(tblXml: string): string[] {
       }
     }
 
-    if (col1Paragraphs.length > 2 || col2Paragraphs.length > 2) {
-      // Return Column 1 text, followed by Column 2 text (preserves section integrity!)
+    const col1HasHeader = col1Paragraphs.some((p) => isSectionHeader(p));
+    const col2HasHeader = col2Paragraphs.some((p) => isSectionHeader(p));
+    const col2IsDateList =
+      col2Paragraphs.length > 0 &&
+      col2Paragraphs.every((p) => isDateOrMetadata(p));
+
+    if (
+      col1Paragraphs.length >= 5 &&
+      col2Paragraphs.length >= 5 &&
+      col1HasHeader &&
+      col2HasHeader &&
+      !col2IsDateList
+    ) {
+      // True 2-column layout container: return Column 1 text, followed by Column 2 text
       return [...col1Paragraphs, "", ...col2Paragraphs];
     }
   }
 
-  // Standard tabular data (e.g. Skill matrix, Education columns)
+  // Otherwise, this is a tabular row (e.g. Title | Date, Skills grid, or Metrics table)
+  // Format ROW BY ROW to keep dates and entries aligned!
   const formattedRows: string[] = [];
   for (const row of rowMatches) {
     const cells = row.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || [];
-    const cellTexts: string[] = [];
+    if (cells.length === 0) continue;
 
+    // Extract all paragraphs per cell
+    const cellParagraphLists: string[][] = [];
     for (const cell of cells) {
       const pMatches = cell.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
       const cellLines = pMatches
         .map((p) => extractParagraphText(p).text)
-        .filter(Boolean)
-        .join(" ");
-      if (cellLines) cellTexts.push(cellLines);
+        .filter(Boolean);
+      cellParagraphLists.push(cellLines);
     }
 
-    if (cellTexts.length > 0) {
-      formattedRows.push(cellTexts.join("  |  "));
+    // Determine max lines in this row
+    const maxLines = Math.max(...cellParagraphLists.map((l) => l.length), 0);
+    if (maxLines === 0) continue;
+
+    if (maxLines === 1) {
+      // Single line per cell (e.g. Title in cell 1, Date in cell 2)
+      const combined = cellParagraphLists
+        .map((l) => l[0] || "")
+        .filter(Boolean)
+        .join("  |  ");
+      if (combined) formattedRows.push(combined);
+    } else {
+      // Multiple lines per cell: pair up line by line where possible
+      for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+        const lineParts: string[] = [];
+        for (const lines of cellParagraphLists) {
+          if (lines[lineIdx]) {
+            lineParts.push(lines[lineIdx]!);
+          }
+        }
+        if (lineParts.length > 0) {
+          formattedRows.push(lineParts.join("  |  "));
+        }
+      }
     }
   }
 

@@ -514,6 +514,216 @@ async function runTests() {
   }
 
   // ============================================================================
+  // TEST 11: Complex Resume with Right-Aligned Dates beside Job & Education (PDF)
+  // ============================================================================
+  console.log("\n--------------------------------------------------------------------------------");
+  console.log(" TEST 11: Right-Aligned Dates Beside Job & Education Entries (PDF)");
+  console.log("--------------------------------------------------------------------------------");
+  {
+    const pdfDoc = new jsPDF({ unit: "pt", format: "letter" });
+    const width = 612;
+
+    // Candidate Header
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(20);
+    pdfDoc.text("Samantha Vance", 54, 55);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9);
+    pdfDoc.text("samantha.vance@example.com | (555) 234-5678 | San Francisco, CA", 54, 72);
+
+    // Section 1: Work Experience
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("WORK EXPERIENCE", 54, 105);
+
+    // Entry 1: Job title on left, right-aligned date on right (SAME baseline Y=125)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Software Developer | ABC Technologies", 54, 125);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Jan 2024 – Dec 2025", 450, 125);
+
+    // Entry 1 Bullets
+    pdfDoc.text("• Developed web applications using React and distributed services.", 54, 142);
+    pdfDoc.text("• Worked with APIs and high-throughput PostgreSQL databases.", 54, 158);
+
+    // Entry 2: Second job title on left, right-aligned date on right (SAME baseline Y=185)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Fullstack Engineer — Tech Solutions", 54, 185);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Aug 2022 – Dec 2023", 450, 185);
+
+    // Entry 2 Bullets
+    pdfDoc.text("• Architected microservices with 99.99% availability.", 54, 202);
+
+    // Section 2: Education
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("EDUCATION", 54, 235);
+
+    // Education Entry: Degree on left, graduation date on right (SAME baseline Y=255)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("B.Tech in Computer Science", 54, 255);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("2022 – 2026", 450, 255);
+
+    pdfDoc.text("University Institute of Technology", 54, 272);
+
+    // Section 3: Technical Skills
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("TECHNICAL SKILLS", 54, 305);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("• Languages: TypeScript, JavaScript, Python, Go, SQL", 54, 325);
+    pdfDoc.text("• Infrastructure: Docker, Kubernetes, AWS, Terraform", 54, 342);
+
+    const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
+    const parsed = await extractResumeDocument(pdfBuffer, "right_aligned_dates_resume.pdf");
+
+    // Layout check: must be recognized as single-column (dates must NOT trigger fake 2-column gutter!)
+    assert(parsed.diagnostics.columnLayout === "single", "Layout detected as single-column despite right-aligned dates");
+
+    // Association check: date preserved beside job entry
+    assert(
+      parsed.cleanedText.includes("Software Developer | ABC Technologies") &&
+        /Jan 2024\s*[-–]\s*Dec 2025/.test(parsed.cleanedText),
+      "Right-aligned employment date preserved directly beside job title",
+    );
+
+    // Association check: graduation date preserved beside education entry
+    assert(
+      parsed.cleanedText.includes("B.Tech in Computer Science") &&
+        /2022\s*[-–]\s*2026/.test(parsed.cleanedText),
+      "Right-aligned graduation date preserved directly beside education entry",
+    );
+
+    // Reading order check: Job title -> Bullets -> Education
+    const idxJob = parsed.cleanedText.indexOf("Software Developer");
+    const idxBullet = parsed.cleanedText.indexOf("Developed web applications");
+    const idxEdu = parsed.cleanedText.indexOf("B.Tech in Computer Science");
+    assert(idxJob < idxBullet && idxBullet < idxEdu, "Natural reading order preserved: Job -> Bullets -> Education");
+
+    // Crucial check: Dates are NOT dumped at the end of the imported document!
+    const last120Chars = parsed.cleanedText.slice(-120);
+    assert(!last120Chars.includes("Jan 2024") && !last120Chars.includes("2026"), "Dates are NOT appended to document end");
+  }
+
+  // ============================================================================
+  // TEST 12: DOCX Resume with Multi-Entry Tables for Title & Date
+  // ============================================================================
+  console.log("\n--------------------------------------------------------------------------------");
+  console.log(" TEST 12: DOCX Table Row-by-Row Entry & Date Association");
+  console.log("--------------------------------------------------------------------------------");
+  {
+    const zip = new JSZip();
+
+    const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>Arthur Pendelton</w:t></w:r></w:p>
+    <w:p><w:r><w:t>arthur@example.com | 555-111-2233 | Austin, TX</w:t></w:r></w:p>
+    <w:p><w:r><w:t>WORK EXPERIENCE</w:t></w:r></w:p>
+    <w:tbl>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Senior Cloud Architect</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Acme Cloud Services</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Jan 2024 – Present</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>• Engineered distributed streaming pipeline processing 100M events/day.</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:p><w:r><w:t>EDUCATION</w:t></w:r></w:p>
+    <w:tbl>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>B.S. in Computer Engineering</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>University of Texas at Austin</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>2018 – 2022</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+  </w:body>
+</w:document>`;
+
+    zip.file("word/document.xml", docXml);
+    const docxBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+    const parsed = await extractResumeDocument(docxBuffer, "table_entries.docx");
+
+    assert(parsed.cleanedText.includes("Arthur Pendelton"), "DOCX candidate name extracted");
+    assert(
+      parsed.cleanedText.includes("Senior Cloud Architect  |  Acme Cloud Services") &&
+        parsed.cleanedText.includes("Jan 2024"),
+      "DOCX row-by-row table preserves Title | Company | Date",
+    );
+    assert(
+      parsed.cleanedText.includes("B.S. in Computer Engineering  |  University of Texas at Austin") &&
+        /2018\s*[-–]\s*2022/.test(parsed.cleanedText),
+      "DOCX row-by-row table preserves Degree | University | Date",
+    );
+    assert(parsed.cleanedText.includes("Engineered distributed streaming"), "DOCX table bullet extracted");
+
+    // Verify dates are not at the end
+    const last100 = parsed.cleanedText.slice(-100);
+    assert(!last100.includes("Jan 2024"), "DOCX table date not appended to document end");
+  }
+
+  // ============================================================================
+  // TEST 13: Resume with Wrapped Dates on Line Below Entry
+  // ============================================================================
+  console.log("\n--------------------------------------------------------------------------------");
+  console.log(" TEST 13: Wrapped Dates Directly Below Entry Title");
+  console.log("--------------------------------------------------------------------------------");
+  {
+    const pdfDoc = new jsPDF({ unit: "pt", format: "letter" });
+
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(20);
+    pdfDoc.text("Lucas Wright", 54, 55);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9);
+    pdfDoc.text("lucas.wright@example.com", 54, 72);
+
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("EXPERIENCE", 54, 105);
+
+    // Line 1: Job title
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Principal Software Engineer — Vertex AI", 54, 125);
+
+    // Line 2: Wrapped date directly below (gap = 13pt)
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9);
+    pdfDoc.text("March 2021 – Present", 54, 138);
+
+    // Line 3: Bullet point
+    pdfDoc.text("• Led team of 14 machine learning engineers developing core inference engine.", 54, 156);
+
+    const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
+    const parsed = await extractResumeDocument(pdfBuffer, "wrapped_dates.pdf");
+
+    assert(parsed.cleanedText.includes("Principal Software Engineer"), "Job title extracted");
+    assert(/March 2021\s*[-–]\s*Present/.test(parsed.cleanedText), "Wrapped date extracted");
+
+    const idxTitle = parsed.cleanedText.indexOf("Principal Software Engineer");
+    const idxBullet = parsed.cleanedText.indexOf("Led team of 14");
+
+    assert(idxTitle < idxBullet, "Title and date precede bullet point (not moved to bottom!)");
+    assert(
+      parsed.cleanedText.includes("Principal Software Engineer — Vertex AI | March 2021") ||
+        parsed.cleanedText.includes("Principal Software Engineer — Vertex AI  |  March 2021"),
+      "Wrapped date merged directly with entry header",
+    );
+  }
+
+  // ============================================================================
   // SUMMARY
   // ============================================================================
   console.log("\n================================================================================");

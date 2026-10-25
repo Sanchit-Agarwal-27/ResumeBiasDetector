@@ -812,6 +812,7 @@ export function ResumeWorkspace() {
       setActiveId(analysis.spans[0]?.id ?? "");
       setCanvasPages(extractedPages);
       setCanvasBlocks(extractedBlocks);
+      setColumnLayout(parsedDoc.diagnostics.columnLayout);
       setStatus(`${cleanFileName} imported into Word resume editor`);
       toast.success("Resume imported successfully", {
         description: `Detected ${analysis.spans.length} signals with ${analysis.neutrality_score}% neutrality index.`,

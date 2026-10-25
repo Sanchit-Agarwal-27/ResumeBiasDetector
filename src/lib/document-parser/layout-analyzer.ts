@@ -4,6 +4,7 @@
  * Accurately detects multi-column layouts (asymmetric sidebars, 2-column, 3-column),
  * reconstructs natural reading order without interleaving columns,
  * detects section headers, contact lines, job titles, and bullet lists.
+ * Keeps right-aligned and wrapped dates associated with their entries.
  */
 
 import type { CanvasTextBlock, ColumnLayoutPreset, ColumnSlot } from "./types";
@@ -52,7 +53,7 @@ export interface DetectedColumns {
  * Standard known resume section titles
  */
 const SECTION_HEADER_REGEX =
-  /^(PROFESSIONAL SUMMARY|EXECUTIVE SUMMARY|SUMMARY|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|EMPLOYMENT|EDUCATION|ACADEMIC BACKGROUND|TECHNICAL SKILLS|CORE COMPETENCIES|SKILLS|PROJECTS|SELECTED PROJECTS|KEY PROJECTS|CERTIFICATIONS|LICENSES & CERTIFICATIONS|AWARDS & HONORS|HONORS & AWARDS|PUBLICATIONS|LEADERSHIP|VOLUNTEER EXPERIENCE|VOLUNTEERING|ACTIVITIES|LANGUAGES|ADDITIONAL INFORMATION|REFERENCES)\b/i;
+  /^(PROFESSIONAL SUMMARY|EXECUTIVE SUMMARY|SUMMARY|ABOUT ME|CAREER OBJECTIVE|OBJECTIVE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|EMPLOYMENT|WORK HISTORY|EDUCATION|ACADEMIC BACKGROUND|ACADEMICS|TECHNICAL SKILLS|CORE COMPETENCIES|AREAS OF EXPERTISE|SKILLS|PROJECTS|SELECTED PROJECTS|KEY PROJECTS|CERTIFICATIONS|LICENSES & CERTIFICATIONS|CERTIFICATES|CREDENTIALS|AWARDS & HONORS|HONORS & AWARDS|AWARDS|PUBLICATIONS|LEADERSHIP|LEADERSHIP & ACTIVITIES|VOLUNTEER EXPERIENCE|VOLUNTEERING|ACTIVITIES|LANGUAGES|ADDITIONAL INFORMATION|INTERNSHIPS|INTERNSHIP EXPERIENCE|REFERENCES)\b/i;
 
 /**
  * Check if a string is a standard section header
@@ -92,8 +93,93 @@ export function isContactLine(text: string): boolean {
   return hasEmail || hasPhone || hasUrl || (hasPipes && trimmed.length < 120);
 }
 
+const MONTH_NAMES =
+  "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Sept|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+const SEASONS = "(?:Spring|Summer|Fall|Autumn|Winter)";
+const YEARS = "(?:19|20)\\d{2}";
+const PRESENT_WORDS = "(?:Present|Current|Now|Ongoing)";
+const DATE_SEPARATORS = "(?:[-–—/]|\\bto\\b)";
+
+const FULL_DATE_RANGE_REGEX = new RegExp(
+  "^" +
+    "(?:" +
+    MONTH_NAMES +
+    "\\.?\\s+)?" +
+    "(?:" +
+    YEARS +
+    "|" +
+    SEASONS +
+    "\\s+" +
+    YEARS +
+    ")" +
+    "\\s*" +
+    DATE_SEPARATORS +
+    "\\s*" +
+    "(?:(?:" +
+    MONTH_NAMES +
+    "\\.?\\s+)?(?:" +
+    YEARS +
+    "|" +
+    SEASONS +
+    "\\s+" +
+    YEARS +
+    ")|" +
+    PRESENT_WORDS +
+    ")" +
+    "$",
+  "i",
+);
+
+const NUMERIC_DATE_RANGE_REGEX = new RegExp(
+  "^(?:\\d{1,2}/)?" +
+    YEARS +
+    "\\s*" +
+    DATE_SEPARATORS +
+    "\\s*(?:(?:\\d{1,2}/)?" +
+    YEARS +
+    "|" +
+    PRESENT_WORDS +
+    ")$",
+  "i",
+);
+
+const SINGLE_DATE_REGEX = new RegExp(
+  "^(?:(?:" + MONTH_NAMES + "\\.?|" + SEASONS + ")\\s+)?" + YEARS + "$",
+  "i",
+);
+
+const LOCATION_REGEX = /^[A-Z][a-zA-Z\s.-]+,\s*([A-Z]{2}|[A-Z][a-zA-Z]+)$/;
+const WORK_MODE_REGEX = /^(Remote|Hybrid|On-site|Onsite)$/i;
+
 /**
- * Detects columns and gutters across the page using a spatial projection histogram
+ * Checks if a string represents a date, date range, location, or metadata.
+ * Examples: "Jan 2024 – Dec 2025", "2022 – 2026", "08/2021 - Present", "Austin, TX", "Remote"
+ */
+export function isDateOrMetadata(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 80) return false;
+
+  // Strip wrapping brackets or parentheses
+  const stripped = trimmed.replace(/^[\(\[\{]/, "").replace(/[\)\]\}]$/, "").trim();
+
+  if (FULL_DATE_RANGE_REGEX.test(stripped)) return true;
+  if (NUMERIC_DATE_RANGE_REGEX.test(stripped)) return true;
+  if (SINGLE_DATE_REGEX.test(stripped)) return true;
+  if (LOCATION_REGEX.test(stripped) || WORK_MODE_REGEX.test(stripped)) return true;
+  if (/^(present|current|now|ongoing)$/i.test(stripped)) return true;
+
+  // Combination with pipes or bullets: e.g. "San Francisco, CA | Jan 2024 – Present"
+  const parts = stripped.split(/\s*[|•·—]\s*/);
+  if (parts.length >= 2 && parts.length <= 3) {
+    if (parts.every((p) => isDateOrMetadata(p))) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Detects columns and gutters across the page using a spatial projection histogram.
+ * Eliminates false positives from right-aligned dates or locations.
  */
 export function detectPageColumns(
   lineRuns: LineRun[],
@@ -104,7 +190,7 @@ export function detectPageColumns(
     return { layout: "single", gutters: [], startY: 0, endY: pageHeight };
   }
 
-  // Filter out full-width lines (> 60% of page width)
+  // Filter out full-width lines (> 58% of page width)
   const nonFullWidth = lineRuns.filter(
     (r) => r.width <= pageWidth * 0.58 && r.y > 60 && r.y < pageHeight - 60,
   );
@@ -124,20 +210,53 @@ export function detectPageColumns(
     let rightCount = 0;
     let crossCount = 0;
 
+    const leftRuns: LineRun[] = [];
+    const rightRuns: LineRun[] = [];
+
     for (const r of nonFullWidth) {
       if (r.maxX < testX - 4) {
         leftCount++;
+        leftRuns.push(r);
       } else if (r.x > testX + 4) {
         rightCount++;
+        rightRuns.push(r);
       } else {
         crossCount++;
       }
     }
 
-    // A valid gutter has plenty of text on both sides and very few/zero crossing items
-    if (leftCount >= 4 && rightCount >= 4 && crossCount <= 1) {
-      const balance = Math.min(leftCount, rightCount) / Math.max(leftCount, rightCount);
-      const score = (leftCount + rightCount) * (1 - crossCount * 0.4) * (0.5 + balance * 0.5);
+    // A candidate gutter must have substantial content on both sides
+    if (leftCount >= 4 && rightCount >= 4 && crossCount <= 2) {
+      // Intelligent column verification:
+      // Verify that the right side is NOT merely a list of right-aligned dates or metadata!
+      const rightDates = rightRuns.filter((r) => isDateOrMetadata(r.text)).length;
+      const rightNonDates = rightRuns.length - rightDates;
+
+      const leftDates = leftRuns.filter((r) => isDateOrMetadata(r.text)).length;
+      const leftNonDates = leftRuns.length - leftDates;
+
+      // Both sides must have at least 4 substantive non-date runs
+      if (rightNonDates < 4 || leftNonDates < 4) {
+        continue;
+      }
+
+      // If either side is dominated by dates (> 50%), this is NOT a column layout
+      if (rightDates / rightRuns.length > 0.5 || leftDates / leftRuns.length > 0.5) {
+        continue;
+      }
+
+      // Check vertical spread: genuine columns span at least 100pt vertically
+      const leftMinY = Math.min(...leftRuns.map((r) => r.y));
+      const leftMaxY = Math.max(...leftRuns.map((r) => r.y + r.height));
+      const rightMinY = Math.min(...rightRuns.map((r) => r.y));
+      const rightMaxY = Math.max(...rightRuns.map((r) => r.y + r.height));
+
+      if (leftMaxY - leftMinY < 100 || rightMaxY - rightMinY < 100) {
+        continue;
+      }
+
+      const balance = Math.min(leftNonDates, rightNonDates) / Math.max(leftNonDates, rightNonDates);
+      const score = (leftNonDates + rightNonDates) * (1 - crossCount * 0.4) * (0.5 + balance * 0.5);
       gutterCandidates.push({ x: testX, score });
     }
   }
@@ -161,9 +280,9 @@ export function detectPageColumns(
   const gutterRatio = bestGutterX / pageWidth;
   let layout: ColumnLayoutPreset = "two-column-equal";
 
-  if (gutterRatio < 0.40) {
+  if (gutterRatio < 0.4) {
     layout = "two-column-left"; // Narrow left sidebar (~30%)
-  } else if (gutterRatio > 0.60) {
+  } else if (gutterRatio > 0.6) {
     layout = "two-column-right"; // Narrow right sidebar (~30%)
   } else {
     layout = "two-column-equal"; // Split in middle (~50/50)
@@ -175,6 +294,115 @@ export function detectPageColumns(
     startY: Math.max(0, startY - 10),
     endY: Math.min(pageHeight, endY + 10),
   };
+}
+
+/**
+ * Merges text runs that appear on the same baseline (same line).
+ * Specifically handles entries where the job title/company is on the left
+ * and the date or location is right-aligned on that same line.
+ * In a multi-column document, runs are only merged within the SAME column slot.
+ */
+export function mergeSameBaselineRuns(
+  lineRuns: LineRun[],
+  columns: DetectedColumns,
+): LineRun[] {
+  if (lineRuns.length <= 1) return lineRuns;
+
+  // Group runs by baselineY (tolerance 3.0 pt)
+  const lineGroups: LineRun[][] = [];
+  const sorted = [...lineRuns].sort((a, b) => {
+    const diff = a.baselineY - b.baselineY;
+    if (Math.abs(diff) > 2.5) return diff;
+    return a.x - b.x;
+  });
+
+  for (const run of sorted) {
+    const group = lineGroups.find((g) => Math.abs(g[0]!.baselineY - run.baselineY) <= 3.0);
+    if (group) {
+      group.push(run);
+    } else {
+      lineGroups.push([run]);
+    }
+  }
+
+  const result: LineRun[] = [];
+  const gutterX = columns.gutters.length > 0 ? columns.gutters[0]! : undefined;
+
+  for (const group of lineGroups) {
+    if (group.length === 1) {
+      result.push(group[0]!);
+      continue;
+    }
+
+    group.sort((a, b) => a.x - b.x);
+
+    // If multi-column, split the group by gutter before merging
+    if (gutterX !== undefined && columns.layout !== "single") {
+      const leftGroup = group.filter((r) => r.maxX <= gutterX + 6);
+      const rightGroup = group.filter((r) => r.x >= gutterX - 6);
+      const crossGroup = group.filter((r) => r.x < gutterX - 6 && r.maxX > gutterX + 6);
+
+      for (const subGroup of [leftGroup, rightGroup, crossGroup]) {
+        if (subGroup.length === 0) continue;
+        result.push(...mergeRunClusterOnLine(subGroup));
+      }
+    } else {
+      // Single-column: merge clusters on this baseline
+      result.push(...mergeRunClusterOnLine(group));
+    }
+  }
+
+  return result;
+}
+
+function mergeRunClusterOnLine(runs: LineRun[]): LineRun[] {
+  if (runs.length <= 1) return runs;
+
+  const merged: LineRun[] = [];
+  let cur = { ...runs[0]! };
+
+  for (let i = 1; i < runs.length; i++) {
+    const next = runs[i]!;
+    const isNextDate = isDateOrMetadata(next.text);
+    const isCurHeader = isSectionHeader(cur.text);
+    const isCurBullet = cur.text.startsWith("•") || cur.text.startsWith("-");
+
+    // Connect right-aligned date/metadata to entry header on the same baseline
+    if (isNextDate && !isCurHeader && !isCurBullet) {
+      const sep =
+        cur.text.endsWith("|") || cur.text.endsWith("—") || cur.text.endsWith("-")
+          ? " "
+          : " | ";
+      cur.text = `${cur.text}${sep}${next.text.trim()}`;
+      cur.maxX = Math.max(cur.maxX, next.maxX);
+      cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
+      cur.height = Math.max(cur.height, next.height);
+    } else if (
+      !isCurHeader &&
+      !isCurBullet &&
+      !next.text.startsWith("•") &&
+      !isSectionHeader(next.text) &&
+      (cur.text.includes("|") ||
+        cur.text.includes("—") ||
+        /^(Senior|Lead|Staff|Principal|Software|Engineer|Developer|Manager|Director|Associate|Bachelor|Master|B\.Tech|B\.S\.)/i.test(
+          cur.text,
+        )) &&
+      (runs.some((r) => isDateOrMetadata(r.text)) || next.x - cur.maxX > 20)
+    ) {
+      // Middle company or title fragment on same line: e.g. "Software Developer" + "ABC Technologies"
+      const sep = cur.text.endsWith("|") || cur.text.endsWith("—") ? " " : " | ";
+      cur.text = `${cur.text}${sep}${next.text.trim()}`;
+      cur.maxX = Math.max(cur.maxX, next.maxX);
+      cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
+      cur.height = Math.max(cur.height, next.height);
+    } else {
+      merged.push(cur);
+      cur = { ...next };
+    }
+  }
+
+  merged.push(cur);
+  return merged;
 }
 
 /**
@@ -218,7 +446,7 @@ export function orderRunsByLayout(
       run.columnSlot = "right";
       col2Runs.push(run);
     } else {
-      // Crosses gutter - if primarily in column 1 or column 2
+      // Crosses gutter - assign to column containing center of run
       const center = run.x + run.width / 2;
       if (center < gutterX) {
         run.columnSlot = "left";
@@ -299,23 +527,42 @@ export function reconstructCanvasBlocks(
       i === 0 && pageIndex === 0 && (cur.fontSize >= 13.5 || cur.bold) && !isHeader;
     const isContact = (i === 1 || i === 2) && pageIndex === 0 && isContactLine(rawText);
 
-    // Job title line heuristic (e.g. "Senior Engineer — Stripe | 2021-Present")
-    const isJobTitleLine =
+    // Job title / Education entry line heuristic
+    const isEntryTitleLine =
       !isHeader &&
       !isCandidateName &&
       !isContact &&
       !isBullet &&
       (rawText.includes(" — ") ||
         rawText.includes(" | ") ||
-        /^(Senior|Lead|Staff|Principal|Software|Frontend|Backend|Fullstack|Data|ML|Product|Engineering|Director|Manager|Consultant)\b/i.test(
+        /^(Senior|Lead|Staff|Principal|Software|Frontend|Backend|Fullstack|Data|ML|Product|Engineering|Director|Manager|Consultant|Junior|Associate|Architect|Developer|Engineer|Designer|Analyst|Specialist|Researcher|Intern|Technician|Officer|Executive|Administrator|Coordinator|Scientist)\b/i.test(
+          rawText,
+        ) ||
+        /^(Bachelor|Master|Ph\.?D|B\.?S|B\.?A|B\.?Tech|B\.?E|M\.?S|M\.?Tech|M\.?B\.?A|Diploma|Associate|Degree|Candidate)\b/i.test(
           rawText,
         )) &&
-      rawText.length < 90;
+      rawText.length < 110;
 
     let nextIdx = i + 1;
 
+    // If this is an entry title and the next run in the same column is a wrapped date/metadata, merge them
+    if (isEntryTitleLine && nextIdx < orderedRuns.length) {
+      const nextRun = orderedRuns[nextIdx]!;
+      if (
+        nextRun.columnSlot === cur.columnSlot &&
+        isDateOrMetadata(nextRun.text) &&
+        nextRun.y - (cur.y + height) <= 18
+      ) {
+        const sep = rawText.endsWith("|") || rawText.endsWith("—") ? " " : " | ";
+        rawText += `${sep}${nextRun.text.trim()}`;
+        width = Math.max(width, nextRun.width);
+        height = Math.round(nextRun.y + nextRun.height - cur.y);
+        nextIdx++;
+      }
+    }
+
     // Merge multi-line wrapping paragraphs within the SAME column slot
-    if (!isHeader && !isCandidateName && !isJobTitleLine) {
+    if (!isHeader && !isCandidateName && !isEntryTitleLine) {
       while (nextIdx < orderedRuns.length) {
         const next = orderedRuns[nextIdx]!;
 
@@ -388,7 +635,7 @@ export function reconstructCanvasBlocks(
       align = "left";
       spaceBefore = 8;
       spaceAfter = 3;
-    } else if (isJobTitleLine) {
+    } else if (isEntryTitleLine) {
       fontSize = Math.max(9.5, Math.min(12, fontSize));
       bold = true;
       align = "left";
@@ -425,7 +672,7 @@ export function reconstructCanvasBlocks(
       spaceAfter,
       indent,
       isTitle: isCandidateName,
-      isHeading: isHeader || isJobTitleLine,
+      isHeading: isHeader || isEntryTitleLine,
       isBullet,
       columnSlot: cur.columnSlot,
     });
@@ -435,4 +682,3 @@ export function reconstructCanvasBlocks(
 
   return blocks;
 }
-

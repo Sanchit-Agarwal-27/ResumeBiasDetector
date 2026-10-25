@@ -218,3 +218,105 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   fs.writeFileSync(filePath, Buffer.from(pdf.output("arraybuffer")));
   console.log("  ✓ Created:", filePath);
 }
+
+// 4. Complex Single-Column Resume with Multiple Fonts, Horizontal Lines, & Right-Aligned Dates
+{
+  const pdf = new jsPDF({ unit: "pt", format: "letter" });
+
+  // Candidate Name in large bold font
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(22);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text("Alexander Wright", 54, 55);
+
+  // Contact info
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(71, 85, 105);
+  pdf.text("alexander.wright@example.com | (555) 789-0123 | Seattle, WA | linkedin.com/in/awright", 54, 72);
+
+  // Decorative Horizontal divider
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(1);
+  pdf.line(54, 85, 558, 85);
+
+  // Work Experience section header
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.setTextColor(30, 58, 138);
+  pdf.text("PROFESSIONAL EXPERIENCE", 54, 105);
+
+  // Job Entry 1: Job title on left, right-aligned date on right (same baseline Y=125)
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text("Software Developer | ABC Technologies", 54, 125);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(100, 116, 139);
+  pdf.text("Jan 2024 – Dec 2025", 445, 125);
+
+  // Bullets
+  pdf.setTextColor(51, 65, 85);
+  pdf.text("• Developed high-performance web applications using React, Next.js, and TypeScript.", 54, 142);
+  pdf.text("• Worked with RESTful and GraphQL APIs connected to distributed PostgreSQL clusters.", 54, 158);
+  pdf.text("• Implemented automated CI/CD deployment pipelines reducing build times by 40%.", 54, 174);
+
+  // Job Entry 2: Second job on left, right-aligned date on right (same baseline Y=200)
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text("Backend Engineer — CloudSphere Systems", 54, 200);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(100, 116, 139);
+  pdf.text("Aug 2021 – Dec 2023", 445, 200);
+
+  // Bullets
+  pdf.setTextColor(51, 65, 85);
+  pdf.text("• Architected event-driven microservices handling 25,000 queries per second.", 54, 217);
+  pdf.text("• Optimized database query plans cutting p99 read latency from 450ms to 28ms.", 54, 233);
+
+  // Decorative Horizontal divider
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(1);
+  pdf.line(54, 252, 558, 252);
+
+  // Education Section
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.setTextColor(30, 58, 138);
+  pdf.text("EDUCATION", 54, 272);
+
+  // Education Entry: Degree on left, graduation date on right (same baseline Y=292)
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text("B.Tech in Computer Science", 54, 292);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(100, 116, 139);
+  pdf.text("2022 – 2026", 445, 292);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(71, 85, 105);
+  pdf.text("University of Washington, Seattle | GPA: 3.85 / 4.0", 54, 308);
+
+  // Skills Section
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.setTextColor(30, 58, 138);
+  pdf.text("CORE COMPETENCIES", 54, 335);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(51, 65, 85);
+  pdf.text("• Languages: TypeScript, JavaScript, Python, Go, Java, SQL", 54, 352);
+  pdf.text("• Technologies: React, Node.js, FastAPI, Docker, Kubernetes, AWS, PostgreSQL", 54, 368);
+
+  const filePath = path.join(OUTPUT_DIR, "4_RightAligned_Dates_Complex_Resume.pdf");
+  fs.writeFileSync(filePath, Buffer.from(pdf.output("arraybuffer")));
+  console.log("  ✓ Created:", filePath);
+}
+
+

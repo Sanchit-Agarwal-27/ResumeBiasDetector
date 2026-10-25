@@ -1,7 +1,9 @@
 import {
   deduplicateOverlappingFragments,
   detectPageColumns,
+  mergeSameBaselineRuns,
   orderRunsByLayout,
+  isDateOrMetadata,
 } from "./document-parser";
 
 export interface CanvasTextBlock {
@@ -392,9 +394,10 @@ export function clusterPdfTextContent(
         cur.maxX = Math.max(cur.maxX, frag.x + frag.width);
         cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
         cur.height = Math.max(cur.height, frag.height);
-      } else if (isSameLineTabGap && Math.abs(cur.fontSize - frag.fontSize) <= 2.5) {
+      } else if (isSameLineTabGap && isDateOrMetadata(frag.text) && Math.abs(cur.fontSize - frag.fontSize) <= 2.5) {
         // Neatly connect Title + Date with a professional separator instead of ragged clumping
-        cur.text += "  —  " + frag.text;
+        const sep = cur.text.endsWith("|") || cur.text.endsWith("—") ? " " : "  |  ";
+        cur.text += sep + frag.text;
         cur.maxX = Math.max(cur.maxX, frag.x + frag.width);
         cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
         cur.height = Math.max(cur.height, frag.height);
@@ -423,8 +426,11 @@ export function clusterPdfTextContent(
   // 6. Layout-aware Column & Gutter Detection (supports asymmetric sidebars & equal 2-col)
   const columns = detectPageColumns(lineRuns, viewportWidth, viewportHeight);
 
+  // Merge same baseline runs within the same column slot
+  const mergedRuns = mergeSameBaselineRuns(lineRuns, columns);
+
   // 7. Reconstruct natural reading order without interleaving columns
-  const orderedRuns = orderRunsByLayout(lineRuns, columns, viewportWidth);
+  const orderedRuns = orderRunsByLayout(mergedRuns, columns, viewportWidth);
 
   // 8. Natural Paragraph Clustering & Alignment Normalization
   // Detect dominant document body baseline margin

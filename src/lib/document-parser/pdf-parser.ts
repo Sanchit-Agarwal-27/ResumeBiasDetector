@@ -20,10 +20,12 @@ import { normalizeResumeText } from "./normalizer";
 import { validateExtraction, deduplicateOverlappingFragments } from "./validator";
 import {
   detectPageColumns,
+  mergeSameBaselineRuns,
   orderRunsByLayout,
   reconstructCanvasBlocks,
   isSectionHeader,
   isContactLine,
+  isDateOrMetadata,
   type LineRun,
   type RawLayoutFragment,
 } from "./layout-analyzer";
@@ -246,8 +248,11 @@ export async function parsePdfResume(
       primaryColumnLayout = columns.layout;
     }
 
+    // Merge same baseline runs (connect right-aligned dates/metadata within same column)
+    const mergedRuns = mergeSameBaselineRuns(filteredRuns, columns);
+
     // Order runs according to layout columns
-    const orderedRuns = orderRunsByLayout(filteredRuns, columns, viewport.width);
+    const orderedRuns = orderRunsByLayout(mergedRuns, columns, viewport.width);
 
     // Reconstruct blocks
     const pageBlocks = reconstructCanvasBlocks(
