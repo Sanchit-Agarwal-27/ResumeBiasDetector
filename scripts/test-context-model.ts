@@ -4,6 +4,7 @@
  * 1. 30-sample benchmark evaluation suite
  * 2. 10 counterfactual pair tests
  * 3. End-to-end document analysis & regression tests
+ * 4. Neutral chronology & age-bias precision tests
  */
 
 import fs from "fs";
@@ -246,6 +247,35 @@ async function testServiceLayer() {
 }
 
 await testServiceLayer();
+
+// ============================================================================
+// SUITE 4: NEUTRAL CHRONOLOGY & AGE-BIAS PRECISION TESTS
+// ============================================================================
+console.log("\n--------------------------------------------------------------------------------");
+console.log(" SUITE 4: Neutral Chronology & Age-Bias Precision Tests");
+console.log("--------------------------------------------------------------------------------");
+
+const c1 = classifySentence("B.A. in Computer Science | 2014–2018");
+assert(c1.classification === CLASSIFICATION.FINE, "B.A. in Computer Science | 2014–2018 is classified as Fine");
+assert(
+  c1.contextType === "neutral_chronological_record" || c1.contextType === "neutral_no_keywords",
+  "Context type is neutral chronology or no keywords",
+);
+
+const c2 = classifySentence("Software Engineer | 2020–2024");
+assert(c2.classification === CLASSIFICATION.FINE, "Software Engineer | 2020–2024 is classified as Fine");
+
+const c3 = classifySentence("Aug. 2014 – May 2018");
+assert(c3.classification === CLASSIFICATION.FINE, "Aug. 2014 – May 2018 is classified as Fine (zero false alarm on date range)");
+
+const c4 = classifySentence("June 2020 – Present College Station, TX");
+assert(c4.classification === CLASSIFICATION.FINE, "June 2020 – Present College Station, TX is classified as Fine");
+
+const c5 = classifySentence("Applicants must be younger than 30 for this junior role.");
+assert(c5.classification === CLASSIFICATION.FLAGGED, "Explicit age exclusion 'younger than 30' is classified as Flagged");
+
+const c6 = classifySentence("Graduated from State University with a Bachelor of Science in Computer Science in 1997.");
+assert(c6.classification === CLASSIFICATION.FLAGGED, "Legacy graduation year proxy (1997) is classified as Flagged");
 
 // ============================================================================
 // FINAL SUMMARY

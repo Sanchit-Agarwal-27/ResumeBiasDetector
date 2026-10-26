@@ -100,64 +100,124 @@ const YEARS = "(?:19|20)\\d{2}";
 const PRESENT_WORDS = "(?:Present|Current|Now|Ongoing)";
 const DATE_SEPARATORS = "(?:[-–—/]|\\bto\\b)";
 
-const FULL_DATE_RANGE_REGEX = new RegExp(
-  "^" +
-    "(?:" +
-    MONTH_NAMES +
-    "\\.?\\s+)?" +
-    "(?:" +
-    YEARS +
-    "|" +
-    SEASONS +
-    "\\s+" +
-    YEARS +
-    ")" +
-    "\\s*" +
-    DATE_SEPARATORS +
-    "\\s*" +
-    "(?:(?:" +
-    MONTH_NAMES +
-    "\\.?\\s+)?(?:" +
-    YEARS +
-    "|" +
-    SEASONS +
-    "\\s+" +
-    YEARS +
-    ")|" +
-    PRESENT_WORDS +
-    ")" +
-    "$",
-  "i",
-);
+const SINGLE_DATE_CORE = "(?:(?:" + MONTH_NAMES + "\\.?|" + SEASONS + ")\\s+)?" + YEARS;
 
-const NUMERIC_DATE_RANGE_REGEX = new RegExp(
-  "^(?:\\d{1,2}/)?" +
-    YEARS +
-    "\\s*" +
-    DATE_SEPARATORS +
-    "\\s*(?:(?:\\d{1,2}/)?" +
-    YEARS +
+const FULL_DATE_RANGE_CORE =
+  "(?:(?:" +
+  MONTH_NAMES +
+  "\\.?\\s+)?" +
+  "(?:" +
+  YEARS +
+  "|" +
+  SEASONS +
+  "\\s+" +
+  YEARS +
+  ")" +
+  "\\s*" +
+  DATE_SEPARATORS +
+  "\\s*" +
+  "(?:(?:" +
+  MONTH_NAMES +
+  "\\.?\\s+)?(?:" +
+  YEARS +
+  "|" +
+  SEASONS +
+  "\\s+" +
+  YEARS +
+  ")|" +
+  PRESENT_WORDS +
+  "))";
+
+const NUMERIC_DATE_RANGE_CORE =
+  "(?:(?:\\d{1,2}/)?" +
+  YEARS +
+  "\\s*" +
+  DATE_SEPARATORS +
+  "\\s*(?:(?:\\d{1,2}/)?" +
+  YEARS +
+  "|" +
+  PRESENT_WORDS +
+  "))";
+
+const ANY_DATE_CORE =
+  "(?:" + FULL_DATE_RANGE_CORE + "|" + NUMERIC_DATE_RANGE_CORE + "|" + SINGLE_DATE_CORE + ")";
+
+const FULL_DATE_RANGE_REGEX = new RegExp("^" + FULL_DATE_RANGE_CORE + "$", "i");
+const NUMERIC_DATE_RANGE_REGEX = new RegExp("^" + NUMERIC_DATE_RANGE_CORE + "$", "i");
+const SINGLE_DATE_REGEX = new RegExp("^" + SINGLE_DATE_CORE + "$", "i");
+
+const LOCATION_REGEX =
+  /^[A-Z][a-zA-Z\s.-]+,\s*(?:[A-Z]{2}|[A-Z][a-zA-Z]+)(?:,\s*[A-Z][a-zA-Z]+)?$/;
+const WORK_MODE_REGEX = /^(Remote|Hybrid|On-site|Onsite)$/i;
+
+// Combined date and location on a single line:
+// e.g. "June 2020 – Present College Station, TX", "Sep. 2018 – Present Georgetown, TX", "Georgetown, TX Aug. 2018 – May 2021"
+const COMBINED_DATE_LOC_REGEX = new RegExp(
+  "^(?:" +
+    ANY_DATE_CORE +
+    "\\s*(?:[,|•·—]\\s*|\\s+)" +
+    "[A-Z][a-zA-Z\\s.-]+,\\s*(?:[A-Z]{2}|[A-Z][a-zA-Z]+)" +
     "|" +
-    PRESENT_WORDS +
+    "[A-Z][a-zA-Z\\s.-]+,\\s*(?:[A-Z]{2}|[A-Z][a-zA-Z]+)" +
+    "\\s*(?:[,|•·—]\\s*|\\s+)" +
+    ANY_DATE_CORE +
     ")$",
   "i",
 );
 
-const SINGLE_DATE_REGEX = new RegExp(
-  "^(?:(?:" + MONTH_NAMES + "\\.?|" + SEASONS + ")\\s+)?" + YEARS + "$",
-  "i",
-);
+/**
+ * Checks if a string represents an academic institution (e.g. University, College, School).
+ */
+export function isAcademicInstitutionLine(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 90) return false;
+  if (trimmed.startsWith("•") || trimmed.startsWith("-")) return false;
+  return (
+    /\b(?:University|College|Institute|School|Academy|Polytechnic|Conservatory|Seminary)\b/i.test(
+      trimmed,
+    ) ||
+    /^(?:MIT|UCLA|NYU|CMU|USC|TAMU|Stanford|Harvard|Yale|Princeton|Columbia|Cornell|Berkeley)\b/i.test(
+      trimmed,
+    )
+  );
+}
 
-const LOCATION_REGEX = /^[A-Z][a-zA-Z\s.-]+,\s*([A-Z]{2}|[A-Z][a-zA-Z]+)$/;
-const WORK_MODE_REGEX = /^(Remote|Hybrid|On-site|Onsite)$/i;
+/**
+ * Checks if a string represents an academic degree or qualification.
+ */
+export function isAcademicDegreeLine(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 100) return false;
+  if (trimmed.startsWith("•") || trimmed.startsWith("-")) return false;
+  return /^(?:Bachelor(?:'s)?|Master(?:'s)?|Associate(?:'s)?|Doctor|Doctorate|Ph\.?D|B\.?[SAE]|B\.?Tech|M\.?[SE]|M\.?Tech|M\.?B\.?A|Diploma|Certificate|Candidate|Degree)\b/i.test(
+    trimmed,
+  );
+}
+
+/**
+ * Checks if a string represents a professional job role or title.
+ */
+export function isProfessionalRoleLine(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 100) return false;
+  if (trimmed.startsWith("•") || trimmed.startsWith("-")) return false;
+  return (
+    /^(?:Senior|Lead|Staff|Principal|Software|Frontend|Backend|Full[- ]?stack|Data|ML|AI|Product|Engineering|Director|Manager|Consultant|Junior|Associate|Architect|Developer|Engineer|Designer|Analyst|Specialist|Researcher|Intern|Technician|Officer|Executive|Administrator|Coordinator|Scientist)\b/i.test(
+      trimmed,
+    ) ||
+    /^(?:Undergraduate|Graduate|Teaching|Student|Artificial\s+Intelligence|Research)\s+(?:Assistant|Researcher|Intern|Tutor|Technician|Developer|Engineer)\b/i.test(
+      trimmed,
+    )
+  );
+}
 
 /**
  * Checks if a string represents a date, date range, location, or metadata.
- * Examples: "Jan 2024 – Dec 2025", "2022 – 2026", "08/2021 - Present", "Austin, TX", "Remote"
+ * Examples: "Jan 2024 – Dec 2025", "2022 – 2026", "08/2021 - Present", "Austin, TX", "June 2020 – Present College Station, TX", "Remote"
  */
 export function isDateOrMetadata(text: string): boolean {
   const trimmed = text.trim();
-  if (!trimmed || trimmed.length > 80) return false;
+  if (!trimmed || trimmed.length > 95) return false;
 
   // Strip wrapping brackets or parentheses
   const stripped = trimmed.replace(/^[\(\[\{]/, "").replace(/[\)\]\}]$/, "").trim();
@@ -166,6 +226,7 @@ export function isDateOrMetadata(text: string): boolean {
   if (NUMERIC_DATE_RANGE_REGEX.test(stripped)) return true;
   if (SINGLE_DATE_REGEX.test(stripped)) return true;
   if (LOCATION_REGEX.test(stripped) || WORK_MODE_REGEX.test(stripped)) return true;
+  if (COMBINED_DATE_LOC_REGEX.test(stripped)) return true;
   if (/^(present|current|now|ongoing)$/i.test(stripped)) return true;
 
   // Combination with pipes or bullets: e.g. "San Francisco, CA | Jan 2024 – Present"
@@ -187,6 +248,15 @@ export function detectPageColumns(
   pageHeight: number,
 ): DetectedColumns {
   if (lineRuns.length < 8) {
+    return { layout: "single", gutters: [], startY: 0, endY: pageHeight };
+  }
+
+  // Check for spanning body lines (e.g. section dividers, full-width bullet points or skill lists)
+  // In a true multi-column layout, body paragraphs are confined within their respective columns.
+  const spanningBodyLines = lineRuns.filter(
+    (r) => r.width >= pageWidth * 0.65 && r.y > 100 && r.y < pageHeight - 100,
+  );
+  if (spanningBodyLines.length >= 3) {
     return { layout: "single", gutters: [], startY: 0, endY: pageHeight };
   }
 
@@ -240,8 +310,8 @@ export function detectPageColumns(
         continue;
       }
 
-      // If either side is dominated by dates (> 50%), this is NOT a column layout
-      if (rightDates / rightRuns.length > 0.5 || leftDates / leftRuns.length > 0.5) {
+      // If either side is dominated by dates (> 35%), this is NOT a column layout
+      if (rightDates / rightRuns.length > 0.35 || leftDates / leftRuns.length > 0.35) {
         continue;
       }
 
@@ -308,16 +378,16 @@ export function mergeSameBaselineRuns(
 ): LineRun[] {
   if (lineRuns.length <= 1) return lineRuns;
 
-  // Group runs by baselineY (tolerance 3.0 pt)
+  // Group runs by baselineY (tolerance 3.8 pt)
   const lineGroups: LineRun[][] = [];
   const sorted = [...lineRuns].sort((a, b) => {
     const diff = a.baselineY - b.baselineY;
-    if (Math.abs(diff) > 2.5) return diff;
+    if (Math.abs(diff) > 3.0) return diff;
     return a.x - b.x;
   });
 
   for (const run of sorted) {
-    const group = lineGroups.find((g) => Math.abs(g[0]!.baselineY - run.baselineY) <= 3.0);
+    const group = lineGroups.find((g) => Math.abs(g[0]!.baselineY - run.baselineY) <= 3.8);
     if (group) {
       group.push(run);
     } else {
@@ -384,9 +454,9 @@ function mergeRunClusterOnLine(runs: LineRun[]): LineRun[] {
       !isSectionHeader(next.text) &&
       (cur.text.includes("|") ||
         cur.text.includes("—") ||
-        /^(Senior|Lead|Staff|Principal|Software|Engineer|Developer|Manager|Director|Associate|Bachelor|Master|B\.Tech|B\.S\.)/i.test(
-          cur.text,
-        )) &&
+        isAcademicInstitutionLine(cur.text) ||
+        isAcademicDegreeLine(cur.text) ||
+        isProfessionalRoleLine(cur.text)) &&
       (runs.some((r) => isDateOrMetadata(r.text)) || next.x - cur.maxX > 20)
     ) {
       // Middle company or title fragment on same line: e.g. "Software Developer" + "ABC Technologies"
@@ -527,6 +597,10 @@ export function reconstructCanvasBlocks(
       i === 0 && pageIndex === 0 && (cur.fontSize >= 13.5 || cur.bold) && !isHeader;
     const isContact = (i === 1 || i === 2) && pageIndex === 0 && isContactLine(rawText);
 
+    const isInstitution = isAcademicInstitutionLine(rawText);
+    const isDegree = isAcademicDegreeLine(rawText);
+    const isRole = isProfessionalRoleLine(rawText);
+
     // Job title / Education entry line heuristic
     const isEntryTitleLine =
       !isHeader &&
@@ -535,13 +609,10 @@ export function reconstructCanvasBlocks(
       !isBullet &&
       (rawText.includes(" — ") ||
         rawText.includes(" | ") ||
-        /^(Senior|Lead|Staff|Principal|Software|Frontend|Backend|Fullstack|Data|ML|Product|Engineering|Director|Manager|Consultant|Junior|Associate|Architect|Developer|Engineer|Designer|Analyst|Specialist|Researcher|Intern|Technician|Officer|Executive|Administrator|Coordinator|Scientist)\b/i.test(
-          rawText,
-        ) ||
-        /^(Bachelor|Master|Ph\.?D|B\.?S|B\.?A|B\.?Tech|B\.?E|M\.?S|M\.?Tech|M\.?B\.?A|Diploma|Associate|Degree|Candidate)\b/i.test(
-          rawText,
-        )) &&
-      rawText.length < 110;
+        isInstitution ||
+        isDegree ||
+        isRole) &&
+      rawText.length < 115;
 
     let nextIdx = i + 1;
 
@@ -571,6 +642,19 @@ export function reconstructCanvasBlocks(
           break;
         }
 
+        const { isBullet: nextIsBullet } = normalizeLineBullet(next.text);
+        const nextIsHeader = isSectionHeader(next.text);
+        const nextIsEntry =
+          isAcademicInstitutionLine(next.text) ||
+          isAcademicDegreeLine(next.text) ||
+          isProfessionalRoleLine(next.text) ||
+          next.text.includes(" | ") ||
+          next.text.includes(" — ");
+
+        if (nextIsBullet || nextIsHeader || nextIsEntry) {
+          break;
+        }
+
         const gapY = next.y - (cur.y + height);
         const sameStyle =
           cur.fontFamily === next.fontFamily &&
@@ -580,17 +664,12 @@ export function reconstructCanvasBlocks(
 
         const isNaturalLineSpacing = gapY >= -2 && gapY <= Math.max(8, cur.fontSize * 0.95);
         const sameMargin = Math.abs(cur.x - next.x) <= 14;
-
-        const { isBullet: nextIsBullet } = normalizeLineBullet(next.text);
-        const nextIsHeader = isSectionHeader(next.text);
         const curEndsTerminal = /[.!?:]$/.test(rawText);
 
         if (
           sameStyle &&
           isNaturalLineSpacing &&
           sameMargin &&
-          !nextIsBullet &&
-          !nextIsHeader &&
           (!curEndsTerminal || /^[a-z]/.test(next.text.trim()))
         ) {
           rawText += " " + next.text.trim();

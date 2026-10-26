@@ -201,6 +201,23 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
+  // Rule 4b: Legacy Graduation Year Proxy
+  // e.g. "Graduated from State University with a Bachelor of Science in Computer Science in 1997."
+  const graduationProxyCandidate = candidates.find(
+    (c) => c.subcategory === "graduation_year_proxy",
+  );
+  if (graduationProxyCandidate) {
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FLAGGED,
+      confidence: 0.95,
+      explanation: `Listing graduation dates older than 20 years ('${graduationProxyCandidate.matchedText}') operates as an age proxy in automated screening, creating disparate barrier risk under EEOC/ADEA guidelines.`,
+      contextType: "graduation_year_proxy",
+      candidate_matches: candidates,
+    };
+  }
+
   // Rule 5: Culture Fit & Affinity Screening Proxies
   // e.g. "The hiring committee evaluated whether the engineer was a good culture fit."
   const cultureFitPhrase = candidates.find(
@@ -466,6 +483,33 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
         candidate_matches: candidates,
       };
     }
+  }
+
+  // Rule 14: Neutral Chronological Date Ranges, Credentials & Employment Entries
+  // e.g. "Aug. 2014 – May 2018", "Software Engineer | 2020 – 2024", "B.A. in Computer Science | 2014–2018", "Southwestern University | Georgetown, TX"
+  const isDateRangeOrCredential =
+    /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*[-–—/]\s*(?:(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}|Present|Current)/i.test(
+      trimmedSentence,
+    ) ||
+    /^(?:Bachelor|Master|Associate(?:'s)?|Ph\.?D|B\.?[SAE]|M\.?[SE]|Degree|Diploma|Candidate)\b/i.test(
+      trimmedSentence,
+    ) ||
+    /^(?:Senior|Staff|Lead|Principal|Software|Frontend|Backend|Fullstack|Data|Systems|DevOps|Cloud|Undergraduate|Research|Student|Tutor|Technician)\s+(?:Engineer|Developer|Architect|Assistant|Technician|Tutor|Scientist|Analyst)\b/i.test(
+      trimmedSentence,
+    ) ||
+    /\b(?:University|College|Institute|School|Academy)\b/i.test(trimmedSentence) ||
+    /\|.*(?:19|20)\d{2}/.test(trimmedSentence);
+
+  if (isDateRangeOrCredential && !hasHiringPreference && !hasDeficitInference) {
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FINE,
+      confidence: 0.95,
+      explanation: `Neutral chronological date range or professional credential documenting candidate employment and education history without discriminatory screening restrictions.`,
+      contextType: "neutral_chronological_record",
+      candidate_matches: candidates,
+    };
   }
 
   // Default Fallback for Unexonerated Sensitive Keywords:

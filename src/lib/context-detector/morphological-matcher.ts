@@ -102,17 +102,44 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
     }
   }
 
-  // 2. Graduation dates older than 10-15 years (e.g. 1950 - 2015)
-  const graduationYearsRegex = /\b(?:19[5-9]\d|200\d|201[0-5])\b/g;
-  let yearMatch = graduationYearsRegex.exec(rawText);
+  // 2. Legacy graduation dates older than 20-25 years (e.g. 1950 - 2004)
+  // Operates as an overt age proxy under EEOC / ADEA guidelines.
+  // NEVER flags standard date ranges (e.g. "2014 – May 2018", "2012 – 2018", "2019 – Present").
+  const legacyGraduationRegex = /\b(?:19[5-9]\d|200[0-4])\b/g;
+  let yearMatch = legacyGraduationRegex.exec(rawText);
   while (yearMatch) {
     const start = yearMatch.index;
     const end = start + yearMatch[0].length;
     const matchedText = yearMatch[0];
 
+    // Check surrounding window (25 chars before and after) to verify it is NOT part of a date range
+    const windowBefore = rawText.slice(Math.max(0, start - 25), start);
+    const windowAfter = rawText.slice(end, Math.min(rawText.length, end + 25));
+
+    // A date range has hyphens, dashes, or range words connecting dates
+    const isPrecededByRange =
+      /[-–—/]\s*$/i.test(windowBefore) || /\b(?:to|until|through)\s*$/i.test(windowBefore);
+    const isFollowedByRange =
+      /^\s*[-–—/]/.test(windowAfter) ||
+      /^\s*\b(?:to|until|through|present|current)\b/i.test(windowAfter);
+    const isMonthRange =
+      /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*$/i.test(windowBefore);
+
+    const isDateRange = isPrecededByRange || isFollowedByRange || isMonthRange;
+
+    // Check if there is explicit graduation or education phrasing in the sentence
+    const surroundingSentence = rawText.slice(
+      Math.max(0, start - 80),
+      Math.min(rawText.length, end + 80),
+    );
+    const hasGraduationContext =
+      /\b(?:graduat(?:ed|ion|e)?|class of|degree|bachelor|master|ph\.?d|b\.?s|b\.?a|alumn(?:us|a|i))\b/i.test(
+        surroundingSentence,
+      );
+
     const overlaps = spans.some((s) => Math.max(s.start, start) < Math.min(s.end, end));
 
-    if (!overlaps) {
+    if (!overlaps && !isDateRange && hasGraduationContext) {
       spans.push({
         form: matchedText,
         type: VARIANT_TYPES.BASE_FORM,
@@ -122,11 +149,11 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
         severity: "medium",
         confidence: 0.95,
         explanation:
-          "Listing graduation dates older than 10-15 years operates as an age proxy in automated candidate screening.",
+          "Listing graduation dates older than 20 years operates as an age proxy in automated candidate screening.",
         researchCitation: "EEOC ADEA Guidance & Neumark et al. (2019)",
         replacement: "Remove graduation year",
         rationale:
-          "Omitting graduation dates neutralizes age proxies while keeping degree credentials intact.",
+          "Omitting legacy graduation dates neutralizes age proxies while keeping degree credentials intact.",
         entry: {
           canonicalTerm: "graduation_year",
           category: "age_indicative",
@@ -135,7 +162,7 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
           confidence: 0.95,
           replacement: "Remove graduation year",
           explanation:
-            "Listing graduation dates older than 10-15 years operates as an age proxy in automated candidate screening.",
+            "Listing graduation dates older than 20 years operates as an age proxy in automated candidate screening.",
           researchCitation: "EEOC ADEA Guidance & Neumark et al. (2019)",
           variants: [{ form: matchedText, type: VARIANT_TYPES.BASE_FORM }],
         },
@@ -144,7 +171,7 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
       });
     }
 
-    yearMatch = graduationYearsRegex.exec(rawText);
+    yearMatch = legacyGraduationRegex.exec(rawText);
   }
 
   // Sort chronologically by start position

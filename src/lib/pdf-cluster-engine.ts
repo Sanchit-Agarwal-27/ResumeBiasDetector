@@ -4,6 +4,9 @@ import {
   mergeSameBaselineRuns,
   orderRunsByLayout,
   isDateOrMetadata,
+  isAcademicInstitutionLine,
+  isAcademicDegreeLine,
+  isProfessionalRoleLine,
 } from "./document-parser";
 
 export interface CanvasTextBlock {
@@ -468,6 +471,10 @@ export function clusterPdfTextContent(
         rawText.includes("linkedin") ||
         rawText.includes("github"));
 
+    const isInstitution = isAcademicInstitutionLine(rawText);
+    const isDegree = isAcademicDegreeLine(rawText);
+    const isRole = isProfessionalRoleLine(rawText);
+
     const isJobTitleLine =
       !isSectionHeader &&
       !isCandidateName &&
@@ -475,10 +482,10 @@ export function clusterPdfTextContent(
       !isBullet &&
       (rawText.includes(" — ") ||
         rawText.includes(" | ") ||
-        /^(Senior|Lead|Junior|Staff|Principal|Software|Product|Engineering|Director|Manager|VP|Analyst|Consultant)/i.test(
-          rawText,
-        )) &&
-      rawText.length < 90;
+        isInstitution ||
+        isDegree ||
+        isRole) &&
+      rawText.length < 115;
 
     let nextIdx = i + 1;
 
@@ -486,6 +493,18 @@ export function clusterPdfTextContent(
     if (!isSectionHeader && !isCandidateName && !isJobTitleLine) {
       while (nextIdx < orderedRuns.length) {
         const next = orderedRuns[nextIdx]!;
+
+        const nextIsEntry =
+          isAcademicInstitutionLine(next.text) ||
+          isAcademicDegreeLine(next.text) ||
+          isProfessionalRoleLine(next.text) ||
+          next.text.includes(" | ") ||
+          next.text.includes(" — ");
+
+        if (nextIsEntry) {
+          break;
+        }
+
         const gapY = next.y - (cur.y + height);
 
         const sameStyle =

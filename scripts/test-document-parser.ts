@@ -724,6 +724,153 @@ async function runTests() {
   }
 
   // ============================================================================
+  // TEST 14: Complex LaTeX Format Resume (Southwestern University / Jake's Resume)
+  // ============================================================================
+  console.log("\n--------------------------------------------------------------------------------");
+  console.log(" TEST 14: Complex LaTeX Format Resume (Southwestern University)");
+  console.log("--------------------------------------------------------------------------------");
+  {
+    const pdfDoc = new jsPDF({ unit: "pt", format: "letter" });
+
+    // Header
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(20);
+    pdfDoc.text("Jake Ryan", 54, 50);
+
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9);
+    pdfDoc.text("123-456-7890 | jake@example.com | linkedin.com/in/jake | github.com/jake", 54, 65);
+
+    // Section 1: Education with horizontal rule
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("EDUCATION", 54, 95);
+    pdfDoc.setLineWidth(0.75);
+    pdfDoc.line(54, 99, 558, 99);
+
+    // Line 1: Southwestern University (left) ... Georgetown, TX (right)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Southwestern University", 54, 115);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Georgetown, TX", 470, 115);
+
+    // Line 2: Bachelor of Arts in Computer Science, Minor in Business (left) ... Aug. 2018 – May 2021 (right)
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(10);
+    pdfDoc.text("Bachelor of Arts in Computer Science, Minor in Business", 54, 130);
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Aug. 2018 – May 2021", 445, 130);
+
+    // Line 3: Blinn College (left) ... Bryan, TX (right)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Blinn College", 54, 150);
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Bryan, TX", 500, 150);
+
+    // Line 4: Associate's in Liberal Arts (left) ... Aug. 2014 – May 2018 (right)
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(10);
+    pdfDoc.text("Associate's in Liberal Arts", 54, 165);
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("Aug. 2014 – May 2018", 445, 165);
+
+    // Section 2: Experience with horizontal rule
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(12);
+    pdfDoc.text("EXPERIENCE", 54, 195);
+    pdfDoc.line(54, 199, 558, 199);
+
+    // Line 5: Undergraduate Research Assistant (left)
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.setFontSize(10.5);
+    pdfDoc.text("Undergraduate Research Assistant", 54, 215);
+
+    // Line 6: Texas A&M University (left) ... June 2020 – Present College Station, TX (right)
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.setFontSize(10);
+    pdfDoc.text("Texas A&M University", 54, 230);
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("June 2020 – Present College Station, TX", 370, 230);
+
+    // Bullets
+    pdfDoc.setFontSize(9.5);
+    pdfDoc.text("• Developed a REST API using FastAPI and PostgreSQL to process telemetry logs.", 64, 248);
+    pdfDoc.text("• Developed a full-stack web application using Flask, React, PostgreSQL, and Docker.", 64, 263);
+
+    const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
+    const parsed = await extractResumeDocument(pdfBuffer, "southwestern_resume.pdf");
+
+    assert(parsed.diagnostics.columnLayout === "single", "Layout correctly classified as single-column");
+    assert(parsed.cleanedText.includes("Southwestern University"), "Extracted Southwestern University");
+    assert(parsed.cleanedText.includes("Georgetown, TX"), "Extracted Georgetown, TX");
+    assert(
+      /Southwestern University\s*\|\s*Georgetown,\s*TX/.test(parsed.cleanedText),
+      "Georgetown, TX paired beside Southwestern University",
+    );
+    assert(
+      /Bachelor of Arts in Computer Science.*\|\s*Aug\.\s*2018\s*[-–]\s*May\s*2021/.test(
+        parsed.cleanedText,
+      ),
+      "Aug. 2018 – May 2021 paired beside Bachelor degree entry",
+    );
+    assert(
+      /Blinn College\s*\|\s*Bryan,\s*TX/.test(parsed.cleanedText),
+      "Bryan, TX paired beside Blinn College",
+    );
+    assert(
+      /Associate's in Liberal Arts\s*\|\s*Aug\.\s*2014\s*[-–]\s*May\s*2018/.test(parsed.cleanedText),
+      "Aug. 2014 – May 2018 paired beside Associate's degree entry",
+    );
+    assert(
+      /Texas A&M University\s*\|\s*June 2020\s*[-–]\s*Present\s*College Station,\s*TX/.test(
+        parsed.cleanedText,
+      ),
+      "June 2020 – Present College Station, TX paired beside Texas A&M University",
+    );
+
+    // Verify organizations and degrees are NOT clumped into a single line
+    assert(
+      !parsed.cleanedText.includes(
+        "Southwestern University Bachelor of Arts in Computer Science",
+      ),
+      "Southwestern University and Bachelor degree are NOT clumped into single continuous line",
+    );
+    assert(
+      !parsed.cleanedText.includes(
+        "Undergraduate Research Assistant Texas A&M University",
+      ),
+      "Undergraduate Research Assistant and Texas A&M are NOT clumped into single continuous line",
+    );
+
+    // Verify zero dates or locations appear at the end of the text
+    const lines = parsed.cleanedText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const last3Lines = lines.slice(-3).join(" ");
+    assert(
+      !/^(?:Georgetown,\s*TX|Bryan,\s*TX|Aug\.\s*2014|Aug\.\s*2018|June\s*2020)/.test(
+        last3Lines,
+      ),
+      "Zero dates or locations appear disconnected at document end",
+    );
+
+    // Downstream bias analysis verification
+    const biasResult = analyzeResumeText(parsed.cleanedText);
+    assert(
+      biasResult.neutrality_score === 100,
+      "Neutral Southwestern resume receives 100% neutrality score",
+      `Score was ${biasResult.neutrality_score}`,
+    );
+    assert(
+      biasResult.spans.length === 0,
+      "Downstream bias detector flags 0 spans (neutral dates not flagged as age bias!)",
+      `Flagged spans: ${JSON.stringify(biasResult.spans.map((s) => s.matched_text))}`,
+    );
+  }
+
+  // ============================================================================
   // SUMMARY
   // ============================================================================
   console.log("\n================================================================================");
