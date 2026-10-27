@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -75,6 +76,14 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
       }
     }
   }, [open, defaultView]);
+
+  const handleContinueAsGuest = () => {
+    logout();
+    onOpenChange(false);
+    toast.info("Working in Guest Mode", {
+      description: "You have full access to local document parsing, bias auditing, and ATS matching without an account.",
+    });
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

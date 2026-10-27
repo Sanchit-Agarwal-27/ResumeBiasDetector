@@ -1149,12 +1149,16 @@ export function ResumeWorkspace() {
                     className="cursor-pointer text-xs text-destructive focus:text-destructive"
                   >
                     <LogOut className="size-3.5 mr-2" />
-                    <span>Sign Out</span>
+                    <span>Sign Out (Switch to Guest Mode)</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-muted/60 text-[11px] text-muted-foreground select-none">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-foreground/80">Guest Mode</span>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
