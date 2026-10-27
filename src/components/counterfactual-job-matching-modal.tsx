@@ -16,6 +16,7 @@ import {
   Briefcase,
   Layers,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ import type {
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { fetchServerAtsMatch } from "@/lib/analysis-service";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
+import { JobMatchExplainabilityView } from "./job-match-explainability-view";
 
 interface CounterfactualJobMatchingModalProps {
   open: boolean;
@@ -249,7 +251,7 @@ export function CounterfactualJobMatchingModal({
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 w-full mb-4">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full mb-4">
             <TabsTrigger value="simulator" className="text-xs font-medium">
               <Briefcase className="h-3.5 w-3.5 mr-1.5" />
               Target Job & Input
@@ -264,7 +266,15 @@ export function CounterfactualJobMatchingModal({
               disabled={!activeResult}
             >
               <GitCompare className="h-3.5 w-3.5 mr-1.5" />
-              Counterfactual Projection
+              Counterfactual
+            </TabsTrigger>
+            <TabsTrigger
+              value="explanation"
+              className="text-xs font-medium"
+              disabled={!activeResult}
+            >
+              <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+              Score Explanation & Evidence
             </TabsTrigger>
           </TabsList>
 
@@ -369,15 +379,26 @@ export function CounterfactualJobMatchingModal({
                     {activeResult.missing_keywords.length} missing skill gaps.
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveTab("analysis")}
-                  className="h-7 text-xs gap-1"
-                >
-                  View Gap Analysis
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("explanation")}
+                    className="h-7 text-xs gap-1 text-primary border-primary/30 hover:bg-primary/5 font-medium"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Explain Score & Evidence
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("analysis")}
+                    className="h-7 text-xs gap-1"
+                  >
+                    View Gap Analysis
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -605,6 +626,18 @@ export function CounterfactualJobMatchingModal({
                   </ul>
                 </div>
               </div>
+            </TabsContent>
+          )}
+
+          {/* Tab 4: Score Explanation & Evidence */}
+          {activeResult && (
+            <TabsContent value="explanation" className="space-y-4">
+              <JobMatchExplainabilityView
+                matchResult={activeResult}
+                resumeText={resumeText}
+                jobText={jobText}
+                onInsertKeyword={onInsertKeywordIntoCanvas}
+              />
             </TabsContent>
           )}
         </Tabs>
