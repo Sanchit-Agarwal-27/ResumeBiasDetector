@@ -80,8 +80,10 @@ import {
   type CanvasPage,
   type ColumnLayoutPreset,
 } from "@/lib/pdf-cluster-engine";
+import { extractResumeDocument } from "@/lib/document-parser";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
+import { generateGoogleXyzRewrite } from "@/lib/xyz-formula-engine";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 
@@ -232,6 +234,7 @@ export function ResumeWorkspace() {
   const [sentenceFilter, setSentenceFilter] = useState<"all" | "flagged" | "fine">("all");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [healthInfo, setHealthInfo] = useState<HealthResponse | null>(null);
+  const [lastLatencyMs, setLastLatencyMs] = useState<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // User Authentication & Theme State
@@ -498,6 +501,7 @@ export function ResumeWorkspace() {
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
+        const analysisStartTime = Date.now();
         const enrichedReport = await processResumeAnalysis(
           fullText,
           report.file_name,
@@ -505,6 +509,7 @@ export function ResumeWorkspace() {
           report.target_job?.raw_text,
           report.target_job?.title,
         );
+        setLastLatencyMs(Date.now() - analysisStartTime);
 
         setReport((current) => {
           if (current.spans.length === 0 && (enrichedReport.error_flags || []).length > 0) {
@@ -527,6 +532,38 @@ export function ResumeWorkspace() {
   }
 
   function applyErrorFix(err: ResumeErrorFlag) {
+    if (
+      err.error_type === "unquantified_impact" ||
+      err.suggestion?.startsWith("Add quantifiable")
+    ) {
+      const sourceSentence = err.sentence || err.matched_text;
+      const xyzResult = generateGoogleXyzRewrite(sourceSentence);
+      let replaced = false;
+      const updatedBlocks = canvasBlocks.map((block) => {
+        const isTarget =
+          block.text.includes(err.matched_text) ||
+          err.matched_text.includes(block.text.trim()) ||
+          (err.sentence && block.text.includes(err.sentence));
+        if (!replaced && isTarget) {
+          replaced = true;
+          return { ...block, text: xyzResult.fullRewrite };
+        }
+        return block;
+      });
+      if (replaced) {
+        setCanvasBlocks(updatedBlocks);
+        const sorted = [...updatedBlocks].sort(
+          (a, b) => a.pageIndex - b.pageIndex || a.y - b.y || a.x - b.x,
+        );
+        const joined = sorted.map((b) => b.text).join("\n\n");
+        updateText(joined);
+        setStatus("Google XYZ formula applied");
+        toast.success("Google XYZ Formula applied", {
+          description: `Transformed bullet to Google XYZ format (${xyzResult.domain}): Accomplished [X], as measured by [Y], by doing [Z].`,
+        });
+      }
+      return;
+    }
     let fixText = err.suggestion;
     if (fixText.includes(" / ")) {
       fixText = fixText.split(" / ")[0].trim();
@@ -718,6 +755,30 @@ export function ResumeWorkspace() {
     }
   }
 
+    async function loadTrialResume(samplePath: string, fileName: string, roleName: string) {
+    try {
+      setIsTransitioning(true);
+      setStatus(`Loading trial resume for ${roleName}...`);
+      const response = await fetch(samplePath);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${fileName}: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: "application/pdf" });
+      await handleFile(file);
+      toast.success(`Loaded ${roleName} trial resume`, {
+        description: `Now evaluating ${fileName} across bias, writing quality, and ATS dimensions.`,
+      });
+    } catch (err) {
+      console.error("Failed to load trial resume:", err);
+      toast.error("Failed to load trial resume", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsTransitioning(false);
+    }
+  }
+
   async function handleFile(file?: File) {
     if (!file) return;
 
@@ -751,91 +812,35 @@ export function ResumeWorkspace() {
       let extractedPages: CanvasPage[] = [];
       let rawText = "";
 
-      // Step 1: Clustering & Extraction
+      // Step 1: Layout-Aware Clustering & Extraction
       setProcessingStep(1);
 
-      if (cleanFileName.toLowerCase().endsWith(".docx")) {
-        const mammoth = await import("mammoth");
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        rawText = result.value.trim();
-        extractedBlocks = parseRawTextToCanvasBlocks(rawText, 612, 792);
-        const maxPageIdx = Math.max(0, ...extractedBlocks.map((b) => b.pageIndex));
-        extractedPages = Array.from({ length: maxPageIdx + 1 }, (_, i) => ({
-          id: `page-${i + 1}`,
-          pageNumber: i + 1,
-          width: 612,
-          height: 792,
-        }));
-      } else {
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-        const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-        for (let index = 0; index < pdf.numPages; index++) {
-          const page = await pdf.getPage(index + 1);
-          const viewport = page.getViewport({ scale: 1 });
-          const opList = await page.getOperatorList();
-          const content = await page.getTextContent();
-          const pageBlocks = clusterPdfTextContent(
-            content.items,
-            content.styles,
-            viewport.width,
-            viewport.height,
-            index,
-            (page as unknown as { commonObjs?: unknown }).commonObjs,
-            opList,
-          );
+      const parsedDoc = await extractResumeDocument(arrayBuffer, cleanFileName, {
+        pdfWorkerUrl,
+        allowOcr: true,
+      });
 
-          // Standardize page dimensions to standard resume formats:
-          // US Letter: 612 x 792 pt, A4: 595 x 842 pt
-          let normWidth = 612;
-          let normHeight = 792;
-          if (viewport.width <= 600) {
-            normWidth = 595;
-            normHeight = 842;
-          } else {
-            normWidth = 612;
-            normHeight = 792;
-          }
+      extractedBlocks = parsedDoc.canvasBlocks;
+      extractedPages = parsedDoc.canvasPages;
+      rawText = parsedDoc.cleanedText || parsedDoc.rawText;
 
-          // If content on this viewport page exceeds standard page height,
-          // flow blocks cleanly across multiple standard pages without vertical stretching
-          const contentMaxY =
-            pageBlocks.length > 0 ? Math.max(...pageBlocks.map((b) => b.y + b.height)) : 0;
-          const usablePageHeight = normHeight - 60;
-          const subPagesNeeded = Math.max(1, Math.ceil(contentMaxY / usablePageHeight));
+      // Safe debug telemetry (zero PII logged)
+      console.debug("[ResumeParser Diagnostics]", {
+        fileType: parsedDoc.diagnostics.fileType,
+        pageCount: parsedDoc.diagnostics.pageCount,
+        characterCount: parsedDoc.diagnostics.characterCount,
+        method: parsedDoc.diagnostics.method,
+        ocrTriggered: parsedDoc.diagnostics.ocrTriggered,
+        layout: parsedDoc.diagnostics.columnLayout,
+        score: parsedDoc.diagnostics.validationScore,
+      });
 
-          const basePageIndex = extractedPages.length;
-          for (let sp = 0; sp < subPagesNeeded; sp++) {
-            extractedPages.push({
-              id: `page-${basePageIndex + sp + 1}`,
-              pageNumber: basePageIndex + sp + 1,
-              width: normWidth,
-              height: normHeight,
-            });
-          }
-
-          for (const b of pageBlocks) {
-            const pageOffset = Math.min(Math.floor(b.y / usablePageHeight), subPagesNeeded - 1);
-            const targetPageIndex = basePageIndex + pageOffset;
-            const remappedY =
-              pageOffset > 0
-                ? Math.round(b.y - pageOffset * usablePageHeight + 36)
-                : Math.round(b.y);
-            extractedBlocks.push({
-              ...b,
-              pageIndex: targetPageIndex,
-              y: remappedY,
-              width: Math.min(b.width, normWidth - 72),
-            });
-          }
-        }
-        rawText = extractedBlocks
-          .map((b) => b.text)
-          .join("\n\n")
-          .trim();
+      if (!rawText || !rawText.trim()) {
+        throw new Error(
+          parsedDoc.validation.fallbackReason ||
+            "No readable text found in document. Please upload a clear PDF or DOCX file.",
+        );
       }
-
-      if (!rawText) throw new Error("No selectable text found in file");
       const safeRawText = sanitizeInputText(rawText, 500000);
 
       // Step 2: Bias taxonomy analysis
@@ -867,10 +872,21 @@ export function ResumeWorkspace() {
       setActiveId(analysis.spans[0]?.id ?? "");
       setCanvasPages(extractedPages);
       setCanvasBlocks(extractedBlocks);
+      setColumnLayout(parsedDoc.diagnostics.columnLayout);
       setStatus(`${cleanFileName} imported into Word resume editor`);
       toast.success("Resume imported successfully", {
         description: `Detected ${analysis.spans.length} signals with ${analysis.neutrality_score}% neutrality index.`,
       });
+
+      if (parsedDoc.diagnostics.ocrTriggered) {
+        toast.info("Scanned document processed via OCR", {
+          description: `Extracted text using visual optical character recognition fallback.`,
+        });
+      } else if (parsedDoc.diagnostics.columnLayout !== "single") {
+        toast.info("Multi-column layout detected", {
+          description: `Processed ${parsedDoc.diagnostics.columnLayout.replace(/-/g, " ")} layout with preserved reading order.`,
+        });
+      }
 
       if (!isAuthenticated) {
         setTimeout(() => {
@@ -1193,12 +1209,16 @@ export function ResumeWorkspace() {
                     className="cursor-pointer text-xs text-destructive focus:text-destructive"
                   >
                     <LogOut className="size-3.5 mr-2" />
-                    <span>Sign Out</span>
+                    <span>Sign Out (Switch to Guest Mode)</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-muted/60 text-[11px] text-muted-foreground select-none">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-foreground/80">Guest Mode</span>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1599,8 +1619,12 @@ export function ResumeWorkspace() {
                     ? "FastAPI Live AI"
                     : "Local Engine"}
               </span>
-              <span className="text-[10px] text-muted-foreground uppercase font-mono px-1 rounded bg-background/80">
-                {engineMode === "fastapi" ? ":8000" : "offline"}
+              <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded bg-background/80">
+                {engineMode === "fastapi"
+                  ? lastLatencyMs !== null
+                    ? `:8000 · ${lastLatencyMs}ms`
+                    : ":8000"
+                  : "offline"}
               </span>
             </div>
 
@@ -1952,6 +1976,63 @@ export function ResumeWorkspace() {
               <p className="text-xs text-muted-foreground">{status}</p>
             </div>
             <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs border-primary/40 hover:border-primary text-primary hover:bg-primary/5 cursor-pointer"
+                    title="Load trial resumes for demonstration"
+                  >
+                    <Sparkles className="size-3.5 text-primary" />
+                    <span className="font-medium">Trial Resumes</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="text-xs font-semibold">Evaluation Sample Resumes</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_maya_sharma_product_designer.pdf",
+                        "sample_resume_maya_sharma_product_designer.pdf",
+                        "Maya Sharma"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Maya Sharma</span>
+                    <span className="text-[11px] text-muted-foreground">Product Designer (UI/UX)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_arjun_mehta_software_engineer.pdf",
+                        "sample_resume_arjun_mehta_software_engineer.pdf",
+                        "Arjun Mehta"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Arjun Mehta</span>
+                    <span className="text-[11px] text-muted-foreground">Software Engineer (Backend/Distributed)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_nisha_fernandes_digital_marketing.pdf",
+                        "sample_resume_nisha_fernandes_digital_marketing.pdf",
+                        "Nisha Fernandes"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Nisha Fernandes</span>
+                    <span className="text-[11px] text-muted-foreground">Digital Marketing Specialist</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -2435,20 +2516,23 @@ export function ResumeWorkspace() {
                                   ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                                   : "bg-blue-500/20 text-blue-700 dark:text-blue-300";
 
-                          const buttonLabel = isSpelling
-                            ? "Fix Spelling"
-                            : isProfanity
-                              ? "Replace / Cleanse"
-                              : isFirstPerson
-                                ? "Use Action Verb"
-                                : isSlang
-                                  ? "Professionalize"
-                                  : isPersonalInfo || err.error_type === "cliche"
-                                    ? "Remove Line"
-                                    : err.error_type === "passive_voice" ||
-                                        err.error_type === "weak_verb"
-                                      ? "Apply Power Verb"
-                                      : "Apply Fix";
+                          const isUnquantified = err.error_type === "unquantified_impact";
+                          const buttonLabel = isUnquantified
+                            ? "Apply Google XYZ Formula"
+                            : isSpelling
+                              ? "Fix Spelling"
+                              : isProfanity
+                                ? "Replace / Cleanse"
+                                : isFirstPerson
+                                  ? "Use Action Verb"
+                                  : isSlang
+                                    ? "Professionalize"
+                                    : isPersonalInfo || err.error_type === "cliche"
+                                      ? "Remove Line"
+                                      : err.error_type === "passive_voice" ||
+                                          err.error_type === "weak_verb"
+                                        ? "Apply Power Verb"
+                                        : "Apply Fix";
 
                           return (
                             <div
@@ -2483,12 +2567,32 @@ export function ResumeWorkspace() {
                                 {err.explanation}
                               </p>
 
+                              {isUnquantified && (() => {
+                                const xyz = generateGoogleXyzRewrite(err.sentence || err.matched_text);
+                                return (
+                                  <div className="bg-primary/5 border border-primary/25 rounded-md p-2.5 space-y-1.5 my-1.5">
+                                    <div className="flex items-center gap-1.5 font-semibold text-primary text-[11px]">
+                                      <Sparkles className="size-3 text-amber-500 shrink-0" />
+                                      <span>Google XYZ Formula ({xyz.domain})</span>
+                                    </div>
+                                    <p className="text-foreground/90 italic pl-2.5 border-l-2 border-primary/50 font-mono text-[11px] leading-relaxed">
+                                      "{xyz.fullRewrite}"
+                                    </p>
+                                    <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Accomplished [X]</span> •
+                                      <span className="text-blue-600 dark:text-blue-400 font-medium">Measured by [Y]</span> •
+                                      <span className="text-violet-600 dark:text-violet-400 font-medium">By doing [Z]</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                               {err.suggestion && (
                                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 mt-1">
                                   <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                                     Fix: {err.suggestion}
                                   </span>
-                                  {!err.suggestion.startsWith("Add quantifiable") && (
+                                  {err.suggestion && (
                                     <Button
                                       size="sm"
                                       variant="outline"

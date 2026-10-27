@@ -4,6 +4,7 @@
  * 1. 30-sample benchmark evaluation suite
  * 2. 10 counterfactual pair tests
  * 3. End-to-end document analysis & regression tests
+ * 4. Neutral chronology & age-bias precision tests
  */
 
 import fs from "fs";
@@ -246,6 +247,211 @@ async function testServiceLayer() {
 }
 
 await testServiceLayer();
+
+// ============================================================================
+// SUITE 4: NEUTRAL CHRONOLOGY & AGE-BIAS PRECISION TESTS
+// ============================================================================
+console.log("\n--------------------------------------------------------------------------------");
+console.log(" SUITE 4: Neutral Chronology & Age-Bias Precision Tests");
+console.log("--------------------------------------------------------------------------------");
+
+const c1 = classifySentence("B.A. in Computer Science | 2014–2018");
+assert(
+  c1.classification === CLASSIFICATION.FINE,
+  "B.A. in Computer Science | 2014–2018 is classified as Fine",
+);
+assert(
+  c1.contextType === "neutral_chronological_record" || c1.contextType === "neutral_no_keywords",
+  "Context type is neutral chronology or no keywords",
+);
+
+const c2 = classifySentence("Software Engineer | 2020–2024");
+assert(
+  c2.classification === CLASSIFICATION.FINE,
+  "Software Engineer | 2020–2024 is classified as Fine",
+);
+
+const c3 = classifySentence("Aug. 2014 – May 2018");
+assert(
+  c3.classification === CLASSIFICATION.FINE,
+  "Aug. 2014 – May 2018 is classified as Fine (zero false alarm on date range)",
+);
+
+const c4 = classifySentence("June 2020 – Present College Station, TX");
+assert(
+  c4.classification === CLASSIFICATION.FINE,
+  "June 2020 – Present College Station, TX is classified as Fine",
+);
+
+const c5 = classifySentence("Applicants must be younger than 30 for this junior role.");
+assert(
+  c5.classification === CLASSIFICATION.FLAGGED,
+  "Explicit age exclusion 'younger than 30' is classified as Flagged",
+);
+
+const c6 = classifySentence(
+  "Graduated from State University with a Bachelor of Science in Computer Science in 1997.",
+);
+assert(
+  c6.classification === CLASSIFICATION.FLAGGED,
+  "Legacy graduation year proxy (1997) is classified as Flagged",
+);
+
+// ============================================================================
+// SUITE 5: COMPREHENSIVE TAXONOMY, TYPO/FUZZY SCANNER & REWRITE RECOMMENDATIONS
+// ============================================================================
+console.log("\n--------------------------------------------------------------------------------");
+console.log(" SUITE 5: Comprehensive Taxonomy, Typo/Fuzzy Scanner & Actionable Recommendations");
+console.log("--------------------------------------------------------------------------------");
+
+// 1. Typo and OCR variant 'anfrily' -> 'angrily' detection
+const sAnfrily = classifySentence(
+  "Candidate reacted anfrily when receiving technical code review feedback.",
+);
+assert(
+  sAnfrily.classification === CLASSIFICATION.FLAGGED,
+  "Sentence with 'anfrily' is classified as Flagged",
+);
+assert(
+  sAnfrily.keyword_match.some((k) => k.toLowerCase() === "anfrily"),
+  "Matches 'anfrily' keyword via typo tolerance / spelling variant",
+);
+assert(
+  sAnfrily.contextType === "hostile_combative_conduct",
+  "Context type is hostile_combative_conduct",
+);
+
+// End-to-end resume check for 'anfrily' with actionable rewrite suggestion
+const anfrilyAnalysis = analyzeResumeText(
+  "Summary: Senior Developer with 5 years experience.\nIncident: Reacted anfrily during architectural dispute with team.\nOutcome: Resolved database deadlock.",
+);
+const anfrilySpan = anfrilyAnalysis.spans.find((s) => s.matched_text.toLowerCase() === "anfrily");
+assert(anfrilySpan !== undefined, "analyzeResumeText generates a flagged span for 'anfrily'");
+assert(
+  anfrilySpan?.category === "personality_behavioral",
+  "anfrily is categorized under personality_behavioral",
+);
+assert(anfrilySpan?.subcategory === "hostile_conduct", "anfrily subcategory is hostile_conduct");
+const anfrilySuggestion = anfrilySpan ? anfrilyAnalysis.suggestions[anfrilySpan.id] : undefined;
+assert(
+  anfrilySuggestion !== undefined && anfrilySuggestion.suggested_text.length > 0,
+  "anfrily provides a non-empty actionable replacement suggestion",
+);
+assert(
+  anfrilySuggestion !== undefined && anfrilySuggestion.rationale.length > 0,
+  "anfrily provides an educational rationale explaining why the replacement eliminates bias",
+);
+
+// 2. Age-related expanded indicators
+const sYoungProf = classifySentence(
+  "Seeking an energetic young professional to lead cloud deployments.",
+);
+assert(
+  sYoungProf.classification === CLASSIFICATION.FLAGGED,
+  "'young professional' is classified as Flagged",
+);
+
+const sRecentGrad = classifySentence(
+  "This entry position is strictly limited to recent graduates.",
+);
+assert(
+  sRecentGrad.classification === CLASSIFICATION.FLAGGED,
+  "'recent graduates' is classified as Flagged",
+);
+
+const sOverqualified = classifySentence(
+  "The hiring team rejected the applicant as overqualified for the position.",
+);
+assert(
+  sOverqualified.classification === CLASSIFICATION.FLAGGED,
+  "'overqualified' is classified as Flagged",
+);
+
+// 3. Culture fit & unstandardized affinity proxies
+const sCultureFit = classifySentence(
+  "The interview committee evaluated whether the engineer was a good culture fit.",
+);
+assert(
+  sCultureFit.classification === CLASSIFICATION.FLAGGED,
+  "'culture fit' is classified as Flagged",
+);
+
+const sBeerTest = classifySentence(
+  "Candidate demonstrated solid skills but failed the beer test with the team.",
+);
+assert(sBeerTest.classification === CLASSIFICATION.FLAGGED, "'beer test' is classified as Flagged");
+
+// 4. Linguistic & national origin proxies
+const sNativeEnglish = classifySentence(
+  "Role requires a native English speaker with a clean accent.",
+);
+assert(
+  sNativeEnglish.classification === CLASSIFICATION.FLAGGED,
+  "'native English speaker' is classified as Flagged",
+);
+assert(
+  sNativeEnglish.contextType === "protected_demographic_proxy",
+  "Linguistic nativity is classified as protected demographic proxy",
+);
+
+// 5. Bro-culture tech jargon
+const sRockstar = classifySentence(
+  "Looking for a rockstar ninja coder to crush it on our engineering team.",
+);
+assert(
+  sRockstar.classification === CLASSIFICATION.FLAGGED,
+  "'rockstar ninja' bro-culture jargon is classified as Flagged",
+);
+
+// 6. Health & physical endurance proxies
+const sHealth = classifySentence(
+  "Candidate has a clean bill of health with tireless 24/7 availability.",
+);
+assert(
+  sHealth.classification === CLASSIFICATION.FLAGGED,
+  "'clean bill of health' / '24/7 availability' is Flagged",
+);
+
+// 7. Substring safety control validation
+const sSafe = classifySentence(
+  "Managed streaming data packages, optimizing profit and employee benefits without damage to system architecture.",
+);
+assert(
+  sSafe.classification === CLASSIFICATION.FINE,
+  "Safe technical sentence with streaming/manage/benefit is Fine",
+);
+
+// 8. Actionable recommendations completeness check on rich document
+const comprehensiveDoc = `
+Profile: Highly motivated young professional seeking a software engineering role.
+Skills: Rockstar ninja in Python, distributed databases, and high-throughput streaming.
+Conduct: Reacted anfrily during code review dispute with peers.
+Education: Native English speaker with a clean accent and degree from an Ivy League institution.
+Availability: Possesses clean bill of health and tireless 24/7 availability.
+`;
+const compAnalysis = analyzeResumeText(comprehensiveDoc);
+assert(
+  compAnalysis.spans.length >= 5,
+  "Comprehensive biased resume flags all present bias categories",
+);
+assert(
+  compAnalysis.neutrality_score < 70,
+  "Neutrality score is penalized appropriately for multiple flags",
+);
+
+// Verify EVERY span has a complete suggestion with original_text, suggested_text, and rationale
+let allSuggestionsValid = true;
+for (const span of compAnalysis.spans) {
+  const sug = compAnalysis.suggestions[span.id];
+  if (!sug || !sug.suggested_text || !sug.rationale || !sug.original_text) {
+    allSuggestionsValid = false;
+    break;
+  }
+}
+assert(
+  allSuggestionsValid,
+  "Every single flagged span produces a rich, actionable suggestion and rationale",
+);
 
 // ============================================================================
 // FINAL SUMMARY

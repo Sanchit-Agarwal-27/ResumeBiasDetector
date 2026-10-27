@@ -64,3 +64,6 @@ backend/.venv/
 venv/
 *.egg-info/
 
+
+# Archives
+*.zip

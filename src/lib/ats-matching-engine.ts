@@ -1,3 +1,4 @@
+import { generateJobMatchExplanation } from "./job-match-explainability";
 import type {
   JobDescriptionProfile,
   AtsMatchResult,
@@ -8,7 +9,7 @@ import type {
 import { analyzeResumeText } from "./bias-taxonomy";
 
 // Comprehensive Technical & Domain Skills Dictionary
-const HARD_SKILLS_DICTIONARY: Record<string, string[]> = {
+export const HARD_SKILLS_DICTIONARY: Record<string, string[]> = {
   // Languages
   typescript: ["ts", "type-script"],
   javascript: ["js", "ecmascript"],
@@ -65,7 +66,7 @@ const HARD_SKILLS_DICTIONARY: Record<string, string[]> = {
   llm: ["large language models", "prompt engineering", "genai", "generative ai"],
 };
 
-const SOFT_SKILLS_DICTIONARY: Record<string, string[]> = {
+export const SOFT_SKILLS_DICTIONARY: Record<string, string[]> = {
   "cross-functional collaboration": ["cross-functional", "collaborated with", "partnered with"],
   leadership: ["mentored", "coached", "led a team", "spearheaded", "directed"],
   "stakeholder management": [
@@ -404,7 +405,7 @@ export function calculateAtsMatch(
     missingKeywords,
   );
 
-  return {
+  const result: AtsMatchResult = {
     job_profile: jobProfile,
     overall_match_score: overallMatchScore,
     hard_skills_score: hardSkillsScore,
@@ -416,6 +417,14 @@ export function calculateAtsMatch(
     counterfactual_simulation: counterfactualSimulation,
     analyzed_at: new Date().toISOString(),
   };
+
+  try {
+    result.explanation = generateJobMatchExplanation(result, resumeText, jobText);
+  } catch (err) {
+    console.warn("Explainability generation fallback:", err);
+  }
+
+  return result;
 }
 
 /**

@@ -2,7 +2,7 @@
  * @file sentence-classifier.ts
  * Implements Stages 1 to 5 of the BiasLens Context-Aware Architecture:
  * - Stage 1: Sentence Input (single sentence or multi-sentence splitting).
- * - Stage 2: Keyword Candidate Detection (morphological & multiword scanning).
+ * - Stage 2: Keyword Candidate Detection (morphological, fuzzy, & multiword scanning).
  * - Stage 3: Context-Aware Classification (Strict binary: "Fine" vs "Flagged").
  * - Stage 4: Explainable AI (grounded, factual rationale referencing input words).
  * - Stage 5: Structured Experimental Output format.
@@ -99,35 +99,39 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     lowerSentence.includes("unreliable") ||
     lowerSentence.includes("excessive supervision") ||
     lowerSentence.includes("burden") ||
-    lowerSentence.includes("liability");
+    lowerSentence.includes("liability") ||
+    lowerSentence.includes("skills rusty") ||
+    lowerSentence.includes("rusty skills");
 
   // Rule 1: Explicit Hiring Preference on Protected / Sensitive Characteristics
   // e.g. "The company prefers young and energetic candidates."
   if (hasHiringPreference) {
-    const ageOrGenderOrHealthCandidates = candidates.filter(
+    const sensitiveCandidates = candidates.filter(
       (c) =>
         c.category === "age_indicative" ||
         c.category === "gender_coded" ||
         c.category === "disability_coded" ||
-        c.category === "prestige_proxy",
+        c.category === "prestige_proxy" ||
+        c.category === "personality_behavioral",
     );
 
-    if (ageOrGenderOrHealthCandidates.length > 0) {
-      const terms = ageOrGenderOrHealthCandidates.map((c) => `'${c.matchedText}'`).join(" and ");
+    if (sensitiveCandidates.length > 0) {
+      const terms = sensitiveCandidates.map((c) => `'${c.matchedText}'`).join(" and ");
       return {
         sentence: trimmedSentence,
         keyword_match: matchedKeywords,
         classification: CLASSIFICATION.FLAGGED,
         confidence: 0.96,
-        explanation: `The sentence explicitly expresses a hiring preference for ${terms}, introducing an unlawful or discriminatory screening criterion under EEOC/ADEA guidelines.`,
+        explanation: `The sentence explicitly expresses a hiring preference for ${terms}, introducing an unlawful or discriminatory screening criterion under EEOC/ADEA/Title VII guidelines.`,
         contextType: "explicit_hiring_preference",
         candidate_matches: candidates,
       };
     }
   }
 
-  // Rule 2: Explicit Negative Inference or Deficit Framing (e.g. Career Break -> Less Committed, Disability -> Excessive Supervision)
+  // Rule 2: Explicit Negative Inference or Deficit Framing
   // e.g. "The candidate took a two-year career break and is therefore less committed to the company."
+  // e.g. "The candidate has a disability and may require excessive supervision."
   if (hasDeficitInference) {
     const gapOrDisability = candidates.filter(
       (c) =>
@@ -135,7 +139,8 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
         c.category === "disability_coded" ||
         c.matchedText.toLowerCase().includes("career break") ||
         c.matchedText.toLowerCase().includes("employment gap") ||
-        c.matchedText.toLowerCase().includes("disability"),
+        c.matchedText.toLowerCase().includes("disability") ||
+        c.matchedText.toLowerCase().includes("less committed"),
     );
 
     if (gapOrDisability.length > 0) {
@@ -152,30 +157,38 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     }
   }
 
-  // Rule 3: Protected Demographic & Health Proxies
-  // e.g. "digital native", "clean bill of health", "differently abled", "rockstar", "seasoned veteran (>25 yrs)"
-  const proxyCandidate = candidates.find(
+  // Rule 3: Hostile, Combative, or Abrasive Interpersonal Conduct (including typos like 'anfrily')
+  // e.g. "He reacted anfrily to the team during sprint planning."
+  // e.g. "Candidate was combative and hostile during code review discussions."
+  const hostileCandidate = candidates.find(
     (c) =>
-      c.matchedText.toLowerCase().includes("digital native") ||
-      c.matchedText.toLowerCase().includes("clean bill of health") ||
-      c.matchedText.toLowerCase().includes("differently abled") ||
-      c.matchedText.toLowerCase().includes("differently-abled") ||
-      c.matchedText.toLowerCase().includes("rockstar") ||
-      c.matchedText.toLowerCase().includes("ninja") ||
-      c.matchedText.toLowerCase().includes("10x engineer") ||
-      c.matchedText.toLowerCase().includes("over 25 years of experience") ||
-      c.matchedText.toLowerCase().includes("seasoned veteran") ||
-      c.category === "prestige_proxy",
+      c.subcategory === "hostile_conduct" ||
+      c.matchedText.toLowerCase() === "anfrily" ||
+      c.matchedText.toLowerCase() === "angrily" ||
+      c.matchedText.toLowerCase() === "angry" ||
+      c.matchedText.toLowerCase() === "hostile" ||
+      c.matchedText.toLowerCase() === "combative" ||
+      c.matchedText.toLowerCase() === "confrontational" ||
+      c.matchedText.toLowerCase() === "confrontatonal" ||
+      c.matchedText.toLowerCase() === "argumentative" ||
+      c.matchedText.toLowerCase() === "short-tempered" ||
+      c.matchedText.toLowerCase() === "abrasive" ||
+      c.matchedText.toLowerCase() === "defensive" ||
+      c.matchedText.toLowerCase() === "toxic" ||
+      c.matchedText.toLowerCase() === "shouting" ||
+      c.matchedText.toLowerCase() === "screaming" ||
+      c.matchedText.toLowerCase() === "demeaning" ||
+      c.matchedText.toLowerCase() === "belittling",
   );
 
-  if (proxyCandidate) {
+  if (hostileCandidate) {
     return {
       sentence: trimmedSentence,
       keyword_match: matchedKeywords,
       classification: CLASSIFICATION.FLAGGED,
-      confidence: 0.94,
-      explanation: `The phrase '${proxyCandidate.matchedText}' functions as an overt proxy for protected characteristics (such as age, physical health status, or elitist pedigree), introducing disparate screening barriers.`,
-      contextType: "protected_demographic_proxy",
+      confidence: 0.95,
+      explanation: `The term '${hostileCandidate.matchedText}' reflects hostile, combative, or unprofessional conduct, introducing subjective interpersonal bias into candidate evaluation.`,
+      contextType: "hostile_combative_conduct",
       candidate_matches: candidates,
     };
   }
@@ -184,9 +197,12 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
   // e.g. "Colleagues noted the candidate has a difficult personality and is hard to work with, often not a team player."
   const conflictPhrase = candidates.find(
     (c) =>
+      c.subcategory === "interpersonal_conflict" ||
       c.matchedText.toLowerCase().includes("difficult personality") ||
       c.matchedText.toLowerCase().includes("hard to work with") ||
-      c.matchedText.toLowerCase().includes("not a team player"),
+      c.matchedText.toLowerCase().includes("not a team player") ||
+      c.matchedText.toLowerCase().includes("bad attitude") ||
+      c.matchedText.toLowerCase().includes("inflexible"),
   );
 
   if (conflictPhrase) {
@@ -201,14 +217,19 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
-  // Rule 5: Culture Fit & Affinity Screening Proxies
+  // Rule 5: Culture Fit & Unstandardized Affinity Proxies
   // e.g. "The hiring committee evaluated whether the engineer was a good culture fit."
+  // e.g. "Failed the beer test despite strong technical credentials."
   const cultureFitPhrase = candidates.find(
     (c) =>
+      c.subcategory === "culture_fit_proxy" ||
       c.matchedText.toLowerCase().includes("culture fit") ||
       c.matchedText.toLowerCase().includes("cultural fit") ||
       c.matchedText.toLowerCase().includes("personality fit") ||
-      c.matchedText.toLowerCase().includes("team fit"),
+      c.matchedText.toLowerCase().includes("team fit") ||
+      c.matchedText.toLowerCase().includes("social fit") ||
+      c.matchedText.toLowerCase().includes("beer test") ||
+      c.matchedText.toLowerCase().includes("airport test"),
   );
 
   if (cultureFitPhrase) {
@@ -216,14 +237,130 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
       sentence: trimmedSentence,
       keyword_match: matchedKeywords,
       classification: CLASSIFICATION.FLAGGED,
-      confidence: 0.91,
+      confidence: 0.92,
       explanation: `Evaluating candidates based on '${cultureFitPhrase.matchedText}' introduces an unstandardized affinity proxy that frequently reproduces demographic homogeneity and unconscious bias.`,
       contextType: "culture_fit_affinity_proxy",
       candidate_matches: candidates,
     };
   }
 
-  // Rule 6: Interpersonal Conduct Targeting People (Colleagues, Teammates, Staff)
+  // Rule 6: Protected Demographic, Generational, Linguistic & Prestige Proxies
+  // e.g. "digital native", "clean bill of health", "young professional", "recent graduate", "overqualified", "native English speaker", "Ivy League", "rockstar"
+  const proxyCandidate = candidates.find(
+    (c) =>
+      c.subcategory === "generational_tech_proxy" ||
+      c.subcategory === "entry_cohort_proxy" ||
+      c.subcategory === "linguistic_nationality_proxy" ||
+      c.subcategory === "physical_endurance_proxy" ||
+      c.matchedText.toLowerCase().includes("digital native") ||
+      c.matchedText.toLowerCase().includes("tech-savvy generation") ||
+      c.matchedText.toLowerCase().includes("young professional") ||
+      c.matchedText.toLowerCase().includes("energetic youth") ||
+      c.matchedText.toLowerCase().includes("recent graduate") ||
+      c.matchedText.toLowerCase().includes("fresh graduate") ||
+      c.matchedText.toLowerCase().includes("college graduate") ||
+      c.matchedText.toLowerCase().includes("overqualified") ||
+      c.matchedText.toLowerCase().includes("too experienced") ||
+      c.matchedText.toLowerCase().includes("clean bill of health") ||
+      c.matchedText.toLowerCase().includes("tireless 24/7 availability") ||
+      c.matchedText.toLowerCase().includes("differently abled") ||
+      c.matchedText.toLowerCase().includes("differently-abled") ||
+      c.matchedText.toLowerCase().includes("native english speaker") ||
+      c.matchedText.toLowerCase().includes("clean accent") ||
+      c.matchedText.toLowerCase().includes("accentless english") ||
+      c.matchedText.toLowerCase().includes("mother tongue") ||
+      c.matchedText.toLowerCase().includes("rockstar") ||
+      c.matchedText.toLowerCase().includes("ninja") ||
+      c.matchedText.toLowerCase().includes("10x engineer") ||
+      c.matchedText.toLowerCase().includes("over 25 years of experience") ||
+      c.matchedText.toLowerCase().includes("seasoned veteran") ||
+      c.matchedText.toLowerCase().includes("ivy league") ||
+      c.matchedText.toLowerCase().includes("top tier university") ||
+      c.matchedText.toLowerCase().includes("tier 1 school") ||
+      (c.category === "prestige_proxy" && !lowerSentence.includes("degree")),
+  );
+
+  if (proxyCandidate) {
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FLAGGED,
+      confidence: 0.94,
+      explanation: `The phrase '${proxyCandidate.matchedText}' functions as an overt proxy for protected characteristics (such as age, national origin, physical health status, or elitist pedigree), introducing disparate screening barriers.`,
+      contextType: "protected_demographic_proxy",
+      candidate_matches: candidates,
+    };
+  }
+
+  // Rule 7: Legacy Graduation Year Proxy
+  // e.g. "Graduated from State University with a Bachelor of Science in Computer Science in 1997."
+  const graduationProxyCandidate = candidates.find(
+    (c) => c.subcategory === "graduation_year_proxy",
+  );
+  if (graduationProxyCandidate) {
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FLAGGED,
+      confidence: 0.95,
+      explanation: `Listing graduation dates older than 20 years ('${graduationProxyCandidate.matchedText}') operates as an age proxy in automated screening, creating disparate barrier risk under EEOC/ADEA guidelines.`,
+      contextType: "graduation_year_proxy",
+      candidate_matches: candidates,
+    };
+  }
+
+  // Rule 8: Ambiguous Leadership Style, Management Demeanor, or Subjective Personality Judgment
+  // e.g. "The candidate has an aggressive leadership style."
+  // e.g. "Aggressive manager with 5 years experience."
+  // e.g. "He is an aggressive developer."
+  const hasSubjectiveStyleOrRole =
+    lowerSentence.includes("leadership") ||
+    lowerSentence.includes("management") ||
+    lowerSentence.includes("style") ||
+    lowerSentence.includes("attitude") ||
+    lowerSentence.includes("personality") ||
+    lowerSentence.includes("temperament") ||
+    lowerSentence.includes("demeanor") ||
+    lowerSentence.includes("communication") ||
+    lowerSentence.includes("manager") ||
+    lowerSentence.includes("developer") ||
+    lowerSentence.includes("engineer") ||
+    lowerSentence.includes("leader") ||
+    lowerSentence.includes("candidate");
+
+  const agenticCandidate = candidates.find((c) => {
+    const t = c.matchedText.toLowerCase();
+    return (
+      t.includes("aggressive") ||
+      t.includes("dominant") ||
+      t.includes("controlling") ||
+      t.includes("forceful") ||
+      t.includes("combative")
+    );
+  });
+
+  if (
+    agenticCandidate &&
+    hasSubjectiveStyleOrRole &&
+    !hasTechnicalObject &&
+    !hasTechnicalAction &&
+    !hasStrategyObject
+  ) {
+    const phraseText = agenticCandidate.matchedText.toLowerCase().includes("style")
+      ? `'${agenticCandidate.matchedText}'`
+      : `'${agenticCandidate.matchedText} leadership style'`;
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FLAGGED,
+      confidence: 0.9,
+      explanation: `The phrase ${phraseText} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.`,
+      contextType: "subjective_leadership_style",
+      candidate_matches: candidates,
+    };
+  }
+
+  // Rule 9: Interpersonal Conduct Targeting People (Colleagues, Teammates, Staff)
   // e.g. "He used aggressive language when criticizing his teammates."
   if (
     hasInterpersonalTarget &&
@@ -253,40 +390,7 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     }
   }
 
-  // Rule 7: Ambiguous Leadership Style or Subjective Personality Judgment
-  // e.g. "The candidate has an aggressive leadership style."
-  if (
-    lowerSentence.includes("leadership style") ||
-    lowerSentence.includes("management style") ||
-    lowerSentence.includes("working style") ||
-    lowerSentence.includes("personality style") ||
-    (lowerSentence.includes("candidate has an") && lowerSentence.includes("style"))
-  ) {
-    const styleCandidate = candidates.find(
-      (c) =>
-        c.matchedText.toLowerCase().includes("aggressive") ||
-        c.matchedText.toLowerCase().includes("dominant") ||
-        c.matchedText.toLowerCase().includes("controlling") ||
-        c.matchedText.toLowerCase().includes("forceful"),
-    );
-
-    if (styleCandidate) {
-      const phraseText = styleCandidate.matchedText.toLowerCase().includes("style")
-        ? `'${styleCandidate.matchedText}'`
-        : `'${styleCandidate.matchedText} leadership style'`;
-      return {
-        sentence: trimmedSentence,
-        keyword_match: matchedKeywords,
-        classification: CLASSIFICATION.FLAGGED,
-        confidence: 0.88,
-        explanation: `The phrase ${phraseText} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.`,
-        contextType: "subjective_leadership_style",
-        candidate_matches: candidates,
-      };
-    }
-  }
-
-  // Rule 8: Technical Accessibility Feature for Disabled Users
+  // Rule 10: Technical Accessibility Feature for Disabled Users (Exoneration)
   // e.g. "He developed an application that improves accessibility for people with disabilities."
   // e.g. "Implemented accessibility needs and screen-reader accommodations compliant with WCAG 2.1 AA."
   const isA11yFeature =
@@ -315,10 +419,34 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
-  // Rule 9: Technical Achievement, Engineering Action, or Software Performance Optimization
-  // e.g. "She aggressively optimized the machine learning pipeline, reducing inference latency by 40%."
-  // e.g. "Reduced database query latency by 60% through aggressive caching tiers."
+  // --------------------------------------------------------------------------
+  // Rule 11: Polysemous Technical Achievements & Engineering Actions (Exoneration)
+  // ONLY exonerates terms with legitimate technical/business polysemy
+  // (e.g. 'aggressive caching', 'aggressively optimized', 'young engineer who developed', 'nurturing accounts')
+  // --------------------------------------------------------------------------
+  const POLYSEMOUS_TECHNICAL_TERMS = new Set([
+    "aggressive",
+    "aggressively",
+    "aggression",
+    "strong",
+    "stronger",
+    "strongest",
+    "flexible",
+    "adaptable",
+    "supportive",
+    "nurturing",
+    "competitive",
+    "competitively",
+    "young",
+    "experienced",
+  ]);
+
+  const hasOnlyPolysemousCandidates = candidates.every((c) =>
+    POLYSEMOUS_TECHNICAL_TERMS.has(c.matchedText.toLowerCase()),
+  );
+
   if (
+    hasOnlyPolysemousCandidates &&
     (hasTechnicalObject || hasTechnicalAction) &&
     !hasInterpersonalTarget &&
     !hasHiringPreference
@@ -353,10 +481,13 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
-  // Rule 10: Technical Skills, Competencies, and Inanimate Architecture
+  // Rule 11B: Technical Skills, Competencies, and Inanimate Architecture
   // e.g. "Strong background in Python and distributed databases with proven problem-solving skills."
   // e.g. "Designed a flexible, modular microservices architecture."
-  if (hasSkillNoun || tokens.includes("architecture") || tokens.includes("framework")) {
+  if (
+    hasOnlyPolysemousCandidates &&
+    (hasSkillNoun || tokens.includes("architecture") || tokens.includes("framework"))
+  ) {
     const techSkillCandidate = candidates.find(
       (c) =>
         c.matchedText.toLowerCase() === "strong" ||
@@ -378,10 +509,10 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     }
   }
 
-  // Rule 11: Inanimate Business Strategy / Competitive Market Analysis
+  // Rule 11C: Inanimate Business Strategy / Competitive Market Analysis
   // e.g. "Conducted comprehensive competitive analysis against top five market competitors to guide product pricing."
   // e.g. "The team adopted an aggressive optimization strategy to reduce processing time."
-  if (hasStrategyObject && !hasInterpersonalTarget) {
+  if (hasOnlyPolysemousCandidates && hasStrategyObject && !hasInterpersonalTarget) {
     const stratObj =
       tokens.find((t) => STRATEGY_AND_BUSINESS_OBJECTS.has(t)) || "business strategy";
     const stratCandidate = candidates[0];
@@ -396,9 +527,10 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
-  // Rule 11B: Commercial Client Relationship & Account Leadership with quantitative outcomes
+  // Rule 11D: Commercial Client Relationship & Account Leadership with quantitative outcomes
   // e.g. "Nurturing enterprise client accounts generated a 35% increase in annual contract renewals."
   if (
+    hasOnlyPolysemousCandidates &&
     (tokens.includes("client") ||
       tokens.includes("clients") ||
       tokens.includes("accounts") ||
@@ -441,14 +573,34 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
   }
 
   // Rule 13: Neutral/Harmless Qualification Mention (e.g. "The candidate is an experienced engineer with strong technical skills.")
+  // STRICT: Only applies to genuinely neutral qualification terms (experienced, strong, flexible, adaptable).
+  // Sensitive/agentic terms (aggressive, young, dominant, rockstar, etc.) are strictly excluded.
+  const SAFE_QUALIFICATION_TERMS = new Set([
+    "experienced",
+    "strong",
+    "stronger",
+    "strongest",
+    "flexible",
+    "adaptable",
+  ]);
+
+  const hasOnlySafeQualificationCandidates = candidates.every((c) =>
+    SAFE_QUALIFICATION_TERMS.has(c.matchedText.toLowerCase()),
+  );
+
   if (
-    tokens.includes("engineer") ||
-    tokens.includes("developer") ||
-    tokens.includes("analyst") ||
-    tokens.includes("manager") ||
-    tokens.includes("consultant") ||
-    tokens.includes("skills") ||
-    tokens.includes("experience")
+    hasOnlySafeQualificationCandidates &&
+    (tokens.includes("engineer") ||
+      tokens.includes("developer") ||
+      tokens.includes("analyst") ||
+      tokens.includes("manager") ||
+      tokens.includes("consultant") ||
+      tokens.includes("specialist") ||
+      tokens.includes("designer") ||
+      tokens.includes("professional") ||
+      tokens.includes("strategy") ||
+      tokens.includes("skills") ||
+      tokens.includes("experience"))
   ) {
     const hasDiscriminatoryPhrase = candidates.some(
       (c) =>
@@ -468,6 +620,33 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     }
   }
 
+  // Rule 14: Neutral Chronological Date Ranges, Credentials & Employment Entries
+  // e.g. "Aug. 2014 – May 2018", "Software Engineer | 2020 – 2024", "B.A. in Computer Science | 2014–2018", "Southwestern University | Georgetown, TX"
+  const isDateRangeOrCredential =
+    /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*[-–—/]\s*(?:(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}|Present|Current)/i.test(
+      trimmedSentence,
+    ) ||
+    /^(?:Bachelor|Master|Associate(?:'s)?|Ph\.?D|B\.?[SAE]|M\.?[SE]|Degree|Diploma|Candidate)\b/i.test(
+      trimmedSentence,
+    ) ||
+    /^(?:Senior|Staff|Lead|Principal|Software|Frontend|Backend|Fullstack|Data|Systems|DevOps|Cloud|Undergraduate|Research|Student|Tutor|Technician)\s+(?:Engineer|Developer|Architect|Assistant|Technician|Tutor|Scientist|Analyst)\b/i.test(
+      trimmedSentence,
+    ) ||
+    /\b(?:University|College|Institute|School|Academy)\b/i.test(trimmedSentence) ||
+    /\|.*(?:19|20)\d{2}/.test(trimmedSentence);
+
+  if (isDateRangeOrCredential && !hasHiringPreference && !hasDeficitInference) {
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FINE,
+      confidence: 0.95,
+      explanation: `Neutral chronological date range or professional credential documenting candidate employment and education history without discriminatory screening restrictions.`,
+      contextType: "neutral_chronological_record",
+      candidate_matches: candidates,
+    };
+  }
+
   // Default Fallback for Unexonerated Sensitive Keywords:
   // If a sensitive keyword remains in a non-technical, uncontextualized sentence,
   // classify as Flagged to ensure potential hiring risks are surfaced.
@@ -476,8 +655,10 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     sentence: trimmedSentence,
     keyword_match: matchedKeywords,
     classification: CLASSIFICATION.FLAGGED,
-    confidence: 0.85,
-    explanation: `The term '${primaryCandidate.matchedText}' (${primaryCandidate.category}) appears without sufficient technical or objective context, posing a potential stereotyping or subjective screening risk.`,
+    confidence: primaryCandidate.confidence || 0.88,
+    explanation:
+      primaryCandidate.explanation ||
+      `The term '${primaryCandidate.matchedText}' (${primaryCandidate.category}) appears without sufficient technical or objective context, posing a potential stereotyping or subjective screening risk.`,
     contextType: "uncontextualized_sensitive_term",
     candidate_matches: candidates,
   };

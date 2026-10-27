@@ -175,6 +175,8 @@ export const TECHNICAL_ACTIONS = new Set<string>([
   "author",
   "authored",
   "authoring",
+  "architect",
+  "architected",
   "ship",
   "shipped",
   "shipping",

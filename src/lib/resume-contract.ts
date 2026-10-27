@@ -1,3 +1,4 @@
+import type { JobMatchExplanationReport } from "./job-match-explainability";
 export type BiasCategory =
   | "gender_coded"
   | "age_indicative"
@@ -160,6 +161,7 @@ export interface AtsMatchResult {
   matched_keywords: KeywordMatchEntry[];
   missing_keywords: KeywordMatchEntry[];
   counterfactual_simulation: CounterfactualJobSimulation;
+  explanation?: JobMatchExplanationReport;
   analyzed_at: string;
 }
 
@@ -363,3 +365,5 @@ TECHNICAL SKILLS & CERTIFICATIONS
     },
   ],
 };
+
+export type { JobMatchExplanationReport };
