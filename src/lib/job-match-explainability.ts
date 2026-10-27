@@ -1,17 +1,8 @@
-import type {
-  AtsMatchResult,
-  KeywordMatchEntry,
-} from "./resume-contract";
-import {
-  HARD_SKILLS_DICTIONARY,
-  SOFT_SKILLS_DICTIONARY,
-} from "./ats-matching-engine";
+import type { AtsMatchResult, KeywordMatchEntry } from "./resume-contract";
+import { HARD_SKILLS_DICTIONARY, SOFT_SKILLS_DICTIONARY } from "./ats-matching-engine";
 
 export type EvidenceType =
-  | "project_experience"
-  | "explicit_skill"
-  | "qualification"
-  | "contextual_mention";
+  "project_experience" | "explicit_skill" | "qualification" | "contextual_mention";
 
 export interface PositiveMatchExplanation {
   keyword: string;
@@ -64,17 +55,73 @@ interface ParsedSentence {
 }
 
 const ACTION_VERBS = new Set([
-  "achieved", "administered", "analyzed", "architected", "automated", "built",
-  "collaborated", "configured", "constructed", "coordinated", "created", "debugged",
-  "delivered", "deployed", "designed", "developed", "directed", "engineered",
-  "established", "executed", "expanded", "facilitated", "formulated", "guided",
-  "implemented", "improved", "increased", "initiated", "inspected", "instituted",
-  "integrated", "introduced", "launched", "lead", "led", "maintained", "managed",
-  "mentored", "migrated", "modeled", "monitored", "negotiated", "optimized",
-  "orchestrated", "organized", "oversaw", "partnered", "performed", "pioneered",
-  "planned", "produced", "programmed", "reduced", "refactored", "resolved",
-  "restructured", "scaled", "shipped", "spearheaded", "standardized", "streamlined",
-  "supervised", "tested", "trained", "transformed", "upgraded", "utilized"
+  "achieved",
+  "administered",
+  "analyzed",
+  "architected",
+  "automated",
+  "built",
+  "collaborated",
+  "configured",
+  "constructed",
+  "coordinated",
+  "created",
+  "debugged",
+  "delivered",
+  "deployed",
+  "designed",
+  "developed",
+  "directed",
+  "engineered",
+  "established",
+  "executed",
+  "expanded",
+  "facilitated",
+  "formulated",
+  "guided",
+  "implemented",
+  "improved",
+  "increased",
+  "initiated",
+  "inspected",
+  "instituted",
+  "integrated",
+  "introduced",
+  "launched",
+  "lead",
+  "led",
+  "maintained",
+  "managed",
+  "mentored",
+  "migrated",
+  "modeled",
+  "monitored",
+  "negotiated",
+  "optimized",
+  "orchestrated",
+  "organized",
+  "oversaw",
+  "partnered",
+  "performed",
+  "pioneered",
+  "planned",
+  "produced",
+  "programmed",
+  "reduced",
+  "refactored",
+  "resolved",
+  "restructured",
+  "scaled",
+  "shipped",
+  "spearheaded",
+  "standardized",
+  "streamlined",
+  "supervised",
+  "tested",
+  "trained",
+  "transformed",
+  "upgraded",
+  "utilized",
 ]);
 
 /**
@@ -315,7 +362,8 @@ export function generateJobMatchExplanation(
     const bestEvidence = findBestResumeEvidence(entry.keyword, parsedResume);
     const jobReq = findBestJobRequirement(entry.keyword, parsedJob);
 
-    const evidenceText = bestEvidence?.sentence || `Mentioned ${entry.frequencyInResume} time(s) in resume text.`;
+    const evidenceText =
+      bestEvidence?.sentence || `Mentioned ${entry.frequencyInResume} time(s) in resume text.`;
     const evidenceType: EvidenceType = bestEvidence?.evidenceType || "explicit_skill";
     const section = bestEvidence?.section || "resume";
 
@@ -386,13 +434,19 @@ export function generateJobMatchExplanation(
   const semanticScore = matchResult.semantic_relevance_score;
   const structureScore = matchResult.section_coverage.overall_structure_score;
 
-  const totalHard = matchResult.matched_keywords.filter((k) => k.category === "hard_skill").length +
+  const totalHard =
+    matchResult.matched_keywords.filter((k) => k.category === "hard_skill").length +
     matchResult.missing_keywords.filter((k) => k.category === "hard_skill").length;
-  const matchedHard = matchResult.matched_keywords.filter((k) => k.category === "hard_skill").length;
+  const matchedHard = matchResult.matched_keywords.filter(
+    (k) => k.category === "hard_skill",
+  ).length;
 
-  const totalSoft = matchResult.matched_keywords.filter((k) => k.category === "soft_skill").length +
+  const totalSoft =
+    matchResult.matched_keywords.filter((k) => k.category === "soft_skill").length +
     matchResult.missing_keywords.filter((k) => k.category === "soft_skill").length;
-  const matchedSoft = matchResult.matched_keywords.filter((k) => k.category === "soft_skill").length;
+  const matchedSoft = matchResult.matched_keywords.filter(
+    (k) => k.category === "soft_skill",
+  ).length;
 
   const dimensionBreakdown: DimensionExplanation[] = [
     {
@@ -401,9 +455,14 @@ export function generateJobMatchExplanation(
       weightDescription: "Core technical capabilities demanded by the job description",
       status: hardScore >= 75 ? "strong" : hardScore >= 50 ? "moderate" : "growth_area",
       summary: `${matchedHard} of ${Math.max(1, totalHard)} required technical competencies verified in your resume.`,
-      evidenceSummary: matchedHard > 0
-        ? `Demonstrated strengths in: ${positiveMatches.filter((p) => p.category === "hard_skill").slice(0, 4).map((p) => p.keyword).join(", ")}.`
-        : "No explicit technical requirements currently documented.",
+      evidenceSummary:
+        matchedHard > 0
+          ? `Demonstrated strengths in: ${positiveMatches
+              .filter((p) => p.category === "hard_skill")
+              .slice(0, 4)
+              .map((p) => p.keyword)
+              .join(", ")}.`
+          : "No explicit technical requirements currently documented.",
     },
     {
       dimension: "Semantic Terminology Alignment",
@@ -411,9 +470,10 @@ export function generateJobMatchExplanation(
       weightDescription: "Overall vocabulary and contextual phrasing overlap with the job posting",
       status: semanticScore >= 70 ? "strong" : semanticScore >= 45 ? "moderate" : "growth_area",
       summary: `Cosine terminology similarity between your resume text and the job description is ${semanticScore}%.`,
-      evidenceSummary: semanticScore >= 60
-        ? "Resume phrasing closely mirrors the technical vocabulary and domain context of the role."
-        : "Resume phrasing uses alternative terminology from the phrasing found in the job description.",
+      evidenceSummary:
+        semanticScore >= 60
+          ? "Resume phrasing closely mirrors the technical vocabulary and domain context of the role."
+          : "Resume phrasing uses alternative terminology from the phrasing found in the job description.",
     },
     {
       dimension: "Soft & Collaborative Competencies",
@@ -421,21 +481,32 @@ export function generateJobMatchExplanation(
       weightDescription: "Interpersonal, leadership, and cross-functional signals",
       status: softScore >= 70 ? "strong" : softScore >= 40 ? "moderate" : "growth_area",
       summary: `${matchedSoft} of ${Math.max(1, totalSoft)} soft competencies identified in the job description are documented.`,
-      evidenceSummary: matchedSoft > 0
-        ? `Evidenced collaborative traits: ${positiveMatches.filter((p) => p.category === "soft_skill").map((p) => p.keyword).join(", ") || "Active team engagement"}.`
-        : "Soft skills are implied but not explicitly stated with action verbs.",
+      evidenceSummary:
+        matchedSoft > 0
+          ? `Evidenced collaborative traits: ${
+              positiveMatches
+                .filter((p) => p.category === "soft_skill")
+                .map((p) => p.keyword)
+                .join(", ") || "Active team engagement"
+            }.`
+          : "Soft skills are implied but not explicitly stated with action verbs.",
     },
     {
       dimension: "Resume Structure & ATS Hygiene",
       score: structureScore,
-      weightDescription: "Standard section layout readability (Experience, Education, Skills, Contact)",
+      weightDescription:
+        "Standard section layout readability (Experience, Education, Skills, Contact)",
       status: structureScore >= 80 ? "strong" : structureScore >= 50 ? "moderate" : "growth_area",
       summary: `Standard structural formatting score: ${structureScore}%.`,
       evidenceSummary: [
         matchResult.section_coverage.contact_info ? "Contact Info present" : "Contact Info unclear",
-        matchResult.section_coverage.work_experience ? "Work Experience verified" : "Work Experience missing",
+        matchResult.section_coverage.work_experience
+          ? "Work Experience verified"
+          : "Work Experience missing",
         matchResult.section_coverage.education ? "Education verified" : "Education missing",
-        matchResult.section_coverage.skills_section ? "Skills section present" : "Skills section missing",
+        matchResult.section_coverage.skills_section
+          ? "Skills section present"
+          : "Skills section missing",
       ].join(", "),
     },
   ];
@@ -447,8 +518,14 @@ export function generateJobMatchExplanation(
   else if (overall >= 65) verdict = "Competitive Match";
   else if (overall >= 45) verdict = "Partial Alignment";
 
-  const topMatchesStr = positiveMatches.slice(0, 3).map((p) => `"${p.keyword}"`).join(", ");
-  const topGapsStr = missingRequirements.slice(0, 3).map((m) => `"${m.keyword}"`).join(", ");
+  const topMatchesStr = positiveMatches
+    .slice(0, 3)
+    .map((p) => `"${p.keyword}"`)
+    .join(", ");
+  const topGapsStr = missingRequirements
+    .slice(0, 3)
+    .map((m) => `"${m.keyword}"`)
+    .join(", ");
 
   let narrative = `Your current match score is ${overall}%. `;
   if (positiveMatches.length > 0) {
@@ -467,7 +544,12 @@ export function generateJobMatchExplanation(
     const requiredGaps = missingRequirements.filter((m) => m.importance === "required");
     if (requiredGaps.length > 0) {
       areasToImprove.push(
-        `Address high-priority requirements: The job description explicitly emphasizes ${requiredGaps.slice(0, 3).map((m) => `"${m.keyword}"`).join(", ")}. If you have practical experience with these competencies, document concrete projects where you applied them.`,
+        `Address high-priority requirements: The job description explicitly emphasizes ${requiredGaps
+          .slice(0, 3)
+          .map((m) => `"${m.keyword}"`)
+          .join(
+            ", ",
+          )}. If you have practical experience with these competencies, document concrete projects where you applied them.`,
       );
     }
   }
@@ -476,7 +558,12 @@ export function generateJobMatchExplanation(
   const skillsWithoutProject = positiveMatches.filter((p) => p.evidenceType === "explicit_skill");
   if (skillsWithoutProject.length > 0) {
     areasToImprove.push(
-      `Strengthen competency depth: ${skillsWithoutProject.slice(0, 2).map((p) => `"${p.keyword}"`).join(", ")} are listed in your skills inventory but lack accompanying project or employment context. Adding a quantifiable outcome will strengthen proof of capability.`,
+      `Strengthen competency depth: ${skillsWithoutProject
+        .slice(0, 2)
+        .map((p) => `"${p.keyword}"`)
+        .join(
+          ", ",
+        )} are listed in your skills inventory but lack accompanying project or employment context. Adding a quantifiable outcome will strengthen proof of capability.`,
     );
   }
 

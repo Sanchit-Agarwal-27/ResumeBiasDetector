@@ -7,7 +7,13 @@
  */
 
 import { EXPANDED_TAXONOMY, type ExpandedTaxonomyItem } from "./expanded-taxonomy";
-import { VARIANT_TYPES, type CandidateMatch } from "./types";
+import {
+  VARIANT_TYPES,
+  type CandidateMatch,
+  type ContextBiasCategory,
+  type SeverityLevel,
+  type TaxonomyEntry,
+} from "./types";
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -56,6 +62,14 @@ const SAFE_WORDS = new Set<string>([
   "clients",
   "service",
   "services",
+  "experience",
+  "experiences",
+  "accessible",
+  "accessibility",
+  "qualification",
+  "qualifications",
+  "deliverable",
+  "deliverables",
   "support",
   "supported",
   "supporting",
@@ -460,15 +474,15 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
           form: item.form,
           type: item.type,
           matchedText,
-          category: item.entry.category as any,
+          category: item.entry.category as ContextBiasCategory,
           subcategory: item.entry.subcategory,
-          severity: item.entry.defaultSeverity as any,
+          severity: item.entry.defaultSeverity as SeverityLevel,
           confidence: item.entry.confidence,
           explanation: item.entry.explanation,
           researchCitation: item.entry.researchCitation,
           replacement: item.entry.replacement,
           rationale: item.entry.rationale || item.entry.explanation,
-          entry: item.entry as any,
+          entry: item.entry as unknown as TaxonomyEntry,
           start,
           end,
         });
@@ -503,15 +517,15 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
               form: target.word,
               type: VARIANT_TYPES.SPELLING_VARIANT,
               matchedText: matchedToken,
-              category: target.entry.category as any,
+              category: target.entry.category as ContextBiasCategory,
               subcategory: target.entry.subcategory,
-              severity: target.entry.defaultSeverity as any,
+              severity: target.entry.defaultSeverity as SeverityLevel,
               confidence: Math.max(0.85, target.entry.confidence - 0.04),
               explanation: `Spelling or OCR variant '${matchedToken}' of '${target.word}': ${target.entry.explanation}`,
               researchCitation: target.entry.researchCitation,
               replacement: target.entry.replacement,
               rationale: target.entry.rationale || target.entry.explanation,
-              entry: target.entry as any,
+              entry: target.entry as unknown as TaxonomyEntry,
               start,
               end,
             });
@@ -544,8 +558,9 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
     const isFollowedByRange =
       /^\s*[-–—/]/.test(windowAfter) ||
       /^\s*\b(?:to|until|through|present|current)\b/i.test(windowAfter);
-    const isMonthRange =
-      /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*$/i.test(windowBefore);
+    const isMonthRange = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*$/i.test(
+      windowBefore,
+    );
 
     const isDateRange = isPrecededByRange || isFollowedByRange || isMonthRange;
 
@@ -587,7 +602,7 @@ export function scanExpandedCandidates(rawText: string): CandidateMatch[] {
             "Listing graduation dates older than 20 years operates as an age proxy in automated candidate screening.",
           researchCitation: "EEOC ADEA Guidance & Neumark et al. (2019)",
           variants: [{ form: matchedText, type: VARIANT_TYPES.BASE_FORM }],
-        } as any,
+        } as unknown as TaxonomyEntry,
         start,
         end,
       });

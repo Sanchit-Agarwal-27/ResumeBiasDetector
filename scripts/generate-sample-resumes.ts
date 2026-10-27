@@ -19,7 +19,7 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
 // 1. Two-Column Modern Sidebar Resume (PDF)
 {
   const pdf = new jsPDF({ unit: "pt", format: "letter" });
-  
+
   // Header across top
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(22);
@@ -29,7 +29,11 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.5);
   pdf.setTextColor(71, 85, 105);
-  pdf.text("marcus.sterling@example.com | (555) 234-5678 | San Francisco, CA | github.com/msterling", 54, 72);
+  pdf.text(
+    "marcus.sterling@example.com | (555) 234-5678 | San Francisco, CA | github.com/msterling",
+    54,
+    72,
+  );
 
   // Left Column Sidebar (X: 54 to 200, ~30% width)
   pdf.setFont("helvetica", "bold");
@@ -86,9 +90,24 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.setTextColor(17, 24, 39);
-  pdf.text("• Architected high-throughput transaction routing gateway supporting 45,000 requests/sec.", 230, 146, { maxWidth: 320 });
-  pdf.text("• Reduced database query latency by 55% via multi-tier caching and distributed Redis cluster.", 230, 174, { maxWidth: 320 });
-  pdf.text("• Mentored junior engineers across four product teams, running weekly architecture reviews.", 230, 202, { maxWidth: 320 });
+  pdf.text(
+    "• Architected high-throughput transaction routing gateway supporting 45,000 requests/sec.",
+    230,
+    146,
+    { maxWidth: 320 },
+  );
+  pdf.text(
+    "• Reduced database query latency by 55% via multi-tier caching and distributed Redis cluster.",
+    230,
+    174,
+    { maxWidth: 320 },
+  );
+  pdf.text(
+    "• Mentored junior engineers across four product teams, running weekly architecture reviews.",
+    230,
+    202,
+    { maxWidth: 320 },
+  );
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
@@ -102,8 +121,18 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.setTextColor(17, 24, 39);
-  pdf.text("• Developed event-driven microservices processing over $850M in annual customer invoices.", 230, 256, { maxWidth: 320 });
-  pdf.text("• Optimized CI/CD deployment pipelines, cutting build verification times from 35m to 4m.", 230, 284, { maxWidth: 320 });
+  pdf.text(
+    "• Developed event-driven microservices processing over $850M in annual customer invoices.",
+    230,
+    256,
+    { maxWidth: 320 },
+  );
+  pdf.text(
+    "• Optimized CI/CD deployment pipelines, cutting build verification times from 35m to 4m.",
+    230,
+    284,
+    { maxWidth: 320 },
+  );
 
   const filePath = path.join(OUTPUT_DIR, "1_Two_Column_Modern_Sidebar.pdf");
   fs.writeFileSync(filePath, Buffer.from(pdf.output("arraybuffer")));
@@ -157,7 +186,7 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
 // 3. Multi-Page Executive Resume with Repeated Headers & Footers (PDF)
 {
   const pdf = new jsPDF({ unit: "pt", format: "letter" });
-  
+
   // Page 1
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(22);
@@ -173,7 +202,12 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
-  pdf.text("Technology executive with 15+ years scaling enterprise engineering organizations and managing multi-million dollar technology budgets.", 54, 130, { maxWidth: 500 });
+  pdf.text(
+    "Technology executive with 15+ years scaling enterprise engineering organizations and managing multi-million dollar technology budgets.",
+    54,
+    130,
+    { maxWidth: 500 },
+  );
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(12);
@@ -186,7 +220,11 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   pdf.setFontSize(9);
   pdf.text("2020 - Present", 460, 195);
   pdf.text("• Led organization of 240 engineers, data scientists, and product managers.", 54, 215);
-  pdf.text("• Delivered HIPAA-compliant electronic health records platform serving 4.5M patients.", 54, 230);
+  pdf.text(
+    "• Delivered HIPAA-compliant electronic health records platform serving 4.5M patients.",
+    54,
+    230,
+  );
 
   // Page 1 footer
   pdf.setFontSize(8.5);
@@ -233,7 +271,11 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.5);
   pdf.setTextColor(71, 85, 105);
-  pdf.text("alexander.wright@example.com | (555) 789-0123 | Seattle, WA | linkedin.com/in/awright", 54, 72);
+  pdf.text(
+    "alexander.wright@example.com | (555) 789-0123 | Seattle, WA | linkedin.com/in/awright",
+    54,
+    72,
+  );
 
   // Decorative Horizontal divider
   pdf.setDrawColor(203, 213, 225);
@@ -258,9 +300,21 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
 
   // Bullets
   pdf.setTextColor(51, 65, 85);
-  pdf.text("• Developed high-performance web applications using React, Next.js, and TypeScript.", 54, 142);
-  pdf.text("• Worked with RESTful and GraphQL APIs connected to distributed PostgreSQL clusters.", 54, 158);
-  pdf.text("• Implemented automated CI/CD deployment pipelines reducing build times by 40%.", 54, 174);
+  pdf.text(
+    "• Developed high-performance web applications using React, Next.js, and TypeScript.",
+    54,
+    142,
+  );
+  pdf.text(
+    "• Worked with RESTful and GraphQL APIs connected to distributed PostgreSQL clusters.",
+    54,
+    158,
+  );
+  pdf.text(
+    "• Implemented automated CI/CD deployment pipelines reducing build times by 40%.",
+    54,
+    174,
+  );
 
   // Job Entry 2: Second job on left, right-aligned date on right (same baseline Y=200)
   pdf.setFont("helvetica", "bold");
@@ -275,7 +329,11 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   // Bullets
   pdf.setTextColor(51, 65, 85);
   pdf.text("• Architected event-driven microservices handling 25,000 queries per second.", 54, 217);
-  pdf.text("• Optimized database query plans cutting p99 read latency from 450ms to 28ms.", 54, 233);
+  pdf.text(
+    "• Optimized database query plans cutting p99 read latency from 450ms to 28ms.",
+    54,
+    233,
+  );
 
   // Decorative Horizontal divider
   pdf.setDrawColor(203, 213, 225);
@@ -318,5 +376,3 @@ console.log("Generating sample complex test resumes in:", OUTPUT_DIR);
   fs.writeFileSync(filePath, Buffer.from(pdf.output("arraybuffer")));
   console.log("  ✓ Created:", filePath);
 }
-
-

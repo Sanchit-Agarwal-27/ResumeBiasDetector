@@ -8,7 +8,7 @@
     "confidence": 0.9,
     "explanation": "Explicit reference to youth or chronological age in screening contexts, triggering age-discriminatory preferences under EEOC ADEA guidelines.",
     "researchCitation": "EEOC ADEA Enforcement Guidance (2020); Neumark et al. (2019)",
-    "replacement": "Specify demonstrated competencies or career stage without age markers",
+    "replacement": "early-career",
     "variants": [
       {
         "form": "young",
@@ -33,6 +33,18 @@
       {
         "form": "young age",
         "type": "multiword_expression"
+      },
+      {
+        "form": "fresh blood",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "cutting edge youth",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "young gun",
+        "type": "multiword_expression"
       }
     ]
   },
@@ -45,7 +57,7 @@
     "confidence": 0.88,
     "explanation": "Chronological age cue that can trigger implicit bias regarding technological adaptability or overqualification.",
     "researchCitation": "Neumark, Burn, & Button (2019) Age Discrimination in Hiring",
-    "replacement": "Focus on domain depth and recent project impact",
+    "replacement": "established",
     "variants": [
       {
         "form": "old",
@@ -82,7 +94,7 @@
     "confidence": 0.86,
     "explanation": "Coded age proxy or subjective maturity label that invites implicit generational stereotyping.",
     "researchCitation": "AARP / EEOC Hiring Audit (2021)",
-    "replacement": "Focus on demonstrated technical leadership and verified competencies",
+    "replacement": "experienced",
     "variants": [
       {
         "form": "mature",
@@ -111,7 +123,7 @@
     "confidence": 0.82,
     "explanation": "Tenure modifier that can serve as a proxy for candidate age when emphasizing chronological duration rather than specific skill mastery.",
     "researchCitation": "EEOC Guidelines",
-    "replacement": "Highlight specialized technical capabilities and programmatic deliverables",
+    "replacement": "skilled",
     "variants": [
       {
         "form": "experienced",
@@ -152,7 +164,7 @@
     "confidence": 0.87,
     "explanation": "Generational entry cohort label that can operate as an indirect age proxy when used to filter applicant pools.",
     "researchCitation": "EEOC Age Guidance",
-    "replacement": "Early-career professional or entry-level candidate",
+    "replacement": "entry-level candidate",
     "variants": [
       {
         "form": "recent graduate",
@@ -189,7 +201,7 @@
     "confidence": 0.89,
     "explanation": "High-energy and youth vitality descriptors often operate as coded proxies for younger candidates.",
     "researchCitation": "EEOC ADEA Guidance",
-    "replacement": "Results-driven contributor with disciplined execution",
+    "replacement": "driven",
     "variants": [
       {
         "form": "energetic",
@@ -238,7 +250,7 @@
     "confidence": 0.95,
     "explanation": "Direct generational age proxy implying that older professionals lack innate technical proficiency.",
     "researchCitation": "EEOC ADEA Enforcement Guidance (2020)",
-    "replacement": "Proficient across modern software, cloud, and collaborative tools",
+    "replacement": "technically proficient",
     "variants": [
       {
         "form": "digital native",
@@ -267,7 +279,7 @@
     "confidence": 0.94,
     "explanation": "Overt gender-stereotyped descriptor that invokes traditional masculine gender role expectations.",
     "researchCitation": "Gaucher, Friesen, & Kay (2011)",
-    "replacement": "Objective, role-relevant competency descriptor",
+    "replacement": "objective",
     "variants": [
       {
         "form": "masculine",
@@ -292,7 +304,7 @@
     "confidence": 0.94,
     "explanation": "Overt feminine descriptor that introduces gendered stereotypes into candidate evaluation.",
     "researchCitation": "Heilman (2012) Gender Stereotypes and Workplace Bias",
-    "replacement": "Professional role-relevant competency descriptor",
+    "replacement": "collaborative",
     "variants": [
       {
         "form": "feminine",
@@ -317,7 +329,7 @@
     "confidence": 0.95,
     "explanation": "Parental status indicators expose candidates to unlawful maternal or caregiver bias.",
     "researchCitation": "Correll, Benard, & Paik (2007) Getting a Job: Is There a Motherhood Penalty?",
-    "replacement": "Omit personal familial disclosures from professional resume text",
+    "replacement": "career sabbatical",
     "variants": [
       {
         "form": "motherhood",
@@ -334,6 +346,14 @@
       {
         "form": "paternal",
         "type": "base_form"
+      },
+      {
+        "form": "unencumbered by family",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "unencumbered by family obligations",
+        "type": "multiword_expression"
       }
     ]
   },
@@ -346,7 +366,7 @@
     "confidence": 0.92,
     "explanation": "Masculine-coded leadership adjective associated with dominant agency; frequently triggers disparate screening in collaborative culture filters.",
     "researchCitation": "Gaucher et al. (2011); Eagly & Karau (2002)",
-    "replacement": "Ambitious and outcome-oriented / results-driven",
+    "replacement": "ambitious",
     "variants": [
       {
         "form": "aggressive",
@@ -423,7 +443,7 @@
     "confidence": 0.95,
     "explanation": "Hyper-masculine tech monoculture jargon correlated with exclusionary candidate pool filtering.",
     "researchCitation": "Broussard (2020); Margolis & Fisher (2002)",
-    "replacement": "High-impact engineering contributor / subject matter expert",
+    "replacement": "lead engineer",
     "variants": [
       {
         "form": "rockstar",
@@ -452,7 +472,7 @@
     "confidence": 0.88,
     "explanation": "Communal and emotional phrasing that can trigger subconscious competence penalties in technical screening.",
     "researchCitation": "Heilman (2012); Gaucher et al. (2011)",
-    "replacement": "Mentoring, collaborative enablement, and technical coaching",
+    "replacement": "mentoring",
     "variants": [
       {
         "form": "emotional",
@@ -501,7 +521,7 @@
     "confidence": 0.9,
     "explanation": "Combative dominance or controlling behaviors in workplace interaction descriptions.",
     "researchCitation": "Gaucher et al. (2011)",
-    "replacement": "Leading cross-functional alignment and decisive execution",
+    "replacement": "leading",
     "variants": [
       {
         "form": "dominant",
@@ -538,7 +558,7 @@
     "confidence": 0.8,
     "explanation": "Descriptor of capability or personal assertion; frequently polysemous between technical capability depth and interpersonal force.",
     "researchCitation": "Empirical Lexicon Analysis",
-    "replacement": "Proficient, verified, or technically rigorous",
+    "replacement": "proficient",
     "variants": [
       {
         "form": "strong",
@@ -571,7 +591,7 @@
     "confidence": 0.85,
     "explanation": "Deficit-oriented trait phrasing that often signals submissiveness or subjective negative characterization.",
     "researchCitation": "Heilman (2012)",
-    "replacement": "Opportunity for development or focus on core deliverables",
+    "replacement": "developing",
     "variants": [
       {
         "form": "weak",
@@ -616,7 +636,7 @@
     "confidence": 0.82,
     "explanation": "Self-assurance descriptor that can be subjectively interpreted along gendered lines under role congruity theory.",
     "researchCitation": "Eagly & Karau (2002)",
-    "replacement": "Decisive and evidence-based contributor",
+    "replacement": "decisive",
     "variants": [
       {
         "form": "confident",
@@ -649,7 +669,7 @@
     "confidence": 0.8,
     "explanation": "Behavioral adaptability trait; highly polysemous between technical system architecture and personal behavioral compliance.",
     "researchCitation": "Workplace Competency Frameworks",
-    "replacement": "Agile, adaptable, or modular architecture",
+    "replacement": "adaptable",
     "variants": [
       {
         "form": "flexible",
@@ -682,7 +702,7 @@
     "confidence": 0.93,
     "explanation": "Subjective interpersonal negative characterization lacking objective behavioral documentation.",
     "researchCitation": "EEOC Workplace Assessment Guidelines",
-    "replacement": "Cite objective, documented collaboration deliverables and measurable outcomes",
+    "replacement": "independent worker",
     "variants": [
       {
         "form": "difficult",
@@ -727,7 +747,7 @@
     "confidence": 0.91,
     "explanation": "'Culture fit' frequently operates as an unstandardized, subjective filter that perpetuates demographic affinity bias and exclusionary hiring.",
     "researchCitation": "Rivera (2012) Hiring as Cultural Matching",
-    "replacement": "Values alignment evaluated against objective, structured rubric criteria",
+    "replacement": "values alignment",
     "variants": [
       {
         "form": "cultural fit",
@@ -744,6 +764,18 @@
       {
         "form": "team fit",
         "type": "multiword_expression"
+      },
+      {
+        "form": "work hard play hard",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "thick skin",
+        "type": "multiword_expression"
+      },
+      {
+        "form": "drinking the kool-aid",
+        "type": "multiword_expression"
       }
     ]
   },
@@ -756,7 +788,7 @@
     "confidence": 0.85,
     "explanation": "Communication trait descriptors can act as racial or affinity microaggressions when subjectively applied to minority candidates.",
     "researchCitation": "Alim & Smitherman (2012) Articulate While Black",
-    "replacement": "Effective stakeholder presentation and technical documentation skills",
+    "replacement": "effective communicator",
     "variants": [
       {
         "form": "communication",
@@ -789,7 +821,7 @@
     "confidence": 0.96,
     "explanation": "Disability status disclosure or inquiry having no bearing on bona fide occupational qualifications for knowledge work.",
     "researchCitation": "EEOC ADA Enforcement Guidance (2020); Ameri et al. (2018)",
-    "replacement": "Focus strictly on technical role qualifications and deliverables",
+    "replacement": "differently-abled",
     "variants": [
       {
         "form": "disabled",
@@ -826,22 +858,6 @@
       {
         "form": "special needs",
         "type": "multiword_expression"
-      },
-      {
-        "form": "accessibility needs",
-        "type": "multiword_expression"
-      },
-      {
-        "form": "accessibility",
-        "type": "noun_form"
-      },
-      {
-        "form": "accommodation",
-        "type": "noun_form"
-      },
-      {
-        "form": "accommodations",
-        "type": "plural_form"
       }
     ]
   },
@@ -854,7 +870,7 @@
     "confidence": 0.95,
     "explanation": "Medical disclosures on resumes invite unlawful health discrimination under the ADA and EEOC guidelines.",
     "researchCitation": "EEOC ADA Compliance Guidelines",
-    "replacement": "Omit private health disclosures entirely from resume text",
+    "replacement": "health leave",
     "variants": [
       {
         "form": "medical condition",
@@ -891,7 +907,7 @@
     "confidence": 0.95,
     "explanation": "Mental health or neurodivergence disclosure introduces protected-class medical information into screening.",
     "researchCitation": "EEOC Mental Health and ADA Guidance",
-    "replacement": "Omit medical and neurodivergent self-disclosures from initial screening resumes",
+    "replacement": "personal leave",
     "variants": [
       {
         "form": "mental health",
@@ -932,7 +948,7 @@
     "confidence": 0.9,
     "explanation": "Physical fitness criteria unrelated to bona fide occupational qualifications can unlawfully exclude candidates with disabilities.",
     "researchCitation": "Ameri et al. (2018) The Disability Employment Penalty",
-    "replacement": "Specify core technical duties unless physical endurance is an essential job function",
+    "replacement": "qualified",
     "variants": [
       {
         "form": "physically fit",
@@ -957,7 +973,7 @@
     "confidence": 0.88,
     "explanation": "Employment gap and hiatus phrasing that triggers automated ATS penalties or negative recruiter speculation.",
     "researchCitation": "Weisshaar (2018) From Opt Out to Blocked Out; Pedulla (2016)",
-    "replacement": "Frame gap with constructive upskilling, self-directed engineering, or consulting deliverables",
+    "replacement": "professional sabbatical",
     "variants": [
       {
         "form": "career gap",
@@ -994,7 +1010,7 @@
     "confidence": 0.9,
     "explanation": "Deficit-based unemployment phrasing that triggers negative heuristics in ATS screening.",
     "researchCitation": "Pedulla (2016) Penalties for Employment Gaps",
-    "replacement": "Focus on independent technical consulting, research projects, or open-source contributions",
+    "replacement": "independent consultant",
     "variants": [
       {
         "form": "unemployed",
@@ -1019,7 +1035,7 @@
     "confidence": 0.91,
     "explanation": "Caregiver or homemaker framing that invites family-responsibility discrimination.",
     "researchCitation": "Weisshaar (2018)",
-    "replacement": "Planned professional hiatus / personal leave period with active skill maintenance",
+    "replacement": "family leave",
     "variants": [
       {
         "form": "stay-at-home",
@@ -1048,7 +1064,7 @@
     "confidence": 0.85,
     "explanation": "Career re-entry or continuity descriptors that highlight non-linear employment trajectories.",
     "researchCitation": "Pedulla (2016)",
-    "replacement": "Emphasize current technical competencies and recent project execution",
+    "replacement": "resuming practice",
     "variants": [
       {
         "form": "returning to work",
@@ -1085,7 +1101,7 @@
     "confidence": 0.85,
     "explanation": "Institutional brand prestige creates algorithmic pedigree bias in screening models.",
     "researchCitation": "Rivera (2012) Pedigree: How Elite Students Get Elite Jobs",
-    "replacement": "Accredited University / Technical Program",
+    "replacement": "Accredited University",
     "variants": [
       {
         "form": "Stanford University",
@@ -1126,7 +1142,7 @@
     "confidence": 0.86,
     "explanation": "Masculine-coded adjective in technical job matching.",
     "researchCitation": "Gaucher et al. (2011)",
-    "replacement": "calculated, bold, and risk-aware",
+    "replacement": "bold",
     "variants": [
       {
         "form": "fearless",
@@ -1143,7 +1159,7 @@
     "confidence": 0.9,
     "explanation": "Carries combative masculine undertones in leadership appraisals.",
     "researchCitation": "Gaucher et al. (2011)",
-    "replacement": "determined and persistent",
+    "replacement": "persistent",
     "variants": [
       {
         "form": "headstrong",
@@ -1160,7 +1176,7 @@
     "confidence": 0.87,
     "explanation": "Feminine-stereotyped behavioral marker that risks leadership capability discounting.",
     "researchCitation": "Heilman (2012) Gender Stereotypes in Evaluation",
-    "replacement": "thoughtful and measured communicator",
+    "replacement": "measured communicator",
     "variants": [
       {
         "form": "soft-spoken",
@@ -1181,7 +1197,7 @@
     "confidence": 0.9,
     "explanation": "Explicit age-bracket signal triggering age-based filtering in ATS heuristics.",
     "researchCitation": "Neumark, Burn, & Button (2019)",
-    "replacement": "established industry professional",
+    "replacement": "senior professional",
     "variants": [
       {
         "form": "mature professional",
@@ -1198,7 +1214,7 @@
     "confidence": 0.86,
     "explanation": "Physical endurance requirement operating as a proxy that disadvantages candidates with chronic health conditions or disabilities.",
     "researchCitation": "EEOC ADA Enforcement Guidance (2021)",
-    "replacement": "reliable and dedicated delivery",
+    "replacement": "reliable execution",
     "variants": [
       {
         "form": "tireless 24/7 availability",

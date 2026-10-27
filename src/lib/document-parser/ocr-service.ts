@@ -55,7 +55,6 @@ export function shouldTriggerOcrFallback(
 ): boolean {
   if (extractedCharCount === 0) return true;
   if (extractedCharCount < 60 && pageCount >= 1) return true;
-  if (garbledCharRatio > 0.20 && extractedCharCount < 200) return true;
+  if (garbledCharRatio > 0.2 && extractedCharCount < 200) return true;
   return false;
 }
-

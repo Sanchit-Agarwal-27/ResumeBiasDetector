@@ -1,11 +1,7 @@
 export type ColumnSlot = "full" | "left" | "right";
 export type DividerStyle = "solid" | "dashed" | "dotted" | "double" | "thick";
 export type ColumnLayoutPreset =
-  | "single"
-  | "two-column-left"
-  | "two-column-right"
-  | "two-column-equal"
-  | "multi-column";
+  "single" | "two-column-left" | "two-column-right" | "two-column-equal" | "multi-column";
 
 export interface CanvasPage {
   id: string;
@@ -58,11 +54,7 @@ export interface CanvasTextBlock {
 export type DocumentType = "pdf" | "docx" | "txt" | "unknown";
 
 export type ExtractionMethod =
-  | "pdf-native-layout"
-  | "pdf-ocr"
-  | "docx-xml-structured"
-  | "docx-mammoth-fallback"
-  | "raw-text";
+  "pdf-native-layout" | "pdf-ocr" | "docx-xml-structured" | "docx-mammoth-fallback" | "raw-text";
 
 export interface ValidationIssue {
   code:
@@ -103,7 +95,7 @@ export interface ExtractionDiagnostics {
 export interface ParsedResumeDocument {
   rawText: string;
   cleanedText: string;
-  canvasBlocks: CanvasTextBlock[] ;
+  canvasBlocks: CanvasTextBlock[];
   canvasPages: CanvasPage[];
   diagnostics: ExtractionDiagnostics;
   validation: ExtractionValidationResult;
@@ -116,4 +108,3 @@ export interface ParserOptions {
   targetWidth?: number;
   targetHeight?: number;
 }
-

@@ -57,9 +57,12 @@ def generate_sentence_rewrite(
 
     # Build full-sentence rewrite
     full_sentence = original_sentence
+    rep_text = inline_replacement
+    if matched_text and matched_text[0].isupper():
+        rep_text = rep_text[0].upper() + rep_text[1:]
     # 1. Replace the matched text cleanly (case-insensitive where possible)
     if matched_text and matched_text in full_sentence:
-        full_sentence = full_sentence.replace(matched_text, inline_replacement)
+        full_sentence = full_sentence.replace(matched_text, rep_text)
     else:
         pattern = re.compile(re.escape(matched_text), re.IGNORECASE)
         full_sentence = pattern.sub(inline_replacement, full_sentence)
@@ -68,7 +71,13 @@ def generate_sentence_rewrite(
     for pat, rep in XYZ_ACTION_PATTERNS:
         full_sentence = re.sub(pat, rep, full_sentence, flags=re.IGNORECASE)
 
-    # 3. Clean up double spaces or awkward punctuation
+    # 3. Clean up grammatical articles ('a' before vowels -> 'an', 'an' before consonants -> 'a')
+    full_sentence = re.sub(r"\b(a)\s+([aeiouAEIOU])", r"an \2", full_sentence)
+    full_sentence = re.sub(r"\b(A)\s+([aeiouAEIOU])", r"An \2", full_sentence)
+    full_sentence = re.sub(r"\b(an)\s+([^aeiouAEIOU\s\d])", r"a \2", full_sentence)
+    full_sentence = re.sub(r"\b(An)\s+([^aeiouAEIOU\s\d])", r"A \2", full_sentence)
+
+    # 4. Clean up double spaces or awkward punctuation
     full_sentence = re.sub(r"\s{2,}", " ", full_sentence).strip()
 
     # Formulate Google XYZ impact formula note

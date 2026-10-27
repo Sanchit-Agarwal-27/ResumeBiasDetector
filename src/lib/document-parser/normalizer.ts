@@ -8,14 +8,12 @@
 /**
  * Standard bullet characters mapping to clean unicode bullet
  */
-const BULLET_PATTERN =
-  /^[\u2022\u25cf\u25cb\u25aa\u25b8\uf0b7\u00b7\u2013\u2014■●○►*•]\s*|^-\s+/;
+const BULLET_PATTERN = /^[\u2022\u25cf\u25cb\u25aa\u25b8\uf0b7\u00b7\u2013\u2014■●○►*•]\s*|^-\s+/;
 
 /**
  * Horizontal line or decorative rule patterns
  */
-const DECORATIVE_LINE_PATTERN =
-  /^([-_—=~|•\s*#]{3,}|[\u2500-\u257F]{2,})$/;
+const DECORATIVE_LINE_PATTERN = /^([-_—=~|•\s*#]{3,}|[\u2500-\u257F]{2,})$/;
 
 /**
  * Normalize bullet points in a single line
@@ -117,5 +115,6 @@ export function normalizeResumeText(rawText: string): string {
  */
 export function sanitizeControlCharacters(str: string): string {
   // Remove ASCII control characters 0-8, 11-12, 14-31, 127
+  // eslint-disable-next-line no-control-regex
   return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }

@@ -62,9 +62,16 @@ pdfDoc.setFontSize(9.5);
 pdfDoc.text("June 2020 – Present College Station, TX", 370, 230);
 
 pdfDoc.setFontSize(9.5);
-pdfDoc.text("• Developed a REST API using FastAPI and PostgreSQL to process telemetry logs.", 64, 248);
-pdfDoc.text("• Developed a full-stack web application using Flask, React, PostgreSQL, and Docker.", 64, 263);
+pdfDoc.text(
+  "• Developed a REST API using FastAPI and PostgreSQL to process telemetry logs.",
+  64,
+  248,
+);
+pdfDoc.text(
+  "• Developed a full-stack web application using Flask, React, PostgreSQL, and Docker.",
+  64,
+  263,
+);
 
 fs.writeFileSync("sample_southwestern_resume.pdf", Buffer.from(pdfDoc.output("arraybuffer")));
 console.log("Successfully created sample_southwestern_resume.pdf");
-

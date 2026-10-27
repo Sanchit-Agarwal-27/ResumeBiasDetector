@@ -83,6 +83,7 @@ import {
 import { extractResumeDocument } from "@/lib/document-parser";
 import { calculateAtsMatch } from "@/lib/ats-matching-engine";
 import { SAMPLE_JOB_BENCHMARKS } from "@/lib/job-benchmarks";
+import { generateGoogleXyzRewrite } from "@/lib/xyz-formula-engine";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 
@@ -233,6 +234,7 @@ export function ResumeWorkspace() {
   const [sentenceFilter, setSentenceFilter] = useState<"all" | "flagged" | "fine">("all");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [healthInfo, setHealthInfo] = useState<HealthResponse | null>(null);
+  const [lastLatencyMs, setLastLatencyMs] = useState<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // User Authentication & Theme State
@@ -499,6 +501,7 @@ export function ResumeWorkspace() {
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
+        const analysisStartTime = Date.now();
         const enrichedReport = await processResumeAnalysis(
           fullText,
           report.file_name,
@@ -506,6 +509,7 @@ export function ResumeWorkspace() {
           report.target_job?.raw_text,
           report.target_job?.title,
         );
+        setLastLatencyMs(Date.now() - analysisStartTime);
 
         setReport((current) => {
           if (current.spans.length === 0 && (enrichedReport.error_flags || []).length > 0) {
@@ -528,6 +532,38 @@ export function ResumeWorkspace() {
   }
 
   function applyErrorFix(err: ResumeErrorFlag) {
+    if (
+      err.error_type === "unquantified_impact" ||
+      err.suggestion?.startsWith("Add quantifiable")
+    ) {
+      const sourceSentence = err.sentence || err.matched_text;
+      const xyzResult = generateGoogleXyzRewrite(sourceSentence);
+      let replaced = false;
+      const updatedBlocks = canvasBlocks.map((block) => {
+        const isTarget =
+          block.text.includes(err.matched_text) ||
+          err.matched_text.includes(block.text.trim()) ||
+          (err.sentence && block.text.includes(err.sentence));
+        if (!replaced && isTarget) {
+          replaced = true;
+          return { ...block, text: xyzResult.fullRewrite };
+        }
+        return block;
+      });
+      if (replaced) {
+        setCanvasBlocks(updatedBlocks);
+        const sorted = [...updatedBlocks].sort(
+          (a, b) => a.pageIndex - b.pageIndex || a.y - b.y || a.x - b.x,
+        );
+        const joined = sorted.map((b) => b.text).join("\n\n");
+        updateText(joined);
+        setStatus("Google XYZ formula applied");
+        toast.success("Google XYZ Formula applied", {
+          description: `Transformed bullet to Google XYZ format (${xyzResult.domain}): Accomplished [X], as measured by [Y], by doing [Z].`,
+        });
+      }
+      return;
+    }
     let fixText = err.suggestion;
     if (fixText.includes(" / ")) {
       fixText = fixText.split(" / ")[0].trim();
@@ -716,6 +752,30 @@ export function ResumeWorkspace() {
           description: "Sign in or create an account anytime to enable Cloud Vault backup.",
         });
       }, 1500);
+    }
+  }
+
+    async function loadTrialResume(samplePath: string, fileName: string, roleName: string) {
+    try {
+      setIsTransitioning(true);
+      setStatus(`Loading trial resume for ${roleName}...`);
+      const response = await fetch(samplePath);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${fileName}: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: "application/pdf" });
+      await handleFile(file);
+      toast.success(`Loaded ${roleName} trial resume`, {
+        description: `Now evaluating ${fileName} across bias, writing quality, and ATS dimensions.`,
+      });
+    } catch (err) {
+      console.error("Failed to load trial resume:", err);
+      toast.error("Failed to load trial resume", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsTransitioning(false);
     }
   }
 
@@ -1559,8 +1619,12 @@ export function ResumeWorkspace() {
                     ? "FastAPI Live AI"
                     : "Local Engine"}
               </span>
-              <span className="text-[10px] text-muted-foreground uppercase font-mono px-1 rounded bg-background/80">
-                {engineMode === "fastapi" ? ":8000" : "offline"}
+              <span className="text-[10px] text-muted-foreground font-mono px-1.5 py-0.5 rounded bg-background/80">
+                {engineMode === "fastapi"
+                  ? lastLatencyMs !== null
+                    ? `:8000 · ${lastLatencyMs}ms`
+                    : ":8000"
+                  : "offline"}
               </span>
             </div>
 
@@ -1912,6 +1976,63 @@ export function ResumeWorkspace() {
               <p className="text-xs text-muted-foreground">{status}</p>
             </div>
             <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs border-primary/40 hover:border-primary text-primary hover:bg-primary/5 cursor-pointer"
+                    title="Load trial resumes for demonstration"
+                  >
+                    <Sparkles className="size-3.5 text-primary" />
+                    <span className="font-medium">Trial Resumes</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="text-xs font-semibold">Evaluation Sample Resumes</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_maya_sharma_product_designer.pdf",
+                        "sample_resume_maya_sharma_product_designer.pdf",
+                        "Maya Sharma"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Maya Sharma</span>
+                    <span className="text-[11px] text-muted-foreground">Product Designer (UI/UX)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_arjun_mehta_software_engineer.pdf",
+                        "sample_resume_arjun_mehta_software_engineer.pdf",
+                        "Arjun Mehta"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Arjun Mehta</span>
+                    <span className="text-[11px] text-muted-foreground">Software Engineer (Backend/Distributed)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      loadTrialResume(
+                        "/samples/sample_resume_nisha_fernandes_digital_marketing.pdf",
+                        "sample_resume_nisha_fernandes_digital_marketing.pdf",
+                        "Nisha Fernandes"
+                      )
+                    }
+                    className="flex flex-col items-start gap-0.5 cursor-pointer py-1.5"
+                  >
+                    <span className="font-semibold text-xs text-foreground">Nisha Fernandes</span>
+                    <span className="text-[11px] text-muted-foreground">Digital Marketing Specialist</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -2395,20 +2516,23 @@ export function ResumeWorkspace() {
                                   ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                                   : "bg-blue-500/20 text-blue-700 dark:text-blue-300";
 
-                          const buttonLabel = isSpelling
-                            ? "Fix Spelling"
-                            : isProfanity
-                              ? "Replace / Cleanse"
-                              : isFirstPerson
-                                ? "Use Action Verb"
-                                : isSlang
-                                  ? "Professionalize"
-                                  : isPersonalInfo || err.error_type === "cliche"
-                                    ? "Remove Line"
-                                    : err.error_type === "passive_voice" ||
-                                        err.error_type === "weak_verb"
-                                      ? "Apply Power Verb"
-                                      : "Apply Fix";
+                          const isUnquantified = err.error_type === "unquantified_impact";
+                          const buttonLabel = isUnquantified
+                            ? "Apply Google XYZ Formula"
+                            : isSpelling
+                              ? "Fix Spelling"
+                              : isProfanity
+                                ? "Replace / Cleanse"
+                                : isFirstPerson
+                                  ? "Use Action Verb"
+                                  : isSlang
+                                    ? "Professionalize"
+                                    : isPersonalInfo || err.error_type === "cliche"
+                                      ? "Remove Line"
+                                      : err.error_type === "passive_voice" ||
+                                          err.error_type === "weak_verb"
+                                        ? "Apply Power Verb"
+                                        : "Apply Fix";
 
                           return (
                             <div
@@ -2443,12 +2567,32 @@ export function ResumeWorkspace() {
                                 {err.explanation}
                               </p>
 
+                              {isUnquantified && (() => {
+                                const xyz = generateGoogleXyzRewrite(err.sentence || err.matched_text);
+                                return (
+                                  <div className="bg-primary/5 border border-primary/25 rounded-md p-2.5 space-y-1.5 my-1.5">
+                                    <div className="flex items-center gap-1.5 font-semibold text-primary text-[11px]">
+                                      <Sparkles className="size-3 text-amber-500 shrink-0" />
+                                      <span>Google XYZ Formula ({xyz.domain})</span>
+                                    </div>
+                                    <p className="text-foreground/90 italic pl-2.5 border-l-2 border-primary/50 font-mono text-[11px] leading-relaxed">
+                                      "{xyz.fullRewrite}"
+                                    </p>
+                                    <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Accomplished [X]</span> •
+                                      <span className="text-blue-600 dark:text-blue-400 font-medium">Measured by [Y]</span> •
+                                      <span className="text-violet-600 dark:text-violet-400 font-medium">By doing [Z]</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                               {err.suggestion && (
                                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 mt-1">
                                   <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                                     Fix: {err.suggestion}
                                   </span>
-                                  {!err.suggestion.startsWith("Add quantifiable") && (
+                                  {err.suggestion && (
                                     <Button
                                       size="sm"
                                       variant="outline"

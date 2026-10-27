@@ -397,7 +397,11 @@ export function clusterPdfTextContent(
         cur.maxX = Math.max(cur.maxX, frag.x + frag.width);
         cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
         cur.height = Math.max(cur.height, frag.height);
-      } else if (isSameLineTabGap && isDateOrMetadata(frag.text) && Math.abs(cur.fontSize - frag.fontSize) <= 2.5) {
+      } else if (
+        isSameLineTabGap &&
+        isDateOrMetadata(frag.text) &&
+        Math.abs(cur.fontSize - frag.fontSize) <= 2.5
+      ) {
         // Neatly connect Title + Date with a professional separator instead of ragged clumping
         const sep = cur.text.endsWith("|") || cur.text.endsWith("—") ? " " : "  |  ";
         cur.text += sep + frag.text;
@@ -480,11 +484,7 @@ export function clusterPdfTextContent(
       !isCandidateName &&
       !isContactLine &&
       !isBullet &&
-      (rawText.includes(" — ") ||
-        rawText.includes(" | ") ||
-        isInstitution ||
-        isDegree ||
-        isRole) &&
+      (rawText.includes(" — ") || rawText.includes(" | ") || isInstitution || isDegree || isRole) &&
       rawText.length < 115;
 
     let nextIdx = i + 1;

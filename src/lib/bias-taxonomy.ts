@@ -8,7 +8,12 @@ import type {
   ClassifiedSentence as ContractClassifiedSentence,
   ContextSummary,
 } from "./resume-contract";
-import { classifyDocument, classifySentence, CLASSIFICATION, EXPANDED_TAXONOMY } from "./context-detector";
+import {
+  classifyDocument,
+  classifySentence,
+  CLASSIFICATION,
+  EXPANDED_TAXONOMY,
+} from "./context-detector";
 
 export interface TaxonomyRule {
   term: string;

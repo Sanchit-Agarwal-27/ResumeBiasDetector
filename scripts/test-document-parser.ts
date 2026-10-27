@@ -90,8 +90,16 @@ async function runTests() {
     pdfDoc.text("2021 - Present", 450, 195);
 
     pdfDoc.setFontSize(10);
-    pdfDoc.text("• Architected a high-throughput event processing pipeline ingesting 2.5B messages daily.", 64, 215);
-    pdfDoc.text("• Reduced database latency by 42% through distributed Redis cluster caching tiers.", 64, 230);
+    pdfDoc.text(
+      "• Architected a high-throughput event processing pipeline ingesting 2.5B messages daily.",
+      64,
+      215,
+    );
+    pdfDoc.text(
+      "• Reduced database latency by 42% through distributed Redis cluster caching tiers.",
+      64,
+      230,
+    );
 
     const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
     const parsed = await extractResumeDocument(pdfBuffer, "simple_resume.pdf");
@@ -146,7 +154,10 @@ async function runTests() {
 
     assert(parsed.cleanedText.includes("Dr. Sophia Vance"), "Extracted name across font shifts");
     assert(parsed.cleanedText.includes("Stanford University"), "Extracted academic institution");
-    assert(parsed.canvasBlocks.some((b) => b.bold), "Bold font attribute preserved in canvas blocks");
+    assert(
+      parsed.canvasBlocks.some((b) => b.bold),
+      "Bold font attribute preserved in canvas blocks",
+    );
     assert(parsed.validation.qualityScore >= 80, "Validation passes with multiple fonts");
   }
 
@@ -197,15 +208,30 @@ async function runTests() {
     pdfDoc.text("Lead Backend Architect — FinTech Corp", 235, 130);
     pdfDoc.setFont("helvetica", "normal");
     pdfDoc.setFontSize(9);
-    pdfDoc.text("• Directed development of algorithmic trading gateway supporting 50K RPS.", 235, 145, { maxWidth: 310 });
-    pdfDoc.text("• Implemented zero-trust authentication reducing security exposure by 95%.", 235, 175, { maxWidth: 310 });
+    pdfDoc.text(
+      "• Directed development of algorithmic trading gateway supporting 50K RPS.",
+      235,
+      145,
+      { maxWidth: 310 },
+    );
+    pdfDoc.text(
+      "• Implemented zero-trust authentication reducing security exposure by 95%.",
+      235,
+      175,
+      { maxWidth: 310 },
+    );
 
     pdfDoc.setFont("helvetica", "bold");
     pdfDoc.setFontSize(10);
     pdfDoc.text("Senior Software Engineer — TechGiant", 235, 215);
     pdfDoc.setFont("helvetica", "normal");
     pdfDoc.setFontSize(9);
-    pdfDoc.text("• Scaled multi-tenant SaaS application across 4 AWS geographic regions.", 235, 230, { maxWidth: 310 });
+    pdfDoc.text(
+      "• Scaled multi-tenant SaaS application across 4 AWS geographic regions.",
+      235,
+      230,
+      { maxWidth: 310 },
+    );
 
     const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
     const parsed = await extractResumeDocument(pdfBuffer, "two_column_resume.pdf");
@@ -253,7 +279,11 @@ async function runTests() {
     pdfDoc.text("• Built analytics dashboard with React and Recharts.", 54, 110);
 
     // Add string-based divider line (common in plain-text or LaTeX exports)
-    pdfDoc.text("--------------------------------------------------------------------------------", 54, 130);
+    pdfDoc.text(
+      "--------------------------------------------------------------------------------",
+      54,
+      130,
+    );
     pdfDoc.text("EDUCATION", 54, 150);
     pdfDoc.text("B.S. in Computer Science — UC Berkeley", 54, 170);
 
@@ -262,8 +292,14 @@ async function runTests() {
 
     assert(parsed.cleanedText.includes("David Kim"), "Name extracted cleanly");
     assert(parsed.cleanedText.includes("Built analytics dashboard"), "Bullet extracted cleanly");
-    assert(!parsed.cleanedText.includes("----------------"), "String divider artifact removed from text");
-    assert(parsed.validation.issues.filter((i) => i.code === "REPEATED_SYMBOLS").length === 0, "No repeated symbols error");
+    assert(
+      !parsed.cleanedText.includes("----------------"),
+      "String divider artifact removed from text",
+    );
+    assert(
+      parsed.validation.issues.filter((i) => i.code === "REPEATED_SYMBOLS").length === 0,
+      "No repeated symbols error",
+    );
   }
 
   // ============================================================================
@@ -331,10 +367,16 @@ async function runTests() {
 
     assert(parsed.cleanedText.includes("Elena Rostova"), "DOCX candidate name extracted");
     assert(parsed.cleanedText.includes("SIDEBAR SKILLS"), "DOCX Text Box title extracted");
-    assert(parsed.cleanedText.includes("Kubernetes & Terraform"), "DOCX Text Box bullet extracted (with XML entity decoded)");
+    assert(
+      parsed.cleanedText.includes("Kubernetes & Terraform"),
+      "DOCX Text Box bullet extracted (with XML entity decoded)",
+    );
     assert(parsed.cleanedText.includes("Acme Cloud Corp"), "DOCX Table cells extracted");
     assert(parsed.cleanedText.includes("45m to 4m"), "DOCX Table bullet extracted");
-    assert(parsed.diagnostics.method === "docx-xml-structured", "Extraction method is docx-xml-structured");
+    assert(
+      parsed.diagnostics.method === "docx-xml-structured",
+      "Extraction method is docx-xml-structured",
+    );
   }
 
   // ============================================================================
@@ -350,19 +392,27 @@ async function runTests() {
 
     // Contact line with email, phone, and LinkedIn URL (standard 9.5pt font)
     pdfDoc.setFontSize(9.5);
-    const contactLine = "Email: jordan.lee@gmail.com | Phone: (415) 555-0199 | LinkedIn: linkedin.com/in/jordanlee";
+    const contactLine =
+      "Email: jordan.lee@gmail.com | Phone: (415) 555-0199 | LinkedIn: linkedin.com/in/jordanlee";
     pdfDoc.text(contactLine, 54, 70);
 
     pdfDoc.setFontSize(12);
     pdfDoc.text("SUMMARY", 54, 100);
     pdfDoc.setFontSize(10);
-    pdfDoc.text("Fullstack developer passionate about accessible and intuitive web interfaces.", 54, 120);
+    pdfDoc.text(
+      "Fullstack developer passionate about accessible and intuitive web interfaces.",
+      54,
+      120,
+    );
 
     const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
     const parsed = await extractResumeDocument(pdfBuffer, "icons_contact_resume.pdf");
 
     assert(parsed.cleanedText.includes("Jordan Lee"), "Candidate name extracted");
-    assert(parsed.cleanedText.includes("jordan.lee@gmail.com"), "Email extracted cleanly without corruption");
+    assert(
+      parsed.cleanedText.includes("jordan.lee@gmail.com"),
+      "Email extracted cleanly without corruption",
+    );
     assert(parsed.cleanedText.includes("linkedin.com/in/jordanlee"), "LinkedIn URL extracted");
     assert(parsed.validation.isValid, "No critical garbled character errors on icon glyphs");
   }
@@ -379,17 +429,29 @@ async function runTests() {
     // Page 1
     pdfDoc.text("Samantha Wright", 54, 50);
     pdfDoc.text("SUMMARY", 54, 80);
-    pdfDoc.text("Executive Engineering Leader with 15+ years of software delivery experience.", 54, 100);
+    pdfDoc.text(
+      "Executive Engineering Leader with 15+ years of software delivery experience.",
+      54,
+      100,
+    );
     pdfDoc.text("EXPERIENCE", 54, 130);
     pdfDoc.text("VP of Engineering — Global Retail Co | 2019 - Present", 54, 150);
-    pdfDoc.text("• Managed engineering organization of 120+ engineers across 6 global offices.", 54, 170);
+    pdfDoc.text(
+      "• Managed engineering organization of 120+ engineers across 6 global offices.",
+      54,
+      170,
+    );
     pdfDoc.text("Page 1 of 2", 270, 770);
 
     // Page 2
     pdfDoc.addPage();
     // Repeated Header on Page 2
     pdfDoc.text("Samantha Wright - Resume", 54, 40);
-    pdfDoc.text("• Spearheaded modern cloud migration delivering $14M in annual operating savings.", 54, 80);
+    pdfDoc.text(
+      "• Spearheaded modern cloud migration delivering $14M in annual operating savings.",
+      54,
+      80,
+    );
     pdfDoc.text("EDUCATION", 54, 120);
     pdfDoc.text("M.S. in Computer Science — Carnegie Mellon University", 54, 140);
     pdfDoc.text("Page 2 of 2", 270, 770);
@@ -423,11 +485,16 @@ async function runTests() {
     const willTrigger = shouldTriggerOcrFallback(0, 1);
     assert(willTrigger === true, "OCR detector accurately identifies 0-text scanned document");
 
-    const parsed = await extractResumeDocument(pdfBuffer, "scanned_resume.pdf", { allowOcr: false });
-    assert(parsed.validation.requiresFallback === true, "Validation flags that fallback is required");
+    const parsed = await extractResumeDocument(pdfBuffer, "scanned_resume.pdf", {
+      allowOcr: false,
+    });
+    assert(
+      parsed.validation.requiresFallback === true,
+      "Validation flags that fallback is required",
+    );
     assert(
       parsed.validation.fallbackReason?.includes("No readable text") ||
-      parsed.validation.fallbackReason?.includes("Scanned image"),
+        parsed.validation.fallbackReason?.includes("Scanned image"),
       "Helpful error explanation provided for scanned document",
     );
   }
@@ -444,7 +511,9 @@ async function runTests() {
 
     // Hyperlink text
     pdfDoc.textWithLink("portfolio.dev/priya", 54, 70, { url: "https://portfolio.dev/priya" });
-    pdfDoc.textWithLink("github.com/priyasharma", 200, 70, { url: "https://github.com/priyasharma" });
+    pdfDoc.textWithLink("github.com/priyasharma", 200, 70, {
+      url: "https://github.com/priyasharma",
+    });
 
     pdfDoc.text("PROJECTS", 54, 100);
 
@@ -460,9 +529,18 @@ async function runTests() {
     assert(parsed.cleanedText.includes("github.com/priyasharma"), "GitHub link preserved");
 
     // Check bullets normalized to standard •
-    assert(parsed.cleanedText.includes("• OpenSource Auth Engine"), "Hyphen bullet normalized to • ");
-    assert(parsed.cleanedText.includes("• Distributed Key-Value Store"), "Star bullet normalized to • ");
-    assert(parsed.cleanedText.includes("• Real-Time Collaboration Canvas"), "Unicode bullet normalized to • ");
+    assert(
+      parsed.cleanedText.includes("• OpenSource Auth Engine"),
+      "Hyphen bullet normalized to • ",
+    );
+    assert(
+      parsed.cleanedText.includes("• Distributed Key-Value Store"),
+      "Star bullet normalized to • ",
+    );
+    assert(
+      parsed.cleanedText.includes("• Real-Time Collaboration Canvas"),
+      "Unicode bullet normalized to • ",
+    );
   }
 
   // ============================================================================
@@ -508,9 +586,15 @@ async function runTests() {
     const analysis = analyzeResumeText(parsed.cleanedText);
     const fairness = runCounterfactualFairnessAudit(parsed.cleanedText, analysis.spans);
 
-    assert(analysis.spans.length > 0, "Downstream bias detector flags age proxy jargon ('digital native')");
+    assert(
+      analysis.spans.length > 0,
+      "Downstream bias detector flags age proxy jargon ('digital native')",
+    );
     assert(analysis.neutrality_score < 100, "Neutrality score reflects detected bias signals");
-    assert(fairness.disparate_impact_ratio !== undefined, "Counterfactual fairness audit completed successfully");
+    assert(
+      fairness.disparate_impact_ratio !== undefined,
+      "Counterfactual fairness audit completed successfully",
+    );
   }
 
   // ============================================================================
@@ -587,7 +671,10 @@ async function runTests() {
     const parsed = await extractResumeDocument(pdfBuffer, "right_aligned_dates_resume.pdf");
 
     // Layout check: must be recognized as single-column (dates must NOT trigger fake 2-column gutter!)
-    assert(parsed.diagnostics.columnLayout === "single", "Layout detected as single-column despite right-aligned dates");
+    assert(
+      parsed.diagnostics.columnLayout === "single",
+      "Layout detected as single-column despite right-aligned dates",
+    );
 
     // Association check: date preserved beside job entry
     assert(
@@ -607,11 +694,17 @@ async function runTests() {
     const idxJob = parsed.cleanedText.indexOf("Software Developer");
     const idxBullet = parsed.cleanedText.indexOf("Developed web applications");
     const idxEdu = parsed.cleanedText.indexOf("B.Tech in Computer Science");
-    assert(idxJob < idxBullet && idxBullet < idxEdu, "Natural reading order preserved: Job -> Bullets -> Education");
+    assert(
+      idxJob < idxBullet && idxBullet < idxEdu,
+      "Natural reading order preserved: Job -> Bullets -> Education",
+    );
 
     // Crucial check: Dates are NOT dumped at the end of the imported document!
     const last120Chars = parsed.cleanedText.slice(-120);
-    assert(!last120Chars.includes("Jan 2024") && !last120Chars.includes("2026"), "Dates are NOT appended to document end");
+    assert(
+      !last120Chars.includes("Jan 2024") && !last120Chars.includes("2026"),
+      "Dates are NOT appended to document end",
+    );
   }
 
   // ============================================================================
@@ -662,11 +755,15 @@ async function runTests() {
       "DOCX row-by-row table preserves Title | Company | Date",
     );
     assert(
-      parsed.cleanedText.includes("B.S. in Computer Engineering  |  University of Texas at Austin") &&
-        /2018\s*[-–]\s*2022/.test(parsed.cleanedText),
+      parsed.cleanedText.includes(
+        "B.S. in Computer Engineering  |  University of Texas at Austin",
+      ) && /2018\s*[-–]\s*2022/.test(parsed.cleanedText),
       "DOCX row-by-row table preserves Degree | University | Date",
     );
-    assert(parsed.cleanedText.includes("Engineered distributed streaming"), "DOCX table bullet extracted");
+    assert(
+      parsed.cleanedText.includes("Engineered distributed streaming"),
+      "DOCX table bullet extracted",
+    );
 
     // Verify dates are not at the end
     const last100 = parsed.cleanedText.slice(-100);
@@ -704,7 +801,11 @@ async function runTests() {
     pdfDoc.text("March 2021 – Present", 54, 138);
 
     // Line 3: Bullet point
-    pdfDoc.text("• Led team of 14 machine learning engineers developing core inference engine.", 54, 156);
+    pdfDoc.text(
+      "• Led team of 14 machine learning engineers developing core inference engine.",
+      54,
+      156,
+    );
 
     const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
     const parsed = await extractResumeDocument(pdfBuffer, "wrapped_dates.pdf");
@@ -798,14 +899,28 @@ async function runTests() {
 
     // Bullets
     pdfDoc.setFontSize(9.5);
-    pdfDoc.text("• Developed a REST API using FastAPI and PostgreSQL to process telemetry logs.", 64, 248);
-    pdfDoc.text("• Developed a full-stack web application using Flask, React, PostgreSQL, and Docker.", 64, 263);
+    pdfDoc.text(
+      "• Developed a REST API using FastAPI and PostgreSQL to process telemetry logs.",
+      64,
+      248,
+    );
+    pdfDoc.text(
+      "• Developed a full-stack web application using Flask, React, PostgreSQL, and Docker.",
+      64,
+      263,
+    );
 
     const pdfBuffer = Buffer.from(pdfDoc.output("arraybuffer"));
     const parsed = await extractResumeDocument(pdfBuffer, "southwestern_resume.pdf");
 
-    assert(parsed.diagnostics.columnLayout === "single", "Layout correctly classified as single-column");
-    assert(parsed.cleanedText.includes("Southwestern University"), "Extracted Southwestern University");
+    assert(
+      parsed.diagnostics.columnLayout === "single",
+      "Layout correctly classified as single-column",
+    );
+    assert(
+      parsed.cleanedText.includes("Southwestern University"),
+      "Extracted Southwestern University",
+    );
     assert(parsed.cleanedText.includes("Georgetown, TX"), "Extracted Georgetown, TX");
     assert(
       /Southwestern University\s*\|\s*Georgetown,\s*TX/.test(parsed.cleanedText),
@@ -822,7 +937,9 @@ async function runTests() {
       "Bryan, TX paired beside Blinn College",
     );
     assert(
-      /Associate's in Liberal Arts\s*\|\s*Aug\.\s*2014\s*[-–]\s*May\s*2018/.test(parsed.cleanedText),
+      /Associate's in Liberal Arts\s*\|\s*Aug\.\s*2014\s*[-–]\s*May\s*2018/.test(
+        parsed.cleanedText,
+      ),
       "Aug. 2014 – May 2018 paired beside Associate's degree entry",
     );
     assert(
@@ -834,25 +951,22 @@ async function runTests() {
 
     // Verify organizations and degrees are NOT clumped into a single line
     assert(
-      !parsed.cleanedText.includes(
-        "Southwestern University Bachelor of Arts in Computer Science",
-      ),
+      !parsed.cleanedText.includes("Southwestern University Bachelor of Arts in Computer Science"),
       "Southwestern University and Bachelor degree are NOT clumped into single continuous line",
     );
     assert(
-      !parsed.cleanedText.includes(
-        "Undergraduate Research Assistant Texas A&M University",
-      ),
+      !parsed.cleanedText.includes("Undergraduate Research Assistant Texas A&M University"),
       "Undergraduate Research Assistant and Texas A&M are NOT clumped into single continuous line",
     );
 
     // Verify zero dates or locations appear at the end of the text
-    const lines = parsed.cleanedText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const lines = parsed.cleanedText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
     const last3Lines = lines.slice(-3).join(" ");
     assert(
-      !/^(?:Georgetown,\s*TX|Bryan,\s*TX|Aug\.\s*2014|Aug\.\s*2018|June\s*2020)/.test(
-        last3Lines,
-      ),
+      !/^(?:Georgetown,\s*TX|Bryan,\s*TX|Aug\.\s*2014|Aug\.\s*2018|June\s*2020)/.test(last3Lines),
       "Zero dates or locations appear disconnected at document end",
     );
 
@@ -874,7 +988,9 @@ async function runTests() {
   // SUMMARY
   // ============================================================================
   console.log("\n================================================================================");
-  console.log(` Test Execution Completed: ${passedTests}/${totalTests} Passed (${failedTests} Failed)`);
+  console.log(
+    ` Test Execution Completed: ${passedTests}/${totalTests} Passed (${failedTests} Failed)`,
+  );
   console.log("================================================================================");
 
   if (failedTests > 0) {
