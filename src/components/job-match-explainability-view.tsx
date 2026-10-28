@@ -348,14 +348,16 @@ export function JobMatchExplainabilityView({
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <p className="leading-relaxed">
             <strong>Important distinction:</strong> Missing evidence in your document does not mean
-            you lack the capability; it indicates only that the uploaded resume text does not explicitly
-            document it. Never fabricate experience; only add genuine achievements or transferable skills.
+            you lack the capability; it indicates only that the uploaded resume text does not
+            explicitly document it. Never fabricate experience; only add genuine achievements or
+            transferable skills.
           </p>
         </div>
 
         {report.missingRequirements.length === 0 ? (
           <div className="p-6 text-center text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg bg-emerald-500/5">
-            🎉 Excellent alignment! Every core requirement in this job description was matched in your resume text.
+            🎉 Excellent alignment! Every core requirement in this job description was matched in
+            your resume text.
           </div>
         ) : (
           <div className="space-y-3">
@@ -432,11 +434,10 @@ export function JobMatchExplainabilityView({
             <Sparkles className="h-4 w-4" />
           </span>
           <div>
-            <h3 className="text-sm font-bold tracking-tight text-foreground">
-              Areas to Improve
-            </h3>
+            <h3 className="text-sm font-bold tracking-tight text-foreground">Areas to Improve</h3>
             <p className="text-[11px] text-muted-foreground">
-              Actionable recommendations to strengthen your application without inflating or fabricating claims
+              Actionable recommendations to strengthen your application without inflating or
+              fabricating claims
             </p>
           </div>
         </div>
@@ -489,7 +490,11 @@ export function JobMatchExplainabilityView({
                   </SelectItem>
                 ))}
                 {report.missingRequirements.map((m) => (
-                  <SelectItem key={m.keyword} value={m.keyword} className="text-xs text-destructive">
+                  <SelectItem
+                    key={m.keyword}
+                    value={m.keyword}
+                    className="text-xs text-destructive"
+                  >
                     ✕ {m.keyword} (Missing)
                   </SelectItem>
                 ))}

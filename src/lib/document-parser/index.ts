@@ -109,4 +109,3 @@ export async function extractResumeDocument(
     throw new Error(`Resume parsing failed for ${fileName}: ${errorMsg}`);
   }
 }
-

@@ -45,8 +45,8 @@ export interface LineRun {
 export interface DetectedColumns {
   layout: ColumnLayoutPreset;
   gutters: number[]; // X coordinates separating columns
-  startY: number;    // Where the multi-column section begins
-  endY: number;      // Where the multi-column section ends
+  startY: number; // Where the multi-column section begins
+  endY: number; // Where the multi-column section ends
 }
 
 /**
@@ -146,8 +146,7 @@ const FULL_DATE_RANGE_REGEX = new RegExp("^" + FULL_DATE_RANGE_CORE + "$", "i");
 const NUMERIC_DATE_RANGE_REGEX = new RegExp("^" + NUMERIC_DATE_RANGE_CORE + "$", "i");
 const SINGLE_DATE_REGEX = new RegExp("^" + SINGLE_DATE_CORE + "$", "i");
 
-const LOCATION_REGEX =
-  /^[A-Z][a-zA-Z\s.-]+,\s*(?:[A-Z]{2}|[A-Z][a-zA-Z]+)(?:,\s*[A-Z][a-zA-Z]+)?$/;
+const LOCATION_REGEX = /^[A-Z][a-zA-Z\s.-]+,\s*(?:[A-Z]{2}|[A-Z][a-zA-Z]+)(?:,\s*[A-Z][a-zA-Z]+)?$/;
 const WORK_MODE_REGEX = /^(Remote|Hybrid|On-site|Onsite)$/i;
 
 // Combined date and location on a single line:
@@ -220,7 +219,10 @@ export function isDateOrMetadata(text: string): boolean {
   if (!trimmed || trimmed.length > 95) return false;
 
   // Strip wrapping brackets or parentheses
-  const stripped = trimmed.replace(/^[\(\[\{]/, "").replace(/[\)\]\}]$/, "").trim();
+  const stripped = trimmed
+    .replace(/^[([{]/, "")
+    .replace(/[\])}]$/, "")
+    .trim();
 
   if (FULL_DATE_RANGE_REGEX.test(stripped)) return true;
   if (NUMERIC_DATE_RANGE_REGEX.test(stripped)) return true;
@@ -372,10 +374,7 @@ export function detectPageColumns(
  * and the date or location is right-aligned on that same line.
  * In a multi-column document, runs are only merged within the SAME column slot.
  */
-export function mergeSameBaselineRuns(
-  lineRuns: LineRun[],
-  columns: DetectedColumns,
-): LineRun[] {
+export function mergeSameBaselineRuns(lineRuns: LineRun[], columns: DetectedColumns): LineRun[] {
   if (lineRuns.length <= 1) return lineRuns;
 
   // Group runs by baselineY (tolerance 3.8 pt)
@@ -440,9 +439,7 @@ function mergeRunClusterOnLine(runs: LineRun[]): LineRun[] {
     // Connect right-aligned date/metadata to entry header on the same baseline
     if (isNextDate && !isCurHeader && !isCurBullet) {
       const sep =
-        cur.text.endsWith("|") || cur.text.endsWith("—") || cur.text.endsWith("-")
-          ? " "
-          : " | ";
+        cur.text.endsWith("|") || cur.text.endsWith("—") || cur.text.endsWith("-") ? " " : " | ";
       cur.text = `${cur.text}${sep}${next.text.trim()}`;
       cur.maxX = Math.max(cur.maxX, next.maxX);
       cur.width = Math.round((cur.maxX - cur.x) * 10) / 10;
@@ -607,11 +604,7 @@ export function reconstructCanvasBlocks(
       !isCandidateName &&
       !isContact &&
       !isBullet &&
-      (rawText.includes(" — ") ||
-        rawText.includes(" | ") ||
-        isInstitution ||
-        isDegree ||
-        isRole) &&
+      (rawText.includes(" — ") || rawText.includes(" | ") || isInstitution || isDegree || isRole) &&
       rawText.length < 115;
 
     let nextIdx = i + 1;

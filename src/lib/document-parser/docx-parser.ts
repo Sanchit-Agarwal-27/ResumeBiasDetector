@@ -97,8 +97,7 @@ function extractTableText(tblXml: string): string[] {
     const col1HasHeader = col1Paragraphs.some((p) => isSectionHeader(p));
     const col2HasHeader = col2Paragraphs.some((p) => isSectionHeader(p));
     const col2IsDateList =
-      col2Paragraphs.length > 0 &&
-      col2Paragraphs.every((p) => isDateOrMetadata(p));
+      col2Paragraphs.length > 0 && col2Paragraphs.every((p) => isDateOrMetadata(p));
 
     if (
       col1Paragraphs.length >= 5 &&
@@ -123,9 +122,7 @@ function extractTableText(tblXml: string): string[] {
     const cellParagraphLists: string[][] = [];
     for (const cell of cells) {
       const pMatches = cell.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
-      const cellLines = pMatches
-        .map((p) => extractParagraphText(p).text)
-        .filter(Boolean);
+      const cellLines = pMatches.map((p) => extractParagraphText(p).text).filter(Boolean);
       cellParagraphLists.push(cellLines);
     }
 
@@ -292,9 +289,7 @@ export async function parseDocxResume(
 
   // 1. Extract Headers (where contact details often reside)
   const headerTexts: string[] = [];
-  const headerFiles = Object.keys(zip.files).filter((name) =>
-    /^word\/header\d+\.xml$/i.test(name),
-  );
+  const headerFiles = Object.keys(zip.files).filter((name) => /^word\/header\d+\.xml$/i.test(name));
 
   for (const hFile of headerFiles) {
     const file = zip.file(hFile);
@@ -392,4 +387,3 @@ export async function parseDocxResume(
     validation,
   };
 }
-

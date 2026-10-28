@@ -309,37 +309,55 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
     };
   }
 
-  // Rule 8: Ambiguous Leadership Style or Subjective Personality Judgment
+  // Rule 8: Ambiguous Leadership Style, Management Demeanor, or Subjective Personality Judgment
   // e.g. "The candidate has an aggressive leadership style."
-  if (
-    lowerSentence.includes("leadership style") ||
-    lowerSentence.includes("management style") ||
-    lowerSentence.includes("working style") ||
-    lowerSentence.includes("personality style") ||
-    (lowerSentence.includes("candidate has an") && lowerSentence.includes("style"))
-  ) {
-    const styleCandidate = candidates.find(
-      (c) =>
-        c.matchedText.toLowerCase().includes("aggressive") ||
-        c.matchedText.toLowerCase().includes("dominant") ||
-        c.matchedText.toLowerCase().includes("controlling") ||
-        c.matchedText.toLowerCase().includes("forceful"),
-    );
+  // e.g. "Aggressive manager with 5 years experience."
+  // e.g. "He is an aggressive developer."
+  const hasSubjectiveStyleOrRole =
+    lowerSentence.includes("leadership") ||
+    lowerSentence.includes("management") ||
+    lowerSentence.includes("style") ||
+    lowerSentence.includes("attitude") ||
+    lowerSentence.includes("personality") ||
+    lowerSentence.includes("temperament") ||
+    lowerSentence.includes("demeanor") ||
+    lowerSentence.includes("communication") ||
+    lowerSentence.includes("manager") ||
+    lowerSentence.includes("developer") ||
+    lowerSentence.includes("engineer") ||
+    lowerSentence.includes("leader") ||
+    lowerSentence.includes("candidate");
 
-    if (styleCandidate) {
-      const phraseText = styleCandidate.matchedText.toLowerCase().includes("style")
-        ? `'${styleCandidate.matchedText}'`
-        : `'${styleCandidate.matchedText} leadership style'`;
-      return {
-        sentence: trimmedSentence,
-        keyword_match: matchedKeywords,
-        classification: CLASSIFICATION.FLAGGED,
-        confidence: 0.88,
-        explanation: `The phrase ${phraseText} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.`,
-        contextType: "subjective_leadership_style",
-        candidate_matches: candidates,
-      };
-    }
+  const agenticCandidate = candidates.find((c) => {
+    const t = c.matchedText.toLowerCase();
+    return (
+      t.includes("aggressive") ||
+      t.includes("dominant") ||
+      t.includes("controlling") ||
+      t.includes("forceful") ||
+      t.includes("combative")
+    );
+  });
+
+  if (
+    agenticCandidate &&
+    hasSubjectiveStyleOrRole &&
+    !hasTechnicalObject &&
+    !hasTechnicalAction &&
+    !hasStrategyObject
+  ) {
+    const phraseText = agenticCandidate.matchedText.toLowerCase().includes("style")
+      ? `'${agenticCandidate.matchedText}'`
+      : `'${agenticCandidate.matchedText} leadership style'`;
+    return {
+      sentence: trimmedSentence,
+      keyword_match: matchedKeywords,
+      classification: CLASSIFICATION.FLAGGED,
+      confidence: 0.9,
+      explanation: `The phrase ${phraseText} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.`,
+      contextType: "subjective_leadership_style",
+      candidate_matches: candidates,
+    };
   }
 
   // Rule 9: Interpersonal Conduct Targeting People (Colleagues, Teammates, Staff)
@@ -555,13 +573,32 @@ export function classifySentence(sentence: string, surroundingText = ""): Classi
   }
 
   // Rule 13: Neutral/Harmless Qualification Mention (e.g. "The candidate is an experienced engineer with strong technical skills.")
+  // STRICT: Only applies to genuinely neutral qualification terms (experienced, strong, flexible, adaptable).
+  // Sensitive/agentic terms (aggressive, young, dominant, rockstar, etc.) are strictly excluded.
+  const SAFE_QUALIFICATION_TERMS = new Set([
+    "experienced",
+    "strong",
+    "stronger",
+    "strongest",
+    "flexible",
+    "adaptable",
+  ]);
+
+  const hasOnlySafeQualificationCandidates = candidates.every((c) =>
+    SAFE_QUALIFICATION_TERMS.has(c.matchedText.toLowerCase()),
+  );
+
   if (
-    hasOnlyPolysemousCandidates &&
+    hasOnlySafeQualificationCandidates &&
     (tokens.includes("engineer") ||
       tokens.includes("developer") ||
       tokens.includes("analyst") ||
       tokens.includes("manager") ||
       tokens.includes("consultant") ||
+      tokens.includes("specialist") ||
+      tokens.includes("designer") ||
+      tokens.includes("professional") ||
+      tokens.includes("strategy") ||
       tokens.includes("skills") ||
       tokens.includes("experience"))
   ) {

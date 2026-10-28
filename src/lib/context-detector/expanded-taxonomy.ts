@@ -34,7 +34,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Explicit reference to youth or chronological age in screening contexts, triggering age-discriminatory preferences under EEOC ADEA guidelines.",
     researchCitation: "EEOC ADEA Enforcement Guidance (2020); Neumark et al. (2019)",
-    replacement: "Specify demonstrated competencies or career stage without age markers",
+    replacement: "early-career",
     rationale: "Neutralizes chronological age proxies while keeping core accomplishments intact.",
     variants: [
       { form: "young", type: VARIANT_TYPES.BASE_FORM },
@@ -42,7 +42,22 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
       { form: "youngest", type: VARIANT_TYPES.SUPERLATIVE_FORM },
       { form: "youthful", type: VARIANT_TYPES.BASE_FORM },
       { form: "youth", type: VARIANT_TYPES.NOUN_FORM },
-      { form: "young age", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
+      {
+      form: "young age",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
+    {
+      form: "fresh blood",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
+    {
+      form: "cutting edge youth",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
+    {
+      form: "young gun",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
       { form: "youth-oriented", type: VARIANT_TYPES.SPELLING_VARIANT },
       { form: "youth oriented", type: VARIANT_TYPES.SPELLING_VARIANT },
     ],
@@ -57,7 +72,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Chronological age cue that can trigger implicit bias regarding technological adaptability or overqualification.",
     researchCitation: "Neumark, Burn, & Button (2019) Age Discrimination in Hiring",
-    replacement: "Focus on domain depth and recent project impact",
+    replacement: "established",
     rationale: "Removes age references in favor of technical domain deliverables.",
     variants: [
       { form: "old", type: VARIANT_TYPES.BASE_FORM },
@@ -79,7 +94,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Coded age proxy or subjective maturity label that invites implicit generational stereotyping in recruitment.",
     researchCitation: "AARP / EEOC Hiring Audit (2021)",
-    replacement: "Focus on demonstrated technical leadership and verified competencies",
+    replacement: "experienced",
     rationale: "Replaces coded generational indicators with verified leadership competencies.",
     variants: [
       { form: "mature", type: VARIANT_TYPES.BASE_FORM },
@@ -103,7 +118,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Tenure modifier that can serve as a proxy for candidate age when emphasizing chronological duration exceeding 20 years.",
     researchCitation: "EEOC ADEA Guidance (2020)",
-    replacement: "Highlight specialized technical capabilities and programmatic deliverables",
+    replacement: "skilled",
     rationale: "Focuses on technical capabilities rather than calendar years.",
     variants: [
       { form: "experienced", type: VARIANT_TYPES.BASE_FORM },
@@ -126,8 +141,9 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Generational entry cohort label ('recent graduate', 'fresh graduate') that operates as an indirect age proxy when used to filter applicant pools.",
     researchCitation: "EEOC Age Discrimination Regulations; Neumark et al. (2019)",
-    replacement: "early-career software engineer / entry-level candidate",
-    rationale: "Replaces age-correlated graduation timing with professional career-stage terminology.",
+    replacement: "entry-level candidate",
+    rationale:
+      "Replaces age-correlated graduation timing with professional career-stage terminology.",
     variants: [
       { form: "recent graduate", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "recent graduates", type: VARIANT_TYPES.PLURAL_FORM },
@@ -169,7 +185,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Direct generational age proxy implying that older professionals lack innate technical fluency.",
     researchCitation: "EEOC ADEA Enforcement Guidance (2020)",
-    replacement: "proficient across modern software, cloud, and collaborative tools",
+    replacement: "technically proficient",
     rationale: "Substitutes generational stereotypes with concrete technical proficiencies.",
     variants: [
       { form: "digital native", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -217,7 +233,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "High-energy and youth vitality descriptors often operate as coded proxies for younger candidates.",
     researchCitation: "EEOC ADEA Guidance (2020)",
-    replacement: "results-driven contributor with disciplined execution",
+    replacement: "driven",
     rationale: "Reflects productive output rather than age-associated physical vigor.",
     variants: [
       { form: "energetic", type: VARIANT_TYPES.BASE_FORM },
@@ -245,7 +261,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Overt gender-stereotyped descriptor that invokes traditional masculine gender role expectations.",
     researchCitation: "Gaucher, Friesen, & Kay (2011)",
-    replacement: "objective, role-relevant competency descriptor",
+    replacement: "objective",
     rationale: "Replaces gender stereotypes with role-specific technical skills.",
     variants: [
       { form: "masculine", type: VARIANT_TYPES.BASE_FORM },
@@ -351,8 +367,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     canonical: "fearless",
     defaultSeverity: "medium",
     confidence: 0.87,
-    explanation:
-      "Hyperbolic masculine-coded trait in empirical job listing and resume lexicons.",
+    explanation: "Hyperbolic masculine-coded trait in empirical job listing and resume lexicons.",
     researchCitation: "Gaucher et al. (2011)",
     replacement: "proactive in tackling complex technical challenges",
     rationale: "Connects initiative directly to technical problem-solving.",
@@ -387,7 +402,8 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     canonical: "decisive",
     defaultSeverity: "low",
     confidence: 0.8,
-    explanation: "Agentic leadership trait often coded masculine in psycholinguistic text classifiers.",
+    explanation:
+      "Agentic leadership trait often coded masculine in psycholinguistic text classifiers.",
     researchCitation: "Gaucher et al. (2011)",
     replacement: "timely and structured in evaluation and execution",
     rationale: "Describes decision-making methodology objectively.",
@@ -442,7 +458,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Overt feminine descriptor that introduces gendered stereotypes into candidate evaluation.",
     researchCitation: "Heilman (2012) Gender Stereotypes and Workplace Bias",
-    replacement: "professional role-relevant competency descriptor",
+    replacement: "collaborative",
     rationale: "Replaces gender stereotypes with professional role accomplishments.",
     variants: [
       { form: "feminine", type: VARIANT_TYPES.BASE_FORM },
@@ -732,7 +748,18 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
       { form: "stay-at-home mother", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "stay-at-home dad", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "primary caregiver", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
-      { form: "family caregiver", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
+      {
+      form: "family caregiver",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
+    {
+      form: "unencumbered by family",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
+    {
+      form: "unencumbered by family obligations",
+      type: VARIANT_TYPES.MULTIWORD_EXPRESSION,
+    },
     ],
   },
 
@@ -750,7 +777,8 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
       "Hostile, combative, or angry conduct descriptions reflect subjective interpersonal bias or emotional characterizations rather than objective deliverables.",
     researchCitation: "EEOC Workplace Assessment Guidelines & Title VII Standards",
     replacement: "professionally and constructively / handled with composure",
-    rationale: "Replaces combative behavioral labels with constructive professional collaboration terminology.",
+    rationale:
+      "Replaces combative behavioral labels with constructive professional collaboration terminology.",
     variants: [
       { form: "angrily", type: VARIANT_TYPES.ADVERB_FORM },
       { form: "angry", type: VARIANT_TYPES.BASE_FORM },
@@ -986,8 +1014,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     canonical: "not a team player",
     defaultSeverity: "high",
     confidence: 0.93,
-    explanation:
-      "Subjective negative characterization lacking objective behavioral documentation.",
+    explanation: "Subjective negative characterization lacking objective behavioral documentation.",
     researchCitation: "EEOC Guidelines",
     replacement: "demonstrates independent initiative while supporting team deliverables",
     rationale: "Highlights self-directed engineering within team contexts.",
@@ -1041,7 +1068,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "'Culture fit' frequently operates as an unstandardized, subjective filter that perpetuates demographic affinity bias and exclusionary hiring.",
     researchCitation: "Rivera (2012) Hiring as Cultural Matching",
-    replacement: "values alignment evaluated against objective, structured rubric criteria",
+    replacement: "values alignment",
     rationale: "Replaces unstandardized social affinity with objective competency criteria.",
     variants: [
       { form: "cultural fit", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1066,7 +1093,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Subjective communication descriptors ('articulate', 'well-spoken') can act as racial microaggressions under linguistic profiling research.",
     researchCitation: "Alim & Smitherman (2012) Articulate While Black",
-    replacement: "effective stakeholder presentation and technical documentation skills",
+    replacement: "effective communicator",
     rationale: "Focuses on technical documentation and presentation skills.",
     variants: [
       { form: "articulate", type: VARIANT_TYPES.BASE_FORM },
@@ -1089,7 +1116,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Disability status disclosure or inquiry having no bearing on bona fide occupational qualifications for knowledge work.",
     researchCitation: "EEOC ADA Enforcement Guidance (2020); Ameri et al. (2018)",
-    replacement: "Focus strictly on technical role qualifications and deliverables",
+    replacement: "differently-abled",
     rationale: "Removes disability disclosures in accordance with ADA guidelines.",
     variants: [
       { form: "disabled", type: VARIANT_TYPES.BASE_FORM },
@@ -1134,7 +1161,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Medical disclosures on resumes invite unlawful health discrimination under the ADA and EEOC guidelines.",
     researchCitation: "EEOC ADA Compliance Guidelines",
-    replacement: "Omit private health disclosures entirely from resume text",
+    replacement: "health leave",
     rationale: "Removes private medical disclosures.",
     variants: [
       { form: "medical condition", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1158,7 +1185,8 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
       "Physical fitness and extreme endurance criteria ('tireless 24/7 availability') unlawfully exclude candidates with disabilities or family obligations.",
     researchCitation: "Ameri et al. (2018) The Disability Employment Penalty",
     replacement: "dependable execution within agreed project schedules",
-    rationale: "Emphasizes dependable milestone delivery rather than unsustainable physical stamina.",
+    rationale:
+      "Emphasizes dependable milestone delivery rather than unsustainable physical stamina.",
     variants: [
       { form: "physically fit", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "medically fit", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1179,7 +1207,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Mental health or neurodivergence disclosure introduces protected-class medical information into screening.",
     researchCitation: "EEOC Mental Health and ADA Guidance",
-    replacement: "Omit medical and neurodivergent self-disclosures from initial screening resumes",
+    replacement: "personal leave",
     rationale: "Safeguards candidates from diagnostic stereotyping.",
     variants: [
       { form: "mental health", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1224,8 +1252,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Employment gap and hiatus phrasing that triggers automated ATS penalties or negative recruiter speculation.",
     researchCitation: "Weisshaar (2018) From Opt Out to Blocked Out; Pedulla (2016)",
-    replacement:
-      "Frame gap with constructive upskilling, self-directed engineering, or consulting deliverables",
+    replacement: "professional sabbatical",
     rationale: "Reframes hiatus with active technical upskilling and independent consulting.",
     variants: [
       { form: "career gap", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1248,8 +1275,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Deficit-based unemployment phrasing that triggers negative heuristics in ATS screening.",
     researchCitation: "Pedulla (2016) Penalties for Employment Gaps",
-    replacement:
-      "independent technical consulting, research projects, or open-source contributions",
+    replacement: "independent consultant",
     rationale: "Highlights productive technical projects completed during transition periods.",
     variants: [
       { form: "unemployed", type: VARIANT_TYPES.BASE_FORM },
@@ -1294,7 +1320,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Caregiver or homemaker framing that invites family-responsibility discrimination.",
     researchCitation: "Weisshaar (2018)",
-    replacement: "planned professional hiatus / personal leave period with active skill maintenance",
+    replacement: "family leave",
     rationale: "Frames personal leave neutrally while confirming active skill currency.",
     variants: [
       { form: "stay-at-home", type: VARIANT_TYPES.SPELLING_VARIANT },
@@ -1314,7 +1340,7 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Career re-entry or continuity descriptors that highlight non-linear employment trajectories.",
     researchCitation: "Pedulla (2016)",
-    replacement: "Emphasize current technical competencies and recent project execution",
+    replacement: "resuming practice",
     rationale: "Centers candidate evaluation on current demonstrated technical depth.",
     variants: [
       { form: "returning to work", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1340,8 +1366,9 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
     explanation:
       "Institutional brand prestige creates algorithmic pedigree bias in screening models, masking underlying skill parity.",
     researchCitation: "Rivera (2012) Pedigree: How Elite Students Get Elite Jobs",
-    replacement: "Accredited University / Technical Degree Program",
-    rationale: "Blinds pedigree markers to focus exclusively on technical coursework and engineering deliverables.",
+    replacement: "Accredited University",
+    rationale:
+      "Blinds pedigree markers to focus exclusively on technical coursework and engineering deliverables.",
     variants: [
       { form: "Ivy League", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "Ivy League graduate", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
@@ -1377,7 +1404,8 @@ export const EXPANDED_TAXONOMY: ExpandedTaxonomyItem[] = [
       "Language nativity and accent criteria ('native English speaker', 'clean accent') operate as proxies for national origin and race under Title VII.",
     researchCitation: "EEOC Title VII National Origin Guidelines & Purnell et al. (1999)",
     replacement: "proficient in professional English technical communication",
-    rationale: "Specifies professional technical communication competency without exclusionary linguistic origin barriers.",
+    rationale:
+      "Specifies professional technical communication competency without exclusionary linguistic origin barriers.",
     variants: [
       { form: "native English speaker", type: VARIANT_TYPES.MULTIWORD_EXPRESSION },
       { form: "native English speakers", type: VARIANT_TYPES.PLURAL_FORM },

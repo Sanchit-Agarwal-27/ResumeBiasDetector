@@ -1,4 +1,5 @@
 from __future__ import annotations
+import functools
 import re
 from typing import List, Dict, Any, Tuple, Optional, Set
 from ..schemas import (
@@ -210,9 +211,10 @@ def scan_candidates(text: str) -> List[CandidateMatch]:
     return matches
 
 
-def classify_sentence(sentence: str, start: int = 0, end: int = 0) -> ClassifiedSentence:
-    """Classifies a single sentence strictly into 'Fine' or 'Flagged' with XAI explanation."""
-    trimmed = sentence.strip()
+@functools.lru_cache(maxsize=4096)
+def _classify_sentence_uncached(trimmed: str) -> ClassifiedSentence:
+    start = 0
+    end = len(trimmed)
     if not trimmed:
         return ClassifiedSentence(
             sentence="",
@@ -367,25 +369,31 @@ def classify_sentence(sentence: str, start: int = 0, end: int = 0) -> Classified
                 end=end,
             )
 
-    # Rule 7: Ambiguous Leadership Style or Subjective Personality Judgment
-    style_triggers = ["leadership style", "management style", "working style", "personality style"]
-    if any(st in lower for st in style_triggers) or ("candidate has an" in lower and "style" in lower):
-        style_words = ["aggressive", "dominant", "controlling", "forceful"]
-        st_cand = next((c for c in candidates if any(sw in c.matched_text.lower() for sw in style_words)), None)
-        if st_cand:
-            phrase_text = f"'{st_cand.matched_text}'" if "style" in st_cand.matched_text.lower() else f"'{st_cand.matched_text} leadership style'"
-            return ClassifiedSentence(
-                sentence=trimmed,
-                keyword_match=matched_keywords,
-                classification="Flagged",
-                confidence=0.88,
-                explanation=f"The phrase {phrase_text} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.",
-                contextType="subjective_leadership_style",
-                start=start,
-                end=end,
-            )
-
-    # Rule 8: Technical Accessibility Feature for Disabled Users
+    # Rule 7: Ambiguous Leadership Style, Management Demeanor, or Subjective Personality Judgment
+    has_subjective_style_or_role = any(
+        w in lower for w in [
+            "leadership", "management", "style", "attitude", "personality",
+            "temperament", "demeanor", "communication", "manager", "developer",
+            "engineer", "leader", "candidate"
+        ]
+    )
+    agentic_cand = next(
+        (c for c in candidates if any(k in c.matched_text.lower() for k in ["aggressive", "dominant", "controlling", "forceful", "combative"])),
+        None
+    )
+    if agentic_cand and has_subjective_style_or_role and not has_tech_obj and not has_tech_act and not has_strat_obj:
+        phrase_text = f"'{agentic_cand.matched_text}'" if "style" in agentic_cand.matched_text.lower() else f"'{agentic_cand.matched_text} leadership style'"
+        return ClassifiedSentence(
+            sentence=trimmed,
+            keyword_match=matched_keywords,
+            classification="Flagged",
+            confidence=0.90,
+            explanation=f"The phrase {phrase_text} represents a subjective personality judgment relevant to hiring that can reflect gender-coded stereotypes. Although the immediate sentence context is insufficient to establish whether the judgment is unfair, subjective personality labels without objective metrics represent an unstandardized screening risk.",
+            contextType="subjective_leadership_style",
+            start=start,
+            end=end,
+        )
+# Rule 8: Technical Accessibility Feature for Disabled Users
     is_a11y_feature = (
         any(k in lower for k in ["accessibility", "accommodation", "wcag", "screen-reader"])
         and any(t in token_set for t in ["application", "developed", "built", "improves", "implemented", "features", "supported", "software"])
@@ -492,8 +500,11 @@ def classify_sentence(sentence: str, start: int = 0, end: int = 0) -> Classified
         )
 
     # Rule 13: Neutral/Harmless Qualification Mention
-    qualification_words = {"engineer", "developer", "analyst", "manager", "consultant", "skills", "experience"}
-    if any(qw in token_set for qw in qualification_words):
+    # STRICT: Only applies to genuinely neutral qualification terms (experienced, strong, flexible, adaptable).
+    safe_qual_terms = {"experienced", "strong", "stronger", "strongest", "flexible", "adaptable"}
+    has_only_safe_qual = all(c.matched_text.lower() in safe_qual_terms for c in candidates)
+    qualification_words = {"engineer", "developer", "analyst", "manager", "consultant", "specialist", "designer", "professional", "strategy", "skills", "experience"}
+    if has_only_safe_qual and any(qw in token_set for qw in qualification_words):
         has_disc = any(c.category == BiasCategory.GENDER_CODED and c.matched_text in ("manly", "girly", "macho") for c in candidates)
         if not has_disc and not has_hiring_pref and not has_deficit:
             return ClassifiedSentence(
@@ -520,6 +531,34 @@ def classify_sentence(sentence: str, start: int = 0, end: int = 0) -> Classified
         end=end,
     )
 
+
+def classify_sentence(sentence: str, start: int = 0, end: int = 0) -> ClassifiedSentence:
+    """Classifies a single sentence strictly into 'Fine' or 'Flagged' with LRU caching."""
+    trimmed = sentence.strip()
+    if not trimmed:
+        return ClassifiedSentence(
+            sentence="",
+            keyword_match=[],
+            classification="Fine",
+            confidence=1.0,
+            explanation="Sentence is empty or contains only whitespace.",
+            contextType="empty",
+            start=start,
+            end=end,
+        )
+    res = _classify_sentence_uncached(trimmed)
+    if res.start == start and res.end == end:
+        return res
+    return ClassifiedSentence(
+        sentence=res.sentence,
+        keyword_match=res.keyword_match,
+        classification=res.classification,
+        confidence=res.confidence,
+        explanation=res.explanation,
+        contextType=res.contextType,
+        start=start,
+        end=end,
+    )
 
 def analyze_document_text(text: str, file_name: str = "document.txt") -> Tuple[
     List[BiasSpan],

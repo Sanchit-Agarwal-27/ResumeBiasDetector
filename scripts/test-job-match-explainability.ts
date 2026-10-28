@@ -157,8 +157,10 @@ for (const missing of explanationAlex.missingRequirements) {
     allMissingHaveRecommendations = false;
   }
   // Check that advice does NOT say to lie or make up skills
-  if (missing.actionableRecommendation.toLowerCase().includes("make up") ||
-      missing.actionableRecommendation.toLowerCase().includes("fabricate")) {
+  if (
+    missing.actionableRecommendation.toLowerCase().includes("make up") ||
+    missing.actionableRecommendation.toLowerCase().includes("fabricate")
+  ) {
     noFabricationEncouraged = false;
   }
 }
@@ -226,11 +228,7 @@ assert(
 // -----------------------------------------------------------------------------
 console.log("\n--- SUITE 5: Fallback & Supplementary Analysis Mode ---");
 
-const supplementaryReport = generateSupplementaryExplanation(
-  78,
-  alexResume,
-  fullstackJob.raw_text,
-);
+const supplementaryReport = generateSupplementaryExplanation(78, alexResume, fullstackJob.raw_text);
 
 assert(
   supplementaryReport.overallScore === 78,
@@ -287,7 +285,9 @@ assert(
 // SUMMARY
 // -----------------------------------------------------------------------------
 console.log("\n" + "=".repeat(80));
-console.log(` Test Execution Completed: ${passedCount}/${passedCount + failedCount} Passed (${failedCount} Failed)`);
+console.log(
+  ` Test Execution Completed: ${passedCount}/${passedCount + failedCount} Passed (${failedCount} Failed)`,
+);
 console.log("=".repeat(80));
 
 if (failedCount > 0) {
@@ -295,4 +295,3 @@ if (failedCount > 0) {
 } else {
   console.log(" All explainability and score invariance tests passed successfully!\n");
 }
-

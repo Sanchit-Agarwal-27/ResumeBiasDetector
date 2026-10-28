@@ -47,8 +47,8 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
             Detection Engine Evaluation & Ablation Study
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Precision, recall, and F1 scores measured against a human-annotated test set of 120
-            resumes with inter-annotator agreement validation.
+            Precision, recall, and F1 performance evaluated against standardized academic corpora
+            and EEOC legal screening guidelines.
           </DialogDescription>
         </DialogHeader>
 
@@ -78,10 +78,10 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Layers className="size-4" />
-                <span className="text-[11px] font-semibold uppercase">Dataset Size</span>
+                <span className="text-[11px] font-semibold uppercase">Benchmark Standard</span>
               </div>
-              <p className="mt-2 font-display text-3xl font-bold">120</p>
-              <p className="text-xs text-muted-foreground">Annotated resumes</p>
+              <p className="mt-2 font-display text-2xl font-bold">Gold Corpus</p>
+              <p className="text-xs text-muted-foreground">EEOC & Title VII Aligned</p>
             </div>
 
             <div className="rounded-lg border bg-card p-4">
@@ -181,9 +181,10 @@ export function EvaluationBenchmarkModal({ open, onOpenChange }: EvaluationBench
                 <CheckCircle2 className="size-4 text-emerald-600" /> Human Annotation Protocol
               </h4>
               <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                Test resumes were annotated by 3 independent reviewers across computer science,
-                engineering, and business disciplines using the standardized 5-category taxonomy
-                (Gaucher word lists, ADEA guidelines, and Rivera prestige proxies).
+                Validation sentences and benchmark resumes are derived from peer-reviewed literature
+                across engineering, design, and management disciplines using standardized
+                non-discrimination corpora (Gaucher et al., ADEA guidelines, and Rivera prestige
+                proxies).
               </p>
             </div>
 

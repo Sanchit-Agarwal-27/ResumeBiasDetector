@@ -238,8 +238,7 @@ export async function parsePdfResume(
 
     // Filter repeated headers and footers on multi-page resumes
     const filteredRuns = lineRuns.filter(
-      (r) =>
-        !isRepeatedHeaderOrFooter(r.text, r.y, viewport.height, pageIdx, candidateName),
+      (r) => !isRepeatedHeaderOrFooter(r.text, r.y, viewport.height, pageIdx, candidateName),
     );
 
     // Layout detection (single vs multi-column)
@@ -321,9 +320,7 @@ export async function parsePdfResume(
     pageCount: numPages,
     characterCount: cleanedText.length,
     wordCount: cleanedText.split(/\s+/).filter(Boolean).length,
-    method: (ocrUsed ? "pdf-ocr" : "pdf-native-layout") as
-      | "pdf-native-layout"
-      | "pdf-ocr",
+    method: (ocrUsed ? "pdf-ocr" : "pdf-native-layout") as "pdf-native-layout" | "pdf-ocr",
     ocrTriggered: ocrUsed,
     columnLayout: primaryColumnLayout,
     validationScore: validation.qualityScore,

@@ -81,7 +81,8 @@ export function AuthModal({ open, onOpenChange, defaultView = "signin" }: AuthMo
     logout();
     onOpenChange(false);
     toast.info("Working in Guest Mode", {
-      description: "You have full access to local document parsing, bias auditing, and ATS matching without an account.",
+      description:
+        "You have full access to local document parsing, bias auditing, and ATS matching without an account.",
     });
   };
 

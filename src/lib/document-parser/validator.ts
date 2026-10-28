@@ -55,6 +55,7 @@ export function validateExtraction(
   // 3. Check for garbled characters or unresolved font glyphs (CID fonts, \uFFFD)
   const cidMatches = (trimmed.match(/\(cid:\d+\)/g) || []).length;
   const replacementCharMatches = (trimmed.match(/\uFFFD/g) || []).length;
+  // eslint-disable-next-line no-control-regex
   const unprintableMatches = (trimmed.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g) || []).length;
   const garbledCount = cidMatches + replacementCharMatches + unprintableMatches;
   const garbledRatio = garbledCount / Math.max(1, trimmed.length);
@@ -196,4 +197,3 @@ export function deduplicateOverlappingFragments<
 
   return result;
 }
-
