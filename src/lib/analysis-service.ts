@@ -276,3 +276,94 @@ export async function processResumeAnalysis(
         : undefined,
   };
 }
+
+
+/**
+ * Fetches LinUCB prioritized recommendation from FastAPI backend
+ */
+export async function fetchBackendRLRecommendation(
+  span: BiasSpan,
+  baselineSuggestion?: RewriteSuggestion,
+  fastApiUrl: string = DEFAULT_CONFIG.fastApiUrl,
+): Promise<any | null> {
+  try {
+    const res = await fetch(`${fastApiUrl}/api/rl/recommend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        span_id: span.id,
+        category: span.category,
+        subcategory: span.subcategory || "",
+        matched_text: span.matched_text,
+        confidence: span.confidence ?? 0.9,
+        severity: span.severity,
+        context_type: span.context_type || "general",
+        sentence: span.sentence || "",
+        baseline_suggestion: baselineSuggestion?.suggested_text,
+      }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Submits feedback to FastAPI backend to update online LinUCB weights in real-time
+ */
+export async function sendBackendRLFeedback(
+  params: {
+    spanId: string;
+    actionId: string;
+    rating: string;
+    suggestedText?: string;
+    userEditedText?: string;
+    comment?: string;
+    stateFeatures: number[];
+    policyVersion?: string;
+  },
+  fastApiUrl: string = DEFAULT_CONFIG.fastApiUrl,
+): Promise<{ success: boolean; message?: string } | null> {
+  try {
+    const res = await fetch(`${fastApiUrl}/api/rl/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        span_id: params.spanId,
+        action_id: params.actionId,
+        rating: params.rating,
+        suggested_text: params.suggestedText || "",
+        user_edited_text: params.userEditedText,
+        comment: params.comment,
+        state_features: params.stateFeatures,
+        policy_version: params.policyVersion || "v1.0.0-python",
+      }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retrieves RL policy state and telemetry from FastAPI backend
+ */
+export async function fetchBackendRLPolicyState(
+  fastApiUrl: string = DEFAULT_CONFIG.fastApiUrl,
+): Promise<any | null> {
+  try {
+    const res = await fetch(`${fastApiUrl}/api/rl/policy-state`);
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

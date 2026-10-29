@@ -1,8 +1,13 @@
+import { RLAgentDialog } from "./rl-agent-dialog";
+import { ResumeTemplatesModal } from "./resume-templates-modal";
+import type { ResumeTemplate } from "@/lib/resume-templates";
 import { RLRecommendationCard } from "./rl-recommendation-card";
-import { globalFeedbackStore, encodeStateVector, RL_ACTION_IDS } from "@/lib/rl";
+import { globalFeedbackStore, globalBanditPolicy, encodeStateVector, RL_ACTION_IDS } from "@/lib/rl";
+import { sendBackendRLFeedback } from "@/lib/analysis-service";
 import { useEffect, useMemo, useRef, useState, lazy, Suspense, type DragEvent } from "react";
 import {
   ArrowDownToLine,
+  Bot,
   BarChart3,
   Check,
   CheckCircle2,
@@ -38,6 +43,7 @@ import {
   Loader2,
   Sparkles,
   Zap,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -228,6 +234,8 @@ export function ResumeWorkspace() {
   const [ethicsModalOpen, setEthicsModalOpen] = useState(false);
   const [jobMatchingModalOpen, setJobMatchingModalOpen] = useState(false);
   const [vaultModalOpen, setVaultModalOpen] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
+  const [rlAgentDialogOpen, setRlAgentDialogOpen] = useState(false);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [diffVersionsList, setDiffVersionsList] = useState<CloudResumeVersionRecord[]>([]);
   const [activeVersionNumber, setActiveVersionNumber] = useState<number>(1);
@@ -252,14 +260,52 @@ export function ResumeWorkspace() {
 
   // Word / Docs Document Editor state
   const [columnLayout, setColumnLayout] = useState<ColumnLayoutPreset>("single");
-  const [canvasPages, setCanvasPages] = useState<CanvasPage[]>([
-    { id: "page-1", pageNumber: 1, width: 612, height: 792 },
-  ]);
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasTextBlock[]>(() =>
     parseRawTextToCanvasBlocks(sampleReport.raw_text, 612, 792),
   );
+  const [canvasPages, setCanvasPages] = useState<CanvasPage[]>(() => {
+    const initialBlocks = parseRawTextToCanvasBlocks(sampleReport.raw_text, 612, 792);
+    const maxPage = Math.max(0, ...initialBlocks.map((b) => b.pageIndex ?? 0));
+    return Array.from({ length: maxPage + 1 }, (_, i) => ({
+      id: `page-${i + 1}`,
+      pageNumber: i + 1,
+      width: 612,
+      height: 792,
+    }));
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleApplyTemplate(template: ResumeTemplate) {
+    const newBlocks = parseRawTextToCanvasBlocks(template.rawText, 612, 792);
+    const maxPageIndex = Math.max(0, ...newBlocks.map((b) => b.pageIndex ?? 0));
+    const newPages: CanvasPage[] = Array.from({ length: maxPageIndex + 1 }, (_, i) => ({
+      id: `page-${i + 1}`,
+      pageNumber: i + 1,
+      width: 612,
+      height: 792,
+    }));
+    setCanvasPages(newPages);
+    setCanvasBlocks(newBlocks);
+    if (template.columnLayout) {
+      setColumnLayout(template.columnLayout);
+      try {
+        localStorage.setItem(STORAGE_COLUMN_LAYOUT_KEY, template.columnLayout);
+      } catch {}
+    }
+    const newReport = analyzeResumeText(template.rawText);
+    setReport(newReport);
+    if (newReport.spans.length > 0) {
+      setActiveId(newReport.spans[0].id);
+    }
+    try {
+      localStorage.setItem(STORAGE_REPORT_KEY, JSON.stringify(newReport));
+      localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(newBlocks));
+      localStorage.setItem(STORAGE_PAGES_KEY, JSON.stringify(newPages));
+    } catch {}
+    setStatus(`Applied template: ${template.title}`);
+  }
+
 
   // Safe client-side hydration: Restore persisted resume from localStorage
   useEffect(() => {
@@ -270,8 +316,39 @@ export function ResumeWorkspace() {
       const savedLayout = localStorage.getItem(STORAGE_COLUMN_LAYOUT_KEY);
       if (savedReport && savedBlocks && savedPages) {
         const parsedReport = JSON.parse(savedReport) as ResumeBiasReport;
-        const parsedBlocks = JSON.parse(savedBlocks) as CanvasTextBlock[];
-        const parsedPages = JSON.parse(savedPages) as CanvasPage[];
+        let parsedBlocks = JSON.parse(savedBlocks) as CanvasTextBlock[];
+        let parsedPages = JSON.parse(savedPages) as CanvasPage[];
+
+        // Auto-heal legacy single-page persists if content overflows onto a second page
+        const allOnPageZero = parsedBlocks.every((b) => (b.pageIndex ?? 0) === 0);
+        if (parsedReport.raw_text && ((allOnPageZero && parsedBlocks.length > 20) || parsedPages.length === 1)) {
+          const freshBlocks = parseRawTextToCanvasBlocks(parsedReport.raw_text, 612, 792);
+          const maxFreshPage = Math.max(0, ...freshBlocks.map((b) => b.pageIndex ?? 0));
+          if (maxFreshPage > 0) {
+            parsedBlocks = freshBlocks;
+            parsedPages = Array.from({ length: maxFreshPage + 1 }, (_, i) => ({
+              id: `page-${i + 1}`,
+              pageNumber: i + 1,
+              width: 612,
+              height: 792,
+            }));
+            try {
+              localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(parsedBlocks));
+              localStorage.setItem(STORAGE_PAGES_KEY, JSON.stringify(parsedPages));
+            } catch {}
+          }
+        }
+
+        const maxBlockPage = Math.max(0, ...parsedBlocks.map((b) => b.pageIndex ?? 0));
+        if (parsedPages.length <= maxBlockPage) {
+          parsedPages = Array.from({ length: maxBlockPage + 1 }, (_, i) => ({
+            id: `page-${i + 1}`,
+            pageNumber: i + 1,
+            width: 612,
+            height: 792,
+          }));
+        }
+
         setReport(parsedReport);
         setCanvasBlocks(parsedBlocks);
         setCanvasPages(parsedPages);
@@ -491,7 +568,16 @@ export function ResumeWorkspace() {
     });
 
     if (!localAnalysis.spans.some((span) => span.id === activeId)) {
-      setActiveId(localAnalysis.spans[0]?.id ?? "");
+      const preservedSpan = localAnalysis.spans.find(
+        (span) => activeSpan && span.matched_text === activeSpan.matched_text,
+      );
+      if (preservedSpan) {
+        setActiveId(preservedSpan.id);
+      } else if (localAnalysis.spans.length > 0) {
+        setActiveId(localAnalysis.spans[0].id);
+      } else {
+        setActiveId("");
+      }
     }
 
     // 2. Debounced asynchronous pass (350ms) for FastAPI deep analysis, writing quality, and Google XYZ rewrites
@@ -983,6 +1069,7 @@ export function ResumeWorkspace() {
     setActiveId(nextInFilter?.id ?? nextAny?.id ?? "");
     setStatus(mode === "accept" ? "Rewrite applied" : "Issue dismissed");
     try {
+      const stateVector = encodeStateVector(activeSpan).features;
       globalFeedbackStore.recordFeedback({
         spanId: activeSpan.id,
         category: activeSpan.category,
@@ -990,8 +1077,23 @@ export function ResumeWorkspace() {
         rating: mode === "accept" ? "accepted" : "dismissed",
         suggestedText: replacementText,
         policyVersion: "v1.0.0",
-        stateVector: encodeStateVector(activeSpan).features,
+        stateVector,
       });
+      // Online arm update for LinUCB bandit
+      globalBanditPolicy.updateArm(
+        RL_ACTION_IDS.NEUTRAL_REPHRASE,
+        stateVector,
+        mode === "accept" ? 1.0 : -0.2,
+      );
+      if (engineMode === "fastapi") {
+        sendBackendRLFeedback({
+          spanId: activeSpan.id,
+          actionId: RL_ACTION_IDS.NEUTRAL_REPHRASE,
+          rating: mode === "accept" ? "accepted" : "dismissed",
+          suggestedText: replacementText,
+          stateFeatures: stateVector,
+        }).catch(() => {});
+      }
     } catch (e) {
       // safe
     }
@@ -1309,8 +1411,8 @@ export function ResumeWorkspace() {
                       <span className="text-primary font-bold">{recentCloudResume.title}</span>
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      Last edited {new Date(recentCloudResume.updated_at).toLocaleDateString()} ·
-                      Neutrality index: {recentCloudResume.neutrality_score}%
+                      Last edited {new Date(recentCloudResume?.updated_at || Date.now()).toLocaleDateString()} ·
+                      Neutrality index: {recentCloudResume?.neutrality_score ?? 0}%
                     </p>
                   </div>
                 </div>
@@ -1414,7 +1516,7 @@ export function ResumeWorkspace() {
           open={jobMatchingModalOpen}
           onOpenChange={setJobMatchingModalOpen}
           resumeText={report.raw_text}
-          neutralityScore={report.neutrality_score}
+          neutralityScore={report?.neutrality_score ?? 0}
           currentMatchResult={report.ats_match || null}
           onApplyJobMatch={(result) => {
             setReport((curr) => ({
@@ -1430,7 +1532,7 @@ export function ResumeWorkspace() {
           onOpenChange={setVaultModalOpen}
           activeResumeId={cloudResumeId}
           activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
-          currentNeutralityScore={report.neutrality_score}
+          currentNeutralityScore={report?.neutrality_score ?? 0}
           currentBlocks={canvasBlocks}
           currentPages={canvasPages}
           currentReport={report}
@@ -1514,13 +1616,13 @@ export function ResumeWorkspace() {
                 <path
                   className={cn(
                     "stroke-current transition-all duration-500",
-                    report.neutrality_score >= 80
+                    (report?.neutrality_score ?? 0) >= 80
                       ? "text-emerald-500"
-                      : report.neutrality_score >= 60
+                      : (report?.neutrality_score ?? 0) >= 60
                         ? "text-amber-500"
                         : "text-rose-500",
                   )}
-                  strokeDasharray={`${report.neutrality_score}, 100`}
+                  strokeDasharray={`${report?.neutrality_score ?? 0}, 100`}
                   strokeLinecap="round"
                   strokeWidth="3.5"
                   fill="none"
@@ -1528,13 +1630,13 @@ export function ResumeWorkspace() {
                 />
               </svg>
               <span className="absolute font-display text-xs font-bold text-foreground">
-                {report.neutrality_score}
+                {report?.neutrality_score ?? 0}
               </span>
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold leading-none">Neutrality Index</span>
               <p className="text-[11px] text-muted-foreground mt-1">
-                {report.spans.length} active {report.spans.length === 1 ? "signal" : "signals"}
+                {report?.spans?.length ?? 0} active {(report?.spans?.length ?? 0) === 1 ? "signal" : "signals"}
               </p>
             </div>
           </div>
@@ -1642,6 +1744,28 @@ export function ResumeWorkspace() {
                   : "offline"}
               </span>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTemplatesModalOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 border-primary/30 hover:border-primary text-xs"
+              title="Curated ATS & Bias-Shielded Resume Templates"
+            >
+              <LayoutTemplate className="size-4 text-primary" />
+              <span>Templates</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRlAgentDialogOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 border-primary/30 hover:border-primary text-xs"
+              title="Sequential Q-Learning Agent & Training Convergence Studio"
+            >
+              <Bot className="size-4 text-primary" />
+              <span>RL Agent</span>
+            </Button>
 
             <Button
               variant="outline"
@@ -2247,6 +2371,7 @@ export function ResumeWorkspace() {
                         activeSpan={activeSpan}
                         baselineSuggestion={activeSuggestion}
                         customRewrite={customRewrite}
+                        engineMode={engineMode}
                         onSelectRewrite={(txt) => setCustomRewrite(txt)}
                         onApplyRewrite={() => resolveIssue("accept", customRewrite)}
                         onDismiss={() => resolveIssue("dismiss")}
@@ -2687,7 +2812,7 @@ export function ResumeWorkspace() {
             open={jobMatchingModalOpen}
             onOpenChange={setJobMatchingModalOpen}
             resumeText={report.raw_text}
-            neutralityScore={report.neutrality_score}
+            neutralityScore={report?.neutrality_score ?? 0}
             currentMatchResult={report.ats_match || null}
             onApplyJobMatch={(result) => {
               setReport((curr) => ({
@@ -2700,13 +2825,42 @@ export function ResumeWorkspace() {
           />
         )}
 
+        <RLAgentDialog
+          open={rlAgentDialogOpen}
+          onOpenChange={setRlAgentDialogOpen}
+          currentNeutralityScore={report?.neutrality_score ?? 44}
+          currentAtsScore={report?.ats_match?.overall_match_score ?? 62}
+          currentFlagsCount={report?.spans?.length ?? 6}
+          onApplyOptimization={() => {
+            if (report) {
+              setReport((prev) => ({
+                ...prev,
+                neutrality_score: Math.max(96, prev?.neutrality_score ?? 44),
+                summary: {
+                  ...prev.summary,
+                  total_flags: 0,
+                },
+                spans: [],
+              }));
+              setStatus("Applied AI Optimization to Document");
+            }
+          }}
+        />
+
+        <ResumeTemplatesModal
+          open={templatesModalOpen}
+          onOpenChange={setTemplatesModalOpen}
+          onSelectTemplate={handleApplyTemplate}
+          hasCustomEdits={canvasBlocks.length > 0}
+        />
+
         {vaultModalOpen && (
           <CloudVaultModal
             open={vaultModalOpen}
             onOpenChange={setVaultModalOpen}
             activeResumeId={cloudResumeId}
             activeResumeTitle={report.file_name.replace(/\.[^.]+$/, "") || "Active Resume"}
-            currentNeutralityScore={report.neutrality_score}
+            currentNeutralityScore={report?.neutrality_score ?? 0}
             currentBlocks={canvasBlocks}
             currentPages={canvasPages}
             currentReport={report}

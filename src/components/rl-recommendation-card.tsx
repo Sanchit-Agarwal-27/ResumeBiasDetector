@@ -20,15 +20,23 @@ import type { BiasSpan, RewriteSuggestion } from "@/lib/resume-contract";
 import {
   selectMitigationRecommendation,
   globalFeedbackStore,
+  globalBanditPolicy,
+  REWARD_SCALE,
   type FeedbackRating,
   type RecommendationOption,
   type RLRecommendationSelection,
 } from "@/lib/rl";
+import {
+  fetchBackendRLRecommendation,
+  sendBackendRLFeedback,
+} from "@/lib/analysis-service";
 
 interface RLRecommendationCardProps {
   activeSpan: BiasSpan;
   baselineSuggestion?: RewriteSuggestion;
   customRewrite: string;
+  engineMode?: "local" | "fastapi";
+  fastApiUrl?: string;
   onSelectRewrite: (text: string) => void;
   onApplyRewrite: () => void;
   onDismiss: () => void;
@@ -38,6 +46,8 @@ export function RLRecommendationCard({
   activeSpan,
   baselineSuggestion,
   customRewrite,
+  engineMode = "local",
+  fastApiUrl,
   onSelectRewrite,
   onApplyRewrite,
   onDismiss,
@@ -76,6 +86,7 @@ export function RLRecommendationCard({
   }
 
   function handleSendFeedback(rating: FeedbackRating) {
+    const stateVector = Object.values(rlSelection.stateFeatures);
     const res = globalFeedbackStore.recordFeedback({
       spanId: activeSpan.id,
       category: activeSpan.category,
@@ -84,13 +95,35 @@ export function RLRecommendationCard({
       suggestedText: activeOption.suggestedText,
       userEditedText: customRewrite !== activeOption.suggestedText ? customRewrite : undefined,
       policyVersion: rlSelection.policyVersion,
-      stateVector: Object.values(rlSelection.stateFeatures),
+      stateVector,
     });
+
+    // 1. Immediately update client-side LinUCB weights in real-time
+    const numericReward = REWARD_SCALE[rating] ?? 0.0;
+    if (stateVector.length === 8) {
+      globalBanditPolicy.updateArm(activeOption.actionId, stateVector, numericReward);
+    }
+
+    // 2. Dispatch feedback to Python FastAPI backend if in FastAPI mode
+    if (engineMode === "fastapi") {
+      sendBackendRLFeedback(
+        {
+          spanId: activeSpan.id,
+          actionId: activeOption.actionId,
+          rating,
+          suggestedText: activeOption.suggestedText,
+          userEditedText: customRewrite !== activeOption.suggestedText ? customRewrite : undefined,
+          stateFeatures: stateVector,
+          policyVersion: rlSelection.policyVersion,
+        },
+        fastApiUrl,
+      ).catch(() => {});
+    }
 
     if (res.success) {
       setSubmittedRating(rating);
       toast.success("Feedback recorded for RL Agent!", {
-        description: `Your rating (${rating.replace("_", " ")}) refines future recommendation rankings.`,
+        description: `Your rating (${rating.replace("_", " ")}) refines LinUCB policy weights in real-time.`,
       });
     } else if (res.message) {
       toast.info(res.message);

@@ -15,6 +15,7 @@ import {
 
 const POLICY_VERSION = "v1.0.0";
 const DEFAULT_ALPHA = 0.25; // Exploration trade-off coefficient
+export const BANDIT_STORAGE_KEY = "biaslens_rl_bandit_policy_v1";
 
 // 8x8 Identity matrix for L2 regularization
 function createIdentityMatrix(dim: number): number[][] {
@@ -124,6 +125,7 @@ export class LinUCBBanditPolicy {
     this.arms = new Map();
     this.totalUpdates = 0;
     this.initializeDefaultArms();
+    this.loadFromStorage();
   }
 
   /**
@@ -194,6 +196,29 @@ export class LinUCBBanditPolicy {
    * Scores an arm for a given state context vector x.
    * Returns: { expectedReward, explorationBonus, ucb }
    */
+
+  private loadFromStorage(): void {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(BANDIT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SerializedBanditPolicy;
+        this.deserialize(parsed);
+      }
+    } catch {
+      // safe fallback
+    }
+  }
+
+  private saveToStorage(): void {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(BANDIT_STORAGE_KEY, JSON.stringify(this.serialize()));
+    } catch {
+      // safe fallback
+    }
+  }
+
   public evaluateArm(
     actionId: RecommendationActionId,
     state: StateVector,
@@ -303,6 +328,7 @@ export class LinUCBBanditPolicy {
     arm.pullCount += 1;
 
     this.totalUpdates += 1;
+    this.saveToStorage();
     return true;
   }
 

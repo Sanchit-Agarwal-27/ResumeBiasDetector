@@ -265,6 +265,45 @@ function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
+function getCaretOffsetWithin(el: HTMLElement): number {
+  try {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return 0;
+    const range = sel.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(el);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    return preCaretRange.toString().length;
+  } catch {
+    return 0;
+  }
+}
+
+function restoreCaretOffsetWithin(el: HTMLElement, targetOffset: number) {
+  try {
+    const sel = window.getSelection();
+    if (!sel) return;
+    let currentOffset = 0;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const len = node.textContent?.length || 0;
+      if (currentOffset + len >= targetOffset) {
+        const range = document.createRange();
+        range.setStart(node, Math.min(targetOffset - currentOffset, len));
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+      currentOffset += len;
+      node = walker.nextNode();
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
 function parseBlocksToHtml(blocks: CanvasTextBlock[], paperTheme: "white" | "dark" = "white"): string {
   if (!blocks || blocks.length === 0) {
     return `<div class="doc-block" style="font-size: 9.5pt; font-family: Calibri, sans-serif; line-height: 1.25; margin-top: 2px; margin-bottom: 2px;"><br></div>`;
@@ -322,7 +361,23 @@ function parseBlocksToHtml(blocks: CanvasTextBlock[], paperTheme: "white" | "dar
         : b.strikethrough
           ? "line-through"
           : "none";
-      const color = b.color || (isTitle || isHeading ? defaultHeadingColor : defaultTextColor);
+      let color = b.color;
+      if (paperTheme === "dark") {
+        if (!color || color === "#111827" || color === "#1f2937" || color === "#0f172a" || color === "#000000") {
+          color = "#f8fafc";
+        } else if (color === "#1e3a8a") {
+          color = "#60a5fa";
+        }
+      } else {
+        if (!color || color === "#f8fafc" || color === "#f1f5f9" || color === "#e2e8f0" || color === "#ffffff") {
+          color = "#111827";
+        } else if (color === "#60a5fa") {
+          color = "#1e3a8a";
+        }
+      }
+      if (!color) {
+        color = isTitle || isHeading ? defaultHeadingColor : defaultTextColor;
+      }
       const bgColor =
         b.backgroundColor && b.backgroundColor !== "transparent"
           ? b.backgroundColor
@@ -585,20 +640,63 @@ export function WordResumeEditor({
   // Page editable container refs
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isUpdatingFromProps = useRef<boolean>(false);
+  const lastEmittedBlocksJsonRef = useRef<string>("");
+  const isLocalTypingRef = useRef<boolean>(false);
+  const prevPaperThemeRef = useRef<string>(paperTheme);
+  const initializedPagesRef = useRef<Set<number>>(new Set());
 
-  // Initialize and load initial HTML into page editable areas
+  // Synchronize initialPages prop changes
   useEffect(() => {
-    if (isUpdatingFromProps.current) {
-      isUpdatingFromProps.current = false;
+    if (initialPages && initialPages.length > 0) {
+      const isDifferentLength = initialPages.length !== pages.length;
+      const isDifferentIds = initialPages.some((p, i) => pages[i]?.id !== p.id);
+      if (isDifferentLength || isDifferentIds) {
+        setPages(
+          initialPages.map((p, i) => ({
+            ...p,
+            pageNumber: i + 1,
+            id: p.id || `page-${i + 1}`,
+            width: targetPreset.width,
+            height: targetPreset.height,
+          })),
+        );
+      }
+    }
+  }, [initialPages, pages, targetPreset.height, targetPreset.width]);
+
+  // Load and synchronize HTML into page editable areas without blowing away user caret
+  useEffect(() => {
+    const incomingJson = JSON.stringify(initialBlocks);
+    const isSelfUpdate = incomingJson === lastEmittedBlocksJsonRef.current;
+    const themeChanged = prevPaperThemeRef.current !== paperTheme;
+    prevPaperThemeRef.current = paperTheme;
+
+    // If update was emitted by our own editor and theme did not change, NEVER touch the DOM!
+    if (isSelfUpdate && !themeChanged) {
       return;
     }
+
+    lastEmittedBlocksJsonRef.current = incomingJson;
 
     pages.forEach((_, pageIdx) => {
       const pageEl = pageRefs.current.get(pageIdx);
       if (pageEl) {
+        const isFocusedInThisPage =
+          pageEl === document.activeElement || pageEl.contains(document.activeElement);
+
+        // If user is actively typing in this page and this isn't a theme change, don't overwrite
+        if (isFocusedInThisPage && isLocalTypingRef.current && !themeChanged) {
+          return;
+        }
+
+        const savedOffset = isFocusedInThisPage ? getCaretOffsetWithin(pageEl) : 0;
         const pageBlocks = initialBlocks.filter((b) => (b.pageIndex ?? 0) === pageIdx);
         pageEl.innerHTML = parseBlocksToHtml(pageBlocks, paperTheme);
+        initializedPagesRef.current.add(pageIdx);
+
+        if (isFocusedInThisPage && savedOffset > 0) {
+          restoreCaretOffsetWithin(pageEl, savedOffset);
+        }
       }
     });
   }, [initialBlocks, pages, paperTheme]);
@@ -673,7 +771,7 @@ export function WordResumeEditor({
 
   // Synchronize document DOM state back to CanvasTextBlock[]
   const syncToBlocks = useCallback(() => {
-    isUpdatingFromProps.current = true;
+    isLocalTypingRef.current = true;
     const allBlocks: CanvasTextBlock[] = [];
 
     pages.forEach((_, pIdx) => {
@@ -686,8 +784,12 @@ export function WordResumeEditor({
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
+      lastEmittedBlocksJsonRef.current = JSON.stringify(allBlocks);
       onChange(allBlocks, pages);
-    }, 200);
+      setTimeout(() => {
+        isLocalTypingRef.current = false;
+      }, 400);
+    }, 250);
   }, [pages, targetPreset.width, onChange]);
 
   // Capture snapshot for history stack
@@ -1296,8 +1398,41 @@ export function WordResumeEditor({
     ],
   );
 
+  const handleEditorInput = useCallback(
+    (pageIdx: number) => {
+      isLocalTypingRef.current = true;
+      const pageEl = pageRefs.current.get(pageIdx);
+      if (pageEl) {
+        // If user backspaced all content on the page, ensure a blank line exists so caret never breaks
+        if (
+          pageEl.children.length === 0 ||
+          !pageEl.innerHTML ||
+          pageEl.innerHTML.trim() === "" ||
+          pageEl.innerHTML === "<br>"
+        ) {
+          pageEl.innerHTML = `<div class="doc-block" style="font-size: 9.5pt; font-family: ${currentFontFamily}; line-height: 1.25; margin-top: 2px; margin-bottom: 2px;"><br></div>`;
+          const sel = window.getSelection();
+          if (sel) {
+            const firstChild = pageEl.firstElementChild;
+            if (firstChild) {
+              const range = document.createRange();
+              range.setStart(firstChild, 0);
+              range.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+        }
+      }
+      syncToBlocks();
+      updateActiveFormatStates();
+    },
+    [currentFontFamily, syncToBlocks, updateActiveFormatStates],
+  );
+
   // Handle typing Enter inside contenteditable: continue bullets naturally
   const handleEditorKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    isLocalTypingRef.current = true;
     if (e.key === "Enter" && !e.shiftKey) {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
@@ -1347,26 +1482,38 @@ export function WordResumeEditor({
     }
   };
 
+  const lastFocusedSpanIdRef = useRef<string | undefined>(undefined);
+
   // Focus matching text when active bias span changes from review queue
   useEffect(() => {
-    if (activeBiasSpan && activeBiasSpan.matched_text) {
-      pages.forEach((_, pIdx) => {
-        const pageEl = pageRefs.current.get(pIdx);
-        if (!pageEl) return;
-        const divs = Array.from(pageEl.querySelectorAll(".doc-block, div, p"));
-        for (const d of divs) {
-          const htmlEl = d as HTMLElement;
-          if (matchesWordBoundary(htmlEl.innerText, activeBiasSpan.matched_text)) {
-            htmlEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            htmlEl.classList.add("ring-2", "ring-amber-500", "rounded");
-            setTimeout(() => {
-              htmlEl.classList.remove("ring-2", "ring-amber-500", "rounded");
-            }, 2500);
-            break;
-          }
-        }
-      });
+    if (!activeBiasSpan || !activeBiasSpan.matched_text) return;
+    if (activeBiasSpan.id === lastFocusedSpanIdRef.current) return;
+    lastFocusedSpanIdRef.current = activeBiasSpan.id;
+
+    // NEVER auto-scroll or steal focus while user is actively editing inside any page
+    const isEditorFocused = Array.from(pageRefs.current.values()).some(
+      (el) => el === document.activeElement || el.contains(document.activeElement),
+    );
+    if (isEditorFocused || isLocalTypingRef.current) {
+      return;
     }
+
+    pages.forEach((_, pIdx) => {
+      const pageEl = pageRefs.current.get(pIdx);
+      if (!pageEl) return;
+      const divs = Array.from(pageEl.querySelectorAll(".doc-block, div, p"));
+      for (const d of divs) {
+        const htmlEl = d as HTMLElement;
+        if (matchesWordBoundary(htmlEl.innerText, activeBiasSpan.matched_text)) {
+          htmlEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          htmlEl.classList.add("ring-2", "ring-amber-500", "rounded");
+          setTimeout(() => {
+            htmlEl.classList.remove("ring-2", "ring-amber-500", "rounded");
+          }, 2500);
+          break;
+        }
+      }
+    });
   }, [activeBiasSpan, pages]);
 
   return (
@@ -2245,7 +2392,7 @@ export function WordResumeEditor({
               key={page.id}
               onClick={() => setActivePageIndex(index)}
               className={cn(
-                "relative mx-auto border transition-all flex flex-col justify-between rounded-xs shadow-2xl",
+                "relative mx-auto border transition-all flex flex-col justify-between rounded-xs shadow-2xl h-auto shrink-0",
                 paperTheme === "white"
                   ? "bg-white text-slate-900 border-slate-300"
                   : "bg-zinc-900 text-zinc-100 border-zinc-700",
@@ -2260,7 +2407,7 @@ export function WordResumeEditor({
               {/* Document Page Header Indicator & Delete Page Option */}
               <div
                 className={cn(
-                  "flex items-center justify-between text-[10px] select-none px-4 pt-2 border-b",
+                  "flex items-center justify-between text-[10px] select-none px-4 pt-2 border-b shrink-0",
                   paperTheme === "white"
                     ? "text-slate-400 border-slate-100"
                     : "text-zinc-500 border-zinc-800",
@@ -2290,7 +2437,7 @@ export function WordResumeEditor({
 
               {/* SINGLE UNIFIED CONTINUOUS BODY OF TEXT FOR THE PAGE */}
               <div
-                className="flex-1 flex flex-col"
+                className="flex-auto flex flex-col min-h-0"
                 style={{
                   paddingLeft: `${pageMargin * zoom}px`,
                   paddingRight: `${pageMargin * zoom}px`,
@@ -2302,7 +2449,7 @@ export function WordResumeEditor({
                   ref={(el) => {
                     if (el) {
                       pageRefs.current.set(index, el);
-                      if (!el.innerHTML || el.innerHTML.trim() === "") {
+                      if (el.children.length === 0 && (!el.innerHTML || el.innerHTML.trim() === "")) {
                         const pageBlocks = initialBlocks.filter(
                           (b) => (b.pageIndex ?? 0) === index,
                         );
@@ -2319,10 +2466,10 @@ export function WordResumeEditor({
                     setActivePageIndex(index);
                     updateActiveFormatStates();
                   }}
-                  onInput={() => {
-                    syncToBlocks();
-                    updateActiveFormatStates();
+                  onBlur={() => {
+                    isLocalTypingRef.current = false;
                   }}
+                  onInput={() => handleEditorInput(index)}
                   onSelect={updateActiveFormatStates}
                   onMouseUp={updateActiveFormatStates}
                   onKeyUp={updateActiveFormatStates}

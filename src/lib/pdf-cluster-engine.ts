@@ -729,7 +729,9 @@ export function parseRawTextToCanvasBlocks(
       spaceAfter = 2;
     }
 
-    const estimatedHeight = Math.max(16, Math.round(fontSize * 1.25));
+    const charsPerLine = isBulletLine ? 75 : 85;
+    const lineCount = Math.max(1, Math.ceil(line.length / charsPerLine));
+    const estimatedHeight = Math.max(16, Math.round(lineCount * fontSize * 1.25));
 
     // Auto page overflow
     if (currentY + estimatedHeight > pageHeight - 40) {
