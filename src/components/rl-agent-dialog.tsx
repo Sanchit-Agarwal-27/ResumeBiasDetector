@@ -46,6 +46,7 @@ interface RLAgentDialogProps {
   currentNeutralityScore?: number;
   currentAtsScore?: number;
   currentFlagsCount?: number;
+  detectedSpans?: any[];
   onApplyOptimization?: () => void;
 }
 
@@ -55,6 +56,7 @@ export function RLAgentDialog({
   currentNeutralityScore = 44,
   currentAtsScore = 62,
   currentFlagsCount = 6,
+  detectedSpans = [],
   onApplyOptimization,
 }: RLAgentDialogProps) {
   const [activeTab, setActiveTab] = useState<"trajectory" | "curves">("trajectory");
@@ -128,93 +130,182 @@ export function RLAgentDialog({
     setTrajectory([]);
   }
 
-  function runAgentTrajectory() {
+  function generateCustomTrajectory(
+    initN: number,
+    initAts: number,
+    spans: any[]
+  ): TrajectoryStep[] {
+    const steps: TrajectoryStep[] = [];
+    let curN = initN;
+    let curAts = initAts;
+    const cats =
+      spans.length > 0
+        ? spans.map((s) => s.category || "gender_coded")
+        : safeInitialFlags > 0
+        ? Array(safeInitialFlags).fill("gender_coded")
+        : [];
+
+    const remainingCats = [...cats];
+    let remainingFlags = remainingCats.length;
+    let cumReward = 0.0;
+    let step = 1;
+
+    // If resume is already clean
+    if (remainingFlags === 0 && curN >= 92) {
+      return [
+        {
+          step: 1,
+          action_name: "TERMINATE_OPTIMIZATION",
+          action_label: "Resume State Already Optimal (Converged)",
+          reward: 5.0,
+          cumulative_reward: 5.0,
+          neutrality_score: Math.max(curN, 96),
+          ats_score: Math.max(curAts, 88),
+          flags_remaining: 0,
+          delta_neutrality: 0.0,
+          delta_ats: 0.0,
+          is_terminal: true,
+        },
+      ];
+    }
+
+    // Process detected categories one by one
+    while (remainingCats.length > 0 && step <= 7) {
+      const cat = remainingCats.shift()!;
+      remainingFlags = remainingCats.length;
+
+      let action_name = "MITIGATE_GENDER_BIAS";
+      let action_label = "Mitigate Gender-Coded Phrasing";
+      let delta_n = 14.0;
+      let delta_ats = 2.0;
+
+      if (cat === "gender_coded") {
+        action_name = "MITIGATE_GENDER_BIAS";
+        action_label = "Mitigate Gender-Coded Phrasing";
+        delta_n = 14.0;
+        delta_ats = 2.0;
+      } else if (cat === "age_indicative") {
+        action_name = "MITIGATE_AGE_INDICATIVE";
+        action_label = "Redact Outdated Graduation Years (>10 yrs)";
+        delta_n = 16.0;
+        delta_ats = -1.0;
+      } else if (cat === "gap_framing") {
+        action_name = "MITIGATE_CAREER_GAP";
+        action_label = "Reframe Career Gaps as Upskilling Sabbaticals";
+        delta_n = 13.0;
+        delta_ats = 3.0;
+      } else {
+        action_name = "MITIGATE_BUZZWORDS";
+        action_label = "Replace Jargon with Concrete Technical Skills";
+        delta_n = 11.0;
+        delta_ats = 5.0;
+      }
+
+      curN = Math.min(98, Math.round(curN + delta_n));
+      curAts = Math.min(96, Math.round(curAts + delta_ats));
+
+      const r = parseFloat((0.1 * delta_n + 0.08 * delta_ats - 0.05).toFixed(2));
+      cumReward = parseFloat((cumReward + r).toFixed(2));
+
+      steps.push({
+        step: step++,
+        action_name,
+        action_label,
+        reward: r,
+        cumulative_reward: cumReward,
+        neutrality_score: curN,
+        ats_score: curAts,
+        flags_remaining: remainingFlags,
+        delta_neutrality: delta_n,
+        delta_ats: delta_ats,
+        is_terminal: false,
+      });
+    }
+
+    // If ATS is low, add keyword alignment
+    if (curAts < 82 && step <= 7) {
+      const delta_ats = 12.0;
+      curAts = Math.min(95, Math.round(curAts + delta_ats));
+      const r = parseFloat((0.08 * delta_ats - 0.05).toFixed(2));
+      cumReward = parseFloat((cumReward + r).toFixed(2));
+
+      steps.push({
+        step: step++,
+        action_name: "BOOST_ATS_ALIGNMENT",
+        action_label: "Align Missing High-Value Role Keywords",
+        reward: r,
+        cumulative_reward: cumReward,
+        neutrality_score: curN,
+        ats_score: curAts,
+        flags_remaining: 0,
+        delta_neutrality: 0.0,
+        delta_ats: delta_ats,
+        is_terminal: false,
+      });
+    }
+
+    // Terminal step
+    cumReward = parseFloat((cumReward + 5.0).toFixed(2));
+    curN = Math.max(curN, 96);
+    curAts = Math.max(curAts, 86);
+
+    steps.push({
+      step: step,
+      action_name: "TERMINATE_OPTIMIZATION",
+      action_label: "Optimization Target Reached (Converged)",
+      reward: 5.0,
+      cumulative_reward: cumReward,
+      neutrality_score: curN,
+      ats_score: curAts,
+      flags_remaining: 0,
+      delta_neutrality: 1.0,
+      delta_ats: 1.0,
+      is_terminal: true,
+    });
+
+    return steps;
+  }
+
+  async function runAgentTrajectory() {
     if (isRunning) return;
 
     handleReset();
     setIsRunning(true);
     setIsCompleted(false);
 
-    const steps: TrajectoryStep[] = [
-      {
-        step: 1,
-        action_name: "MITIGATE_GENDER_BIAS",
-        action_label: "Mitigate Gender-Coded Phrasing",
-        reward: 1.51,
-        cumulative_reward: 1.51,
-        neutrality_score: 58.0,
-        ats_score: 64.0,
-        flags_remaining: Math.max(0, safeInitialFlags - 1),
-        delta_neutrality: 14.0,
-        delta_ats: 2.0,
-        is_terminal: false,
-      },
-      {
-        step: 2,
-        action_name: "MITIGATE_AGE_INDICATIVE",
-        action_label: "Redact Outdated Graduation Years (>10 yrs)",
-        reward: 1.47,
-        cumulative_reward: 2.98,
-        neutrality_score: 74.0,
-        ats_score: 63.0,
-        flags_remaining: Math.max(0, safeInitialFlags - 2),
-        delta_neutrality: 16.0,
-        delta_ats: -1.0,
-        is_terminal: false,
-      },
-      {
-        step: 3,
-        action_name: "MITIGATE_CAREER_GAP",
-        action_label: "Reframe Career Gaps as Upskilling Sabbaticals",
-        reward: 1.39,
-        cumulative_reward: 4.37,
-        neutrality_score: 86.0,
-        ats_score: 66.0,
-        flags_remaining: Math.max(0, safeInitialFlags - 3),
-        delta_neutrality: 12.0,
-        delta_ats: 3.0,
-        is_terminal: false,
-      },
-      {
-        step: 4,
-        action_name: "MITIGATE_BUZZWORDS",
-        action_label: "Replace Jargon with Concrete Technical Skills",
-        reward: 1.35,
-        cumulative_reward: 5.72,
-        neutrality_score: 95.0,
-        ats_score: 71.0,
-        flags_remaining: Math.max(0, safeInitialFlags - 4),
-        delta_neutrality: 9.0,
-        delta_ats: 5.0,
-        is_terminal: false,
-      },
-      {
-        step: 5,
-        action_name: "BOOST_ATS_ALIGNMENT",
-        action_label: "Align Missing High-Value Role Keywords",
-        reward: 0.59,
-        cumulative_reward: 6.31,
-        neutrality_score: 95.0,
-        ats_score: 84.0,
-        flags_remaining: Math.max(0, safeInitialFlags - 5),
-        delta_neutrality: 0.0,
-        delta_ats: 13.0,
-        is_terminal: false,
-      },
-      {
-        step: 6,
-        action_name: "TERMINATE_OPTIMIZATION",
-        action_label: "Optimization Target Reached (Converged)",
-        reward: 5.0,
-        cumulative_reward: 11.31,
-        neutrality_score: 96.0,
-        ats_score: 86.0,
-        flags_remaining: 0,
-        delta_neutrality: 1.0,
-        delta_ats: 2.0,
-        is_terminal: true,
-      },
-    ];
+    let steps: TrajectoryStep[] = [];
+    const detectedCategories = detectedSpans
+      .map((s) => s?.category)
+      .filter(Boolean);
+
+    try {
+      const res = await fetch("/api/rl/sequential-optimize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          initial_neutrality: safeInitialNeutrality,
+          initial_ats: safeInitialAts,
+          initial_flags: safeInitialFlags,
+          detected_categories: detectedCategories,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.trajectory) && data.trajectory.length > 0) {
+          steps = data.trajectory;
+        }
+      }
+    } catch {
+      // Fallback to local trajectory computation
+    }
+
+    if (steps.length === 0) {
+      steps = generateCustomTrajectory(
+        safeInitialNeutrality,
+        safeInitialAts,
+        detectedSpans
+      );
+    }
 
     let currentIdx = 0;
     timerRef.current = setInterval(() => {

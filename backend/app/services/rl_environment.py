@@ -45,6 +45,7 @@ class ResumeOptimizationEnv:
         self.neutrality_score = 45.0
         self.ats_score = 60.0
         self.flag_count = 6
+        self.active_categories: List[str] = []
         self.history: List[Dict[str, Any]] = []
 
     def reset(
@@ -52,13 +53,26 @@ class ResumeOptimizationEnv:
         initial_neutrality: float = 45.0,
         initial_ats: float = 60.0,
         initial_flags: int = 6,
+        detected_categories: List[str] = None,
     ) -> int:
-        """Resets the environment for a new optimization episode."""
+        """Resets the environment for a new optimization episode with custom resume metrics."""
         self.current_step = 0
         self.neutrality_score = float(initial_neutrality)
         self.ats_score = float(initial_ats)
-        self.flag_count = int(initial_flags)
         self.history = []
+
+        if detected_categories is not None:
+            self.active_categories = list(detected_categories)
+            self.flag_count = len(self.active_categories)
+        else:
+            self.flag_count = int(initial_flags)
+            # Synthesize representative categories based on flag count
+            cats = []
+            pool = ["gender_coded", "age_indicative", "gap_framing", "personality_behavioral", "prestige_proxy"]
+            for i in range(self.flag_count):
+                cats.append(pool[i % len(pool)])
+            self.active_categories = cats
+
         return self._get_discrete_state()
 
     def _get_discrete_state(self) -> int:
@@ -136,33 +150,83 @@ class ResumeOptimizationEnv:
             }
             return self._get_discrete_state(), reward, terminated, info
 
-        # Execute editing transitions
+        # Execute editing transitions based on custom resume categories
         delta_n = 0.0
         delta_ats = 0.0
 
         if action == 0:  # Mitigate gender bias
-            if self.flag_count > 0:
+            has_gender = "gender_coded" in self.active_categories
+            if has_gender:
+                self.active_categories.remove("gender_coded")
                 delta_n = 14.0
                 delta_ats = 2.0
-                self.flag_count = max(0, self.flag_count - 1)
-        elif action == 1:  # Redact age proxies
-            if self.flag_count > 0:
-                delta_n = 16.0
-                delta_ats = -1.0  # Slight penalty if a date token is removed
-                self.flag_count = max(0, self.flag_count - 1)
-        elif action == 2:  # Reframe career gap
-            if self.flag_count > 0:
-                delta_n = 12.0
-                delta_ats = 3.0
-                self.flag_count = max(0, self.flag_count - 1)
-        elif action == 3:  # Competency substitution for buzzwords
-            if self.flag_count > 0:
+            elif self.flag_count > 0:
+                # Fallback if no specific category mapped
+                if self.active_categories:
+                    self.active_categories.pop(0)
                 delta_n = 10.0
+                delta_ats = 1.0
+            else:
+                delta_n = 0.0
+                delta_ats = -1.0  # Action taken with no gender issues remaining
+
+        elif action == 1:  # Redact age proxies
+            has_age = "age_indicative" in self.active_categories
+            if has_age:
+                self.active_categories.remove("age_indicative")
+                delta_n = 16.0
+                delta_ats = -0.5  # Slight token removal cost
+            elif self.flag_count > 0:
+                if self.active_categories:
+                    self.active_categories.pop(0)
+                delta_n = 12.0
+                delta_ats = -0.5
+            else:
+                delta_n = 0.0
+                delta_ats = -1.0
+
+        elif action == 2:  # Reframe career gap
+            has_gap = "gap_framing" in self.active_categories
+            if has_gap:
+                self.active_categories.remove("gap_framing")
+                delta_n = 13.0
+                delta_ats = 3.0
+            elif self.flag_count > 0:
+                if self.active_categories:
+                    self.active_categories.pop(0)
+                delta_n = 9.0
+                delta_ats = 2.0
+            else:
+                delta_n = 0.0
+                delta_ats = -1.0
+
+        elif action == 3:  # Competency substitution for buzzwords
+            has_buzz = any(c in self.active_categories for c in ["personality_behavioral", "prestige_proxy", "disability_coded"])
+            if has_buzz:
+                for c in ["personality_behavioral", "prestige_proxy", "disability_coded"]:
+                    if c in self.active_categories:
+                        self.active_categories.remove(c)
+                        break
+                delta_n = 11.0
                 delta_ats = 5.0
-                self.flag_count = max(0, self.flag_count - 1)
+            elif self.flag_count > 0:
+                if self.active_categories:
+                    self.active_categories.pop(0)
+                delta_n = 8.0
+                delta_ats = 3.0
+            else:
+                delta_n = 0.0
+                delta_ats = -1.0
+
         elif action == 4:  # Boost ATS alignment
-            delta_n = -1.0  # Slight neutrality cost if keywords added carelessly
-            delta_ats = 8.0
+            if self.ats_score < 85.0:
+                delta_n = -0.5  # Minor phrasing adjustment cost
+                delta_ats = 10.0
+            else:
+                delta_n = 0.0
+                delta_ats = 1.0  # Diminishing returns if ATS already high
+
+        self.flag_count = len(self.active_categories)
 
         # Update continuous metrics
         self.neutrality_score = min(100.0, max(0.0, self.neutrality_score + delta_n))

@@ -106,24 +106,48 @@ class QLearningAgent:
         initial_neutrality: float = 44.0,
         initial_ats: float = 62.0,
         initial_flags: int = 6,
+        detected_categories: List[str] = None,
         max_steps: int = 10,
     ) -> Dict[str, Any]:
         """
         Executes a deterministic (greedy) trajectory across the document environment.
-        Used by the frontend and API to demonstrate live sequential RL optimization.
+        Customizes decisions dynamically to the specific resume's starting scores and active bias flags.
         """
         env = ResumeOptimizationEnv(max_steps=max_steps)
         state = env.reset(
             initial_neutrality=initial_neutrality,
             initial_ats=initial_ats,
             initial_flags=initial_flags,
+            detected_categories=detected_categories,
         )
 
         trajectory: List[Dict[str, Any]] = []
         cumulative_reward = 0.0
 
         for step_idx in range(max_steps):
-            action = self.select_action(state, greedy=True)
+            # Check if all issues are resolved and scores are high -> naturally terminate
+            if env.flag_count == 0 and env.neutrality_score >= 88.0:
+                action = 5  # Terminate
+            else:
+                # Find valid action candidates that target remaining issues
+                candidate_actions = []
+                if "gender_coded" in env.active_categories:
+                    candidate_actions.append(0)
+                if "age_indicative" in env.active_categories:
+                    candidate_actions.append(1)
+                if "gap_framing" in env.active_categories:
+                    candidate_actions.append(2)
+                if any(c in env.active_categories for c in ["personality_behavioral", "prestige_proxy", "disability_coded"]):
+                    candidate_actions.append(3)
+                if env.ats_score < 82.0:
+                    candidate_actions.append(4)
+
+                if not candidate_actions:
+                    action = 5  # No remaining issues or ATS deficit -> terminate
+                else:
+                    # Pick candidate action with highest Q(s, a)
+                    action = max(candidate_actions, key=lambda a: self.q_table[state][a])
+
             next_state, reward, terminated, info = env.step(action)
             cumulative_reward += reward
 

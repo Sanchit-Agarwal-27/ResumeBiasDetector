@@ -242,12 +242,14 @@ async def run_sequential_optimization(request: dict = None):
     init_n = float(req.get("initial_neutrality", 44.0))
     init_ats = float(req.get("initial_ats", 62.0))
     init_flags = int(req.get("initial_flags", 6))
+    detected_cats = req.get("detected_categories", None)
     max_steps = int(req.get("max_steps", 10))
 
     trajectory_result = global_q_agent.run_optimization_trajectory(
         initial_neutrality=init_n,
         initial_ats=init_ats,
         initial_flags=init_flags,
+        detected_categories=detected_cats,
         max_steps=max_steps,
     )
     return trajectory_result

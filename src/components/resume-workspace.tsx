@@ -2831,6 +2831,7 @@ export function ResumeWorkspace() {
           currentNeutralityScore={report?.neutrality_score ?? 44}
           currentAtsScore={report?.ats_match?.overall_match_score ?? 62}
           currentFlagsCount={report?.spans?.length ?? 6}
+          detectedSpans={report?.spans ?? []}
           onApplyOptimization={() => {
             if (report) {
               setReport((prev) => ({
