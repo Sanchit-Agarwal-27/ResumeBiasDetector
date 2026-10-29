@@ -1,3 +1,5 @@
+import { RLRecommendationCard } from "./rl-recommendation-card";
+import { globalFeedbackStore, encodeStateVector, RL_ACTION_IDS } from "@/lib/rl";
 import { useEffect, useMemo, useRef, useState, lazy, Suspense, type DragEvent } from "react";
 import {
   ArrowDownToLine,
@@ -980,6 +982,19 @@ export function ResumeWorkspace() {
     const nextAny = report.spans.find((span) => span.id !== activeSpan.id);
     setActiveId(nextInFilter?.id ?? nextAny?.id ?? "");
     setStatus(mode === "accept" ? "Rewrite applied" : "Issue dismissed");
+    try {
+      globalFeedbackStore.recordFeedback({
+        spanId: activeSpan.id,
+        category: activeSpan.category,
+        actionId: RL_ACTION_IDS.NEUTRAL_REPHRASE,
+        rating: mode === "accept" ? "accepted" : "dismissed",
+        suggestedText: replacementText,
+        policyVersion: "v1.0.0",
+        stateVector: encodeStateVector(activeSpan).features,
+      });
+    } catch (e) {
+      // safe
+    }
     if (mode === "accept") {
       toast.success("Rewrite applied to document");
     } else {
@@ -2228,49 +2243,14 @@ export function ResumeWorkspace() {
                         )}
                       </div>
 
-                      <div className="rounded-md border p-4 bg-muted/20">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                            Suggested revision
-                          </p>
-                          {customRewrite !== (activeSuggestion.suggested_text || "") && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCustomRewrite(activeSuggestion.suggested_text || "")
-                              }
-                              className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
-                            >
-                              Reset to suggestion
-                            </button>
-                          )}
-                        </div>
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                            <span className="text-[10px] font-bold uppercase text-destructive">
-                              Before
-                            </span>
-                            <p className="mt-2 text-sm font-semibold text-destructive break-words">
-                              {activeSuggestion.original_text}
-                            </p>
-                          </div>
-                          <div className="rounded-md border border-success/30 bg-success/5 p-3 flex flex-col">
-                            <span className="text-[10px] font-bold uppercase text-success">
-                              After (Editable)
-                            </span>
-                            <textarea
-                              value={customRewrite}
-                              onChange={(e) => setCustomRewrite(e.target.value)}
-                              placeholder="Type or customize neutral rewrite..."
-                              rows={2}
-                              className="mt-2 w-full flex-1 min-h-[58px] resize-y rounded-sm border border-success/30 bg-background/80 p-2 text-sm font-semibold text-success focus:border-success focus:outline-hidden focus:ring-1 focus:ring-success"
-                            />
-                          </div>
-                        </div>
-                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                          {activeSuggestion.rationale}
-                        </p>
-                      </div>
+                      <RLRecommendationCard
+                        activeSpan={activeSpan}
+                        baselineSuggestion={activeSuggestion}
+                        customRewrite={customRewrite}
+                        onSelectRewrite={(txt) => setCustomRewrite(txt)}
+                        onApplyRewrite={() => resolveIssue("accept", customRewrite)}
+                        onDismiss={() => resolveIssue("dismiss")}
+                      />
 
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                         <Button size="lg" onClick={() => resolveIssue("accept", customRewrite)}>

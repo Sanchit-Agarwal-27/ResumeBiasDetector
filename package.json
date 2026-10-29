@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vite-node scripts/test-context-model.ts && vite-node scripts/test-document-parser.ts && vite-node scripts/test-job-match-explainability.ts",
+    "test": "vite-node scripts/test-context-model.ts && vite-node scripts/test-document-parser.ts && vite-node scripts/test-job-match-explainability.ts && vite-node scripts/test-rl-policy.ts",
+    "test:rl": "vite-node scripts/test-rl-policy.ts",
+    "evaluate:rl": "vite-node scripts/evaluate-rl-policy.ts",
     "test:parser": "vite-node scripts/test-document-parser.ts",
     "generate:samples": "vite-node scripts/generate-sample-resumes.ts",
     "backend:test": "pytest backend/tests/ -v"
