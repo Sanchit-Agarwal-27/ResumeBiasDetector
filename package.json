@@ -17,7 +17,7 @@
     "evaluate:rl": "vite-node scripts/evaluate-rl-policy.ts",
     "test:parser": "vite-node scripts/test-document-parser.ts",
     "generate:samples": "vite-node scripts/generate-sample-resumes.ts",
-    "backend:test": "pytest backend/tests/ -v"
+    "backend:test": "backend\\.venv\\Scripts\\pytest.exe backend/tests/ -v"
   },
   "overrides": {
     "rolldown": "1.2.1"

@@ -2,14 +2,14 @@ import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import HealthResponse
-from .routers import analyze, rewrite, audit, benchmarks, job_match
+from .routers import analyze, rewrite, audit, benchmarks, job_match, rl
 
 START_TIME = time.time()
 
 app = FastAPI(
     title="BiasLens AI Engine & Fairness API",
-    description="Context-Aware Resume Bias Detection, Error Detection & Correction, ATS Job Matching, and Explainable AI (XAI) Microservice.",
-    version="2.5.0",
+    description="Context-Aware Resume Bias Detection, Error Detection & Correction, ATS Job Matching, Explainable AI (XAI), and Reinforcement Learning Bandit Microservice.",
+    version="2.6.0",
 )
 
 # Configure CORS so the frontend running on Vite (localhost:8080 or localhost:5173) can communicate seamlessly
@@ -33,6 +33,7 @@ app.include_router(rewrite.router)
 app.include_router(audit.router)
 app.include_router(benchmarks.router)
 app.include_router(job_match.router)
+app.include_router(rl.router)
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["Health"])
@@ -40,8 +41,8 @@ async def health_check():
     """Health check endpoint used by the frontend to verify live AI server availability."""
     return HealthResponse(
         status="healthy",
-        model_version="BiasLens Context-Aware Transformer v2.5",
-        engine="Python FastAPI + XAI Engine",
+        model_version="BiasLens Context-Aware Transformer v2.6",
+        engine="Python FastAPI + XAI Engine + RL Bandit",
         uptime_seconds=round(time.time() - START_TIME, 2),
         features_active=[
             "context_aware_bias_detection",
@@ -50,6 +51,7 @@ async def health_check():
             "ats_job_matching_simulation",
             "counterfactual_fairness_audit",
             "gold_benchmark_evaluation",
+            "reinforcement_learning_bandit",
         ],
     )
 

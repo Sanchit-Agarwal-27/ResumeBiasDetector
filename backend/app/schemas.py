@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -233,3 +233,76 @@ class HealthResponse(BaseModel):
     engine: str
     uptime_seconds: float
     features_active: List[str] = []
+
+
+class RLActionScore(BaseModel):
+    expected_reward: float
+    exploration_bonus: float
+    ucb: float
+
+
+class RLRecommendRequest(BaseModel):
+    span_id: str
+    category: str
+    subcategory: Optional[str] = ""
+    matched_text: str
+    confidence: Optional[float] = 0.9
+    severity: Optional[str] = "medium"
+    context_type: Optional[str] = "general"
+    sentence: Optional[str] = ""
+    section: Optional[str] = "experience"
+    state_features: Optional[List[float]] = None
+    baseline_suggestion: Optional[str] = None
+
+
+class RLRecommendationOption(BaseModel):
+    action_id: str
+    label: str
+    description: str
+    strategy_description: str
+    suggested_text: str
+    ucb: float
+    expected_reward: float
+    exploration_bonus: float
+    is_evidence_supported: bool
+
+
+class RLRecommendResponse(BaseModel):
+    span_id: str
+    decision_source: str = "rl_fastapi_policy"
+    policy_version: str
+    selected_action: str
+    selected_option: RLRecommendationOption
+    all_options: List[RLRecommendationOption]
+    state_features: List[float]
+    linucb_score: float
+    confidence_bonus: float
+    rationale: str
+
+
+class RLFeedbackRequest(BaseModel):
+    span_id: str
+    action_id: str
+    rating: str
+    suggested_text: Optional[str] = ""
+    user_edited_text: Optional[str] = None
+    comment: Optional[str] = None
+    state_features: List[float]
+    policy_version: Optional[str] = "v1.0.0-python"
+
+
+class RLFeedbackResponse(BaseModel):
+    success: bool
+    feedback_id: str
+    numeric_reward: float
+    updated_pull_count: int
+    total_policy_updates: int
+    message: str
+
+
+class RLPolicyStateResponse(BaseModel):
+    version: str
+    dimension: int
+    alpha: float
+    total_updates: int
+    arms: Dict[str, Any]
